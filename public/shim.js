@@ -3,12 +3,12 @@
   'use strict';
   const H = { 'x-hp': '1' };
   let ME = null;
-  const meP = fetch('/api/me', { credentials: 'same-origin' }).then(r => { if (r.status === 401) { location.href = '/login.html'; throw new Error('auth'); } return r.json(); }).then(j => (ME = j));
+  const meP = fetch('/api/me', { credentials: 'same-origin' }).then(r => { if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); }).then(j => (ME = j));
 
   function E(code, message) { const e = new Error(message || code); e.code = code; return e; }
   async function call(path, opt = {}) {
     const r = await fetch(path, { credentials: 'same-origin', ...opt, headers: { ...(opt.headers || {}), ...H } });
-    if (r.status === 401) { location.href = '/login.html'; throw E('unauthenticated'); }
+    if (r.status === 401) { location.href = '/login'; throw E('unauthenticated'); }
     const ct = r.headers.get('content-type') || '';
     const j = ct.includes('json') ? await r.json().catch(() => null) : null;
     if (!r.ok) {
@@ -198,5 +198,5 @@
 
   const RES = { db, user, assets, downloads, sample };
   window.claude = { use: async name => { if (name in RES) { if (name !== 'downloads' && name !== 'sample') await meP; return RES[name]; } return null; } };
-  window.HIK_CF = { me: () => meP, call, postJ, logout: async () => { try { await postJ('/api/auth/logout', {}); } catch { } location.href = '/login.html'; } };
+  window.HIK_CF = { me: () => meP, call, postJ, logout: async () => { try { await postJ('/api/auth/logout', {}); } catch { } location.href = '/login'; } };
 })();

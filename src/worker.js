@@ -6,7 +6,7 @@ import seed from '../seed/data.json';
 const SESSION_DAYS = 60;
 const OTP_MIN = 10;
 const MAX_UPLOAD = 20 * 1024 * 1024;
-const PUBLIC_PATHS = new Set(['/login.html', '/favicon.svg', '/robots.txt']);
+const PUBLIC_PATHS = new Set(['/login', '/login.html', '/favicon.svg', '/robots.txt']);
 const TZ = 'Europe/Rome';
 
 /* ---------------- utility ---------------- */
@@ -386,7 +386,7 @@ async function api(req, env, ctx, url, u) {
       if (t.email === normEmail(env.OWNER_EMAIL)) return err('permission_denied', 'Il proprietario non si può modificare', 403);
       if (b.action === 'approve' || b.action === 'enable') {
         await env.DB.prepare("UPDATE users SET status='active' WHERE id=?").bind(t.id).run();
-        if (b.action === 'approve') await sendMail(env, { to: t.email, kind: 'approved', subject: 'Accesso al CRM HIK PALERMO approvato', html: mailShell('Benvenuto in HIK PALERMO', `<p>Ciao ${esc(t.name)}, il tuo accesso è stato approvato. Entra con la tua email: ti invieremo un codice.</p>`, ['Entra nel CRM', env.APP_URL + '/login.html']) });
+        if (b.action === 'approve') await sendMail(env, { to: t.email, kind: 'approved', subject: 'Accesso al CRM HIK PALERMO approvato', html: mailShell('Benvenuto in HIK PALERMO', `<p>Ciao ${esc(t.name)}, il tuo accesso è stato approvato. Entra con la tua email: ti invieremo un codice.</p>`, ['Entra nel CRM', env.APP_URL + '/login']) });
       } else if (b.action === 'reject' || b.action === 'disable') {
         await env.DB.batch([env.DB.prepare("UPDATE users SET status='disabled' WHERE id=?").bind(t.id), env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id)]);
       } else if (b.action === 'delete') {
@@ -436,17 +436,17 @@ export default {
     try {
       if (p === '/api/auth/request' && req.method === 'POST') return await authRequest(req, env);
       if (p === '/api/auth/verify' && req.method === 'POST') return await authVerify(req, env);
-      if (PUBLIC_PATHS.has(p)) return env.ASSETS.fetch(req);
       const u = await currentUser(req, env);
+      if (u && (p === '/login' || p === '/login.html')) return Response.redirect(url.origin + '/', 302);
+      if (PUBLIC_PATHS.has(p)) return env.ASSETS.fetch(p === '/login.html' ? new Request(url.origin + '/login', req) : req);
       if (p.startsWith('/api/')) {
         if (!u) return err('unauthenticated', 'Sessione scaduta: accedi di nuovo.', 401);
         return await api(req, env, ctx, url, u);
       }
       if (!u) {
-        if (p === '/' || p.endsWith('.html')) return Response.redirect(url.origin + '/login.html', 302);
+        if (req.method === 'GET' && (p === '/' || p.endsWith('.html') || (req.headers.get('accept') || '').includes('text/html'))) return Response.redirect(url.origin + '/login', 302);
         return new Response('Accesso richiesto', { status: 401 });
       }
-      if (p === '/login.html') return Response.redirect(url.origin + '/', 302);
       if (p.startsWith('/_blob/')) {
         const id = p.slice(7);
         const o = await env.FILES.get(id);
