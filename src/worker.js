@@ -93,7 +93,8 @@ async function sendMail(env, { to, subject, html, text, attachments, kind = 'inf
     });
     if (r.ok) ok = 1; else e = r.status + ' ' + (await r.text()).slice(0, 300);
   } catch (x) { e = String(x && x.message || x); }
-  try { await env.DB.prepare('INSERT INTO mail_log(id,at,kind,to_addr,subject,ok,err) VALUES(?,?,?,?,?,?,?)').bind(rndHex(8), now(), kind, list.join(','), subject, ok, e).run(); } catch { }
+  try { await env.DB.prepare('INSERT INTO mail_log(at,kind,to_addr,subject,ok,err) VALUES(?,?,?,?,?,?)').bind(now(), kind, list.join(','), subject, ok, e).run(); } catch (x) { console.log('mail_log', x); }
+  if (e) console.log('Resend error', e);
   return !!ok;
 }
 
@@ -268,7 +269,7 @@ async function authRequest(req, env) {
 <p style="font-size:13px;color:#45576A">Scade tra ${OTP_MIN} minuti. Se non l'hai richiesto, ignora questa email.</p>`),
     text: 'Codice di accesso HIK PALERMO: ' + code + ' (scade tra ' + OTP_MIN + ' minuti)'
   });
-  if (!ok) return err('mail_failed', 'Invio email non riuscito. Riprova tra poco o contatta l\'amministratore.', 502);
+  if (!ok) { await env.DB.prepare('DELETE FROM otp WHERE email=?').bind(email).run(); return err('mail_failed', 'Invio email non riuscito. Riprova tra poco o contatta l\'amministratore.', 502); }
   return json({ ok: true });
 }
 
