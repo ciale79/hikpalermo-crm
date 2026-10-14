@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hikpalermo-crm",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "hikpalermo.com", "custom_domain": true },
+    { "pattern": "www.hikpalermo.com", "custom_domain": true }
+  ],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "none"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "hikpalermo-crm", "database_id": "89a005f4-876c-442f-a4a8-a5a989b9fe57" }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "hikpalermo-files" }
+  ],
+  "durable_objects": {
+    "bindings": [ { "name": "ROOM", "class_name": "Room" } ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Room"] }
+  ],
+  "triggers": { "crons": ["0 6 * * *"] },
+  "vars": {
+    "APP_URL": "https://hikpalermo.com",
+    "MAIL_FROM": "HIK PALERMO <notifiche@hikpalermo.com>",
+    "OWNER_EMAIL": "paolo.cosentino@hikvision.com",
+    "CLAUDE_MODEL": "claude-opus-5-5"
+  },
+  "observability": { "enabled": true }
+  // Secrets (Impostazioni del Worker → Variabili e segreti): RESEND_API_KEY, ANTHROPIC_API_KEY
+}

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HIK Palermo · Accesso</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@1,75..125,700..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{--bg:#F2F4F6;--surface:#fff;--line:#D3DAE1;--ink:#14212C;--ink-2:#45576A;--ink-3:#768797;--accent:#C8102E;--accent-soft:#FADDE1;--side:#14212C;--side-accent:#E8384F;--ok:#2D7A4E;--bad:#8E1D45}
+@media (prefers-color-scheme:dark){:root{--bg:#0E171F;--surface:#16222D;--line:#2A3946;--ink:#E6ECF1;--ink-2:#AAB8C4;--ink-3:#7D8E9C;--accent-soft:#3A1820}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.brand{background:var(--side);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:40px;position:relative;overflow:hidden}
+.brand:after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--accent)}
+.logo{font-family:Archivo,"Arial Narrow",sans-serif;font-style:italic;font-weight:800;font-size:44px;letter-spacing:.5px;font-stretch:110%}
+.logo b{color:var(--side-accent)}
+.brand p{color:#C9D4DD;max-width:380px;line-height:1.5}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:32px 32px;pointer-events:none}
+main{display:flex;align-items:center;justify-content:center;padding:32px 16px}
+.card{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px;box-shadow:0 8px 24px rgba(20,33,44,.08)}
+h1{margin:0 0 4px;font-size:22px}
+.sub{margin:0 0 20px;color:var(--ink-2);font-size:14px}
+.tabs{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:4px;margin-bottom:20px}
+.tabs button{flex:1;border:0;background:transparent;padding:8px;border-radius:6px;font:inherit;font-weight:600;color:var(--ink-2);cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 6px;color:var(--ink-2)}
+input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;font:inherit;background:var(--surface);color:var(--ink)}
+input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+#code{font-family:"IBM Plex Mono",monospace;font-size:26px;letter-spacing:10px;text-align:center}
+.btn{width:100%;margin-top:20px;padding:11px;border:0;border-radius:6px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:default}
+.link{background:none;border:0;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;padding:0;margin-top:14px}
+.msg{margin-top:14px;font-size:14px;padding:10px 12px;border-radius:6px;display:none}
+.msg.bad{display:block;background:var(--accent-soft);color:var(--bad)}
+.msg.ok{display:block;background:rgba(45,122,78,.12);color:var(--ok)}
+.hint{font-size:12px;color:var(--ink-3);margin-top:8px}
+[hidden]{display:none!important}
+@media (max-width:760px){body{grid-template-columns:1fr}.brand{padding:24px 16px}.brand p{display:none}.logo{font-size:32px}}
+</style>
+</head>
+<body>
+<aside class="brand"><div class="grid"></div>
+  <div class="logo"><b>HIK</b> PALERMO</div>
+  <p>CRM del gruppo di lavoro: commesse, clienti, offerte dai listini Pro e Solution, calendario condiviso e analisi dei capitolati.</p>
+  <span style="font-size:12px;color:#8798A7">hikpalermo.com</span>
+</aside>
+<main>
+  <div class="card">
+    <section id="s1">
+      <h1>Benvenuto</h1>
+      <p class="sub">Ti mandiamo un codice via email: niente password da ricordare.</p>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tLogin" aria-selected="true">Accedi</button>
+        <button role="tab" id="tReg" aria-selected="false">Registrati</button>
+      </div>
+      <form id="f1" novalidate>
+        <div id="nameBox" hidden><label for="name">Nome e cognome</label><input id="name" autocomplete="name" maxlength="80"></div>
+        <label for="email">Email aziendale</label>
+        <input id="email" type="email" autocomplete="email" inputmode="email" required>
+        <button class="btn" id="b1" type="submit">Invia codice</button>
+        <p class="hint" id="regHint" hidden>I colleghi già inseriti nel gruppo entrano subito; per gli altri un amministratore approva la richiesta.</p>
+      </form>
+    </section>
+    <section id="s2" hidden>
+      <h1>Controlla la posta</h1>
+      <p class="sub">Abbiamo inviato un codice a 6 cifre a <b id="em"></b>. Scade tra 10 minuti.</p>
+      <form id="f2" novalidate>
+        <label for="code">Codice</label>
+        <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" required>
+        <button class="btn" id="b2" type="submit">Entra</button>
+      </form>
+      <button class="link" id="again" type="button">Invia un nuovo codice</button> · <button class="link" id="back" type="button">Cambia email</button>
+    </section>
+    <section id="s3" hidden>
+      <h1>Richiesta inviata</h1>
+      <p class="sub">La tua registrazione è in attesa di approvazione. Riceverai un'email appena un amministratore ti abilita, poi potrai accedere da questa pagina.</p>
+      <button class="link" id="back2" type="button">Torna all'accesso</button>
+    </section>
+    <div class="msg" id="msg" role="status" aria-live="polite"></div>
+  </div>
+</main>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);let mode='login';
+const show=(t,c)=>{const m=$('#msg');m.textContent=t||'';m.className='msg'+(t?' '+(c||'bad'):'');};
+const step=n=>{['#s1','#s2','#s3'].forEach((s,i)=>$(s).hidden=i!==n-1);show('');};
+function setMode(m){mode=m;$('#tLogin').setAttribute('aria-selected',m==='login');$('#tReg').setAttribute('aria-selected',m==='register');$('#nameBox').hidden=m!=='register';$('#regHint').hidden=m!=='register';show('');}
+$('#tLogin').onclick=()=>setMode('login');$('#tReg').onclick=()=>setMode('register');
+try{const e=localStorage.getItem('hp_email');if(e)$('#email').value=e;}catch(e){}
+async function post(p,b){const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json','x-hp':'1'},body:JSON.stringify(b),credentials:'same-origin'});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error&&j.error.message||'Errore '+r.status);return j;}
+async function request(){const email=$('#email').value.trim();if(!email){show('Inserisci la tua email.');return;}
+  if(mode==='register'&&!$('#name').value.trim()){show('Inserisci nome e cognome.');return;}
+  $('#b1').disabled=true;$('#b1').textContent='Invio in corso…';
+  try{await post('/api/auth/request',{email,name:$('#name').value.trim(),mode});try{localStorage.setItem('hp_email',email);}catch(e){}$('#em').textContent=email;step(2);$('#code').value='';$('#code').focus();}
+  catch(e){show(e.message);if(/registrat/.test(e.message)&&mode==='login')setMode('register'),show(e.message);}
+  finally{$('#b1').disabled=false;$('#b1').textContent='Invia codice';}}
+$('#f1').onsubmit=e=>{e.preventDefault();request();};
+$('#f2').onsubmit=async e=>{e.preventDefault();const code=$('#code').value.replace(/\D/g,'');if(code.length!==6){show('Il codice ha 6 cifre.');return;}
+  $('#b2').disabled=true;try{const j=await post('/api/auth/verify',{email:$('#email').value.trim(),code});if(j.pending){step(3);return;}location.href='/';}
+  catch(e){show(e.message);}finally{$('#b2').disabled=false;}};
+$('#code').addEventListener('input',()=>{if($('#code').value.replace(/\D/g,'').length===6)$('#f2').requestSubmit();});
+$('#again').onclick=async()=>{try{await post('/api/auth/request',{email:$('#email').value.trim(),name:$('#name').value.trim(),mode});show('Nuovo codice inviato.','ok');}catch(e){show(e.message);}};
+$('#back').onclick=()=>step(1);$('#back2').onclick=()=>{setMode('login');step(1);};
+</script>
+</body>
+</html>
