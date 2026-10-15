@@ -545,7 +545,8 @@ export default {
       if (p === '/api/auth/verify' && req.method === 'POST') return await authVerify(req, env);
       if (p === '/api/auth/login' && req.method === 'POST') return await authLogin(req, env);
       const u = await currentUser(req, env);
-      if (u && (p === '/login' || p === '/login.html')) return Response.redirect(url.origin + '/', 302);
+      if (u && (p === '/login' || p === '/login.html') && u.has_pwd && !url.searchParams.has('step')) return Response.redirect(url.origin + '/', 302);
+      if (u && !u.has_pwd && (p === '/' || p === '/index.html')) return Response.redirect(url.origin + '/login?step=pwd', 302);
       if (PUBLIC_PATHS.has(p)) return env.ASSETS.fetch(p === '/login.html' ? new Request(url.origin + '/login', req) : req);
       if (p.startsWith('/api/')) {
         if (!u) return err('unauthenticated', 'Sessione scaduta: accedi di nuovo.', 401);
