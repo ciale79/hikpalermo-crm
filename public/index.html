@@ -443,6 +443,28 @@ th.r .hp-sb{flex-direction:row-reverse}
 .btn.hp-wa{background:#25D366;border-color:#25D366;color:#fff}.btn.hp-tg{background:#229ED9;border-color:#229ED9;color:#fff}
 .hp-prog{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}.hp-prog i{display:block;height:100%;background:var(--accent);transition:width .4s}
 .hp-salesbar{margin-bottom:12px}
+
+/* partner */
+.pa-ach{display:flex;align-items:center;gap:8px;min-width:120px}
+.pa-ach .abar{flex:1;height:7px;background:var(--surface-2);border-radius:4px;overflow:hidden;min-width:60px}
+.pa-ach .abar i{display:block;height:100%;background:hsl(var(--h) 70% 45%);border-radius:4px}
+.pa-ach b{font-family:var(--font-mono);font-size:.82rem;min-width:42px;text-align:right}
+.pa-tiers{display:flex;flex-direction:column;gap:12px}
+.pa-tr{display:grid;grid-template-columns:130px 1fr 150px;gap:12px;align-items:center;padding:4px;border-radius:6px}
+.pa-tl{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.pa-tb{position:relative;height:22px}
+.pa-tb i{position:absolute;left:0;border-radius:3px}
+.pa-tb i.tg{top:0;height:22px;background:var(--surface-2);border:1px dashed var(--ink-3)}
+.pa-tb i.so{top:5px;height:12px;background:hsl(var(--h) 70% 45%)}
+.pa-tv{text-align:right;font-family:var(--font-mono);font-size:.82rem}
+.pa-lg{display:inline-block;width:14px;height:8px;border-radius:2px}.pa-lg.tg{background:var(--surface-2);border:1px dashed var(--ink-3)}.pa-lg.so{background:hsl(32 70% 45%)}
+.pa-rank{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+.pa-rr{display:grid;grid-template-columns:minmax(0,170px) 1fr;gap:10px;align-items:center;padding:3px 4px;border-radius:5px;font-size:.85rem}
+.pa-rn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pa-mk{color:var(--accent);font-weight:700;margin-left:3px;cursor:help}
+.pa-notes{margin:4px 0 0;padding-left:20px;font-size:.85rem;color:var(--accent)}
+.pa-notes li{margin:4px 0}.pa-notes b{color:var(--ink)}
+@media (max-width:760px){.pa-tr{grid-template-columns:90px 1fr;}.pa-tv{grid-column:1/-1;text-align:left}}
 </style>
 </head>
 <body>
@@ -1459,6 +1481,7 @@ boot();
 <script src="/maps.js"></script>
 <script src="/lists.js"></script>
 <script src="/drill.js"></script>
+<script src="/partner.js"></script>
 <script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
 </body>
