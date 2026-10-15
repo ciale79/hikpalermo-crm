@@ -168,20 +168,39 @@ const icsTxt = s => String(s || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n')
 function fold(l) { const out = []; while (l.length > 74) { out.push(l.slice(0, 74)); l = ' ' + l.slice(74); } out.push(l); return out.join('\r\n'); }
 async function buildIcs(env, id, e, method) {
   const att = [];
-  for (const p of e.part || []) { const m = await emailOf(env, p); if (m) att.push(`ATTENDEE;CN=${icsTxt(await nameOf(env, p) || m)};RSVP=FALSE:mailto:${m}`); }
+  if (method !== 'PUBLISH') for (const p of e.part || []) { const m = await emailOf(env, p); if (m) att.push(`ATTENDEE;CN=${icsTxt(await nameOf(env, p) || m)};RSVP=FALSE:mailto:${m}`); }
   const loc = [e.luogo, e.teams].filter(Boolean).join(' · ');
   const desc = [e.note, e.teams ? 'Riunione Teams: ' + e.teams : '', (env.APP_URL || '') + '/'].filter(Boolean).join('\n');
   const seq = Math.floor((e.upd || e.at || 0) / 1000) - 1700000000;
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//HIK PALERMO//CRM//IT', 'CALSCALE:GREGORIAN', 'METHOD:' + method, 'BEGIN:VEVENT',
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//HIK PALERMO//CRM//IT', 'CALSCALE:GREGORIAN', 'METHOD:' + method, method === 'PUBLISH' ? 'X-WR-CALNAME:HIK PALERMO' : '', 'BEGIN:VEVENT',
     'UID:' + id + '@hikpalermo.com', 'SEQUENCE:' + Math.max(0, seq), 'DTSTAMP:' + icsDate(now()), 'DTSTART:' + icsDate(e.start), 'DTEND:' + icsDate(e.end || e.start + 3600e3),
     'SUMMARY:' + icsTxt(e.titolo || 'Evento'), loc ? 'LOCATION:' + icsTxt(loc) : '', desc ? 'DESCRIPTION:' + icsTxt(desc) : '',
-    e.teams ? 'URL:' + e.teams : '', 'ORGANIZER;CN=HIK PALERMO:mailto:notifiche@hikpalermo.com', ...att,
+    e.teams ? 'URL:' + e.teams : '', method === 'PUBLISH' ? '' : 'ORGANIZER;CN=HIK PALERMO:mailto:notifiche@hikpalermo.com', ...att,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsTxt(e.titolo || 'Evento'), 'TRIGGER:-PT30M', 'END:VALARM',
     method === 'CANCEL' ? 'STATUS:CANCELLED' : 'STATUS:CONFIRMED', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean);
   return lines.map(fold).join('\r\n');
 }
 const fmtDT = t => new Intl.DateTimeFormat('it-IT', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(t));
 const romeDay = t => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t));
 const b64 = s => { const b = enc.encode(s); let o = ''; for (let i = 0; i < b.length; i++) o += String.fromCharCode(b[i]); return btoa(o); };
+
+/* ---------------- link pubblico firmato al file .ics di un evento ---------------- */
+async function icsSig(env, id) {
+  const secret = await sha256('ics:' + (env.ICS_SECRET || env.RESEND_API_KEY || env.ANTHROPIC_API_KEY || 'hikpalermo'));
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode('ev:' + id));
+  return [...new Uint8Array(sig)].slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+async function publicIcs(env, url) {
+  const id = decodeURIComponent(url.pathname.slice(5).replace(/\.ics$/, ''));
+  const k = url.searchParams.get('k') || '';
+  if (!/^[A-Za-z0-9_\-]{1,100}$/.test(id) || !safeEq(k, await icsSig(env, id))) return new Response('Link non valido', { status: 404 });
+  const d = await getDoc(env, 'eventi', id);
+  if (!d) return new Response('Evento non più disponibile', { status: 404 });
+  const ics = await buildIcs(env, id, d.data, 'PUBLISH');
+  const name = (d.data.titolo || 'evento').replace(/[^\w\- àèéìòù]/gi, '').trim().slice(0, 60) || 'evento';
+  return new Response(ics, { headers: { 'content-type': 'text/calendar; charset=utf-8', 'content-disposition': `attachment; filename="${name}.ics"; filename*=UTF-8''${encodeURIComponent(name)}.ics`, 'cache-control': 'no-store' } });
+}
 
 /* ---------------- hook dopo le scritture ---------------- */
 async function afterWrite(env, u, op, col, id, prev, data) {
@@ -520,6 +539,7 @@ async function api(req, env, ctx, url, u) {
   }
   if (p === '/api/claude' && m === 'POST') return claudeProxy(req, env);
   if (p === '/api/auth/password' && m === 'POST') return setPassword(req, env, u);
+  if (p === '/api/ics-link' && m === 'GET') { const id = url.searchParams.get('id') || ''; if (!(await getDoc(env, 'eventi', id))) return err('not_found', 'Evento non trovato', 404); return json({ url: (env.APP_URL || url.origin) + '/ics/' + encodeURIComponent(id) + '.ics?k=' + await icsSig(env, id) }); }
   if (p === '/api/geocode' && m === 'GET') return json(await geocode(env, url.searchParams.get('q')));
   if (p === '/api/auth/logout' && m === 'POST') {
     const tok = cookie(req, 'hp_s');
@@ -544,6 +564,7 @@ export default {
       if (p === '/api/auth/request' && req.method === 'POST') return await authRequest(req, env);
       if (p === '/api/auth/verify' && req.method === 'POST') return await authVerify(req, env);
       if (p === '/api/auth/login' && req.method === 'POST') return await authLogin(req, env);
+      if (p.startsWith('/ics/') && req.method === 'GET') return await publicIcs(env, url);
       const u = await currentUser(req, env);
       if (u && (p === '/login' || p === '/login.html') && u.has_pwd && !url.searchParams.has('step')) return Response.redirect(url.origin + '/', 302);
       if (u && !u.has_pwd && (p === '/' || p === '/index.html')) return Response.redirect(url.origin + '/login?step=pwd', 302);

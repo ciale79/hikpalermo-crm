@@ -430,6 +430,17 @@ th.hp-on .hp-sa{opacity:1;color:var(--accent)}
 th.r .hp-sb{flex-direction:row-reverse}
 .hp-xbar{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin:0 0 6px}
 .hp-xbar .hint{margin-right:2px}
+
+/* statistiche cliccabili e condivisione */
+.hp-click{cursor:pointer;transition:filter .15s,box-shadow .15s}
+.hp-click:hover{filter:brightness(1.12)}
+.kpi.hp-click:hover,.bar-r.hp-click:hover,.hr.hp-click:hover,tr.hp-click:hover{box-shadow:inset 0 0 0 1px var(--accent)}
+.sidewid .srow.hp-click:hover b{text-decoration:underline}
+.hp-click:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hp-flash{animation:hpflash 1.6s ease}
+@keyframes hpflash{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+.hp-drill{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.btn.hp-wa{background:#25D366;border-color:#25D366;color:#fff}.btn.hp-tg{background:#229ED9;border-color:#229ED9;color:#fff}
 </style>
 </head>
 <body>
@@ -746,7 +757,7 @@ VIEWS.commesse={title:()=>S.sel?'Commessa':'Commesse',mount(){if(S.sel)return co
   fillSel(this.cliSel,[['','Tutti i clienti'],...[...S.clienti.values()].sort(byName).map(c=>[c.id,c.nome])],f.cli);
   fillSel(this.respSel,[['','Tutti i responsabili'],...[...S.team.keys()].map(id=>[id,nm(id)])],f.resp);
   const ql=f.q.toLowerCase();
-  const rows=[...S.commesse.values()].filter(c=>(!f.st||(f.st==='attive'?!CLOSED.has(c.stato):c.stato===f.st))&&(!f.cli||c.clienteId===f.cli)&&(!f.resp||c.resp===f.resp)&&(!f.tipo||(c.tipoCom||'normale')===f.tipo)&&(!f.stp||c.statoProgetto===f.stp)&&(!ql||(c.nome+' '+(c.titolo||'')+' '+(c.codice||'')+' '+(c.citta||'')+' '+(S.clienti.get(c.clienteId)?.nome||'')).toLowerCase().includes(ql))).sort((a,b)=>(b.upd||b.at||0)-(a.upd||a.at||0));
+  const rows=[...S.commesse.values()].filter(c=>(!f.drill||f.drill.ids.has(c.id))&&(!f.st||(f.st==='attive'?!CLOSED.has(c.stato):c.stato===f.st))&&(!f.cli||c.clienteId===f.cli)&&(!f.resp||c.resp===f.resp)&&(!f.tipo||(c.tipoCom||'normale')===f.tipo)&&(!f.stp||c.statoProgetto===f.stp)&&(!ql||(c.nome+' '+(c.titolo||'')+' '+(c.codice||'')+' '+(c.citta||'')+' '+(S.clienti.get(c.clienteId)?.nome||'')).toLowerCase().includes(ql))).sort((a,b)=>(b.upd||b.at||0)-(a.upd||a.at||0));
   const gate=[dbGate(),loading()].filter(Boolean);
   if(!rows.length){this.body.replaceChildren(...gate,S.commesse.size?emptyBox('Nessuna commessa con questi filtri','Cambia i filtri o cerca un altro termine.'):emptyBox('Nessuna commessa','Crea la prima commessa: collega il cliente, inserisci la posizione e prepara le offerte dai listini.',btn('Nuova commessa',()=>commessaForm({}),'pri','plus')));return;}
   if(f.mode==='map'){const pts=rows.filter(c=>c.lat!=null).map(c=>({lat:c.lat,lng:c.lng,color:CCOL[c.stato||'opp'],title:c.nome,label:c.nome.length>22?c.nome.slice(0,21)+'…':c.nome,on:()=>go('commesse',c.id)}));const miss=rows.filter(c=>c.lat==null);
@@ -965,7 +976,7 @@ function eventDetail(e,justCreated){const c=S.commesse.get(e.commessaId),k=S.cli
   const body=el('div',{class:'stack'},justCreated?el('div',{class:'banner',style:'border-left-color:var(--ok)'},others.length?'Evento salvato: '+others.length+' colleghi vedono già l\'avviso nel CRM. Per l\'invito via email apri Teams o Outlook qui sotto.':'Evento salvato nel calendario condiviso.'):null,
     el('div',{class:'row'},el('span',{class:'pill e-'+e.tipo},ETL[e.tipo]),el('b',{},fDT(e.start)+' – '+fT(e.end))),
     el('dl',{class:'dl'},el('dt',{},'Organizzato da'),el('dd',{},nm(e.by)),el('dt',{},'Partecipanti'),el('dd',{},(e.part||[]).length?el('div',{class:'people'},(e.part||[]).map(id=>el('span',{class:'person on',style:'cursor:default'},av(id),nm(id)))):'—'),el('dt',{},'Luogo'),el('dd',{},e.luogo||'—'),el('dt',{},'Commessa'),el('dd',{},c?el('a',{href:'#',onclick:ev=>{ev.preventDefault();mm.close();go('commesse',c.id);}},c.nome):'—'),el('dt',{},'Cliente'),el('dd',{},k?k.nome:'—'),el('dt',{},'Teams'),el('dd',{},e.teams?el('a',{href:e.teams,target:'_blank',rel:'noopener'},'Partecipa alla riunione'):'—'),el('dt',{},'Note'),el('dd',{style:'white-space:pre-wrap'},e.note||'—')),
-    el('div',{class:'panel',style:'background:var(--surface-2)'},el('h4',{style:'margin-bottom:8px'},'Invito ai partecipanti'),el('div',{class:'linkrow'},linkBtn('Invita via Teams',teamsUrl(e),'pri','video'),linkBtn('Invita via Outlook',outlookUrl(e),'','mail'),btn('Copia testo invito',()=>copy(inviteText(e)),'','copy')),el('p',{class:'hint',style:'margin-top:8px'},'Teams e Outlook si aprono con oggetto, orario, testo e indirizzi già compilati: all\'invio i colleghi ricevono l\'email di invito.'+(miss.length?' Indirizzo email mancante per: '+miss.map(nm).join(', ')+' (lo impostano in Impostazioni).':''))));
+    el('div',{class:'panel',style:'background:var(--surface-2)'},el('h4',{style:'margin-bottom:8px'},'Invito ai partecipanti'),el('div',{class:'linkrow'},linkBtn('Invita via Teams',teamsUrl(e),'pri','video'),linkBtn('Invita via Outlook',outlookUrl(e),'','mail'),btn('Copia testo invito',()=>copy(inviteText(e)),'','copy')),el('p',{class:'hint',style:'margin-top:8px'},'Teams e Outlook si aprono con oggetto, orario, testo e indirizzi già compilati: all\'invio i colleghi ricevono l\'email di invito.'+(miss.length?' Indirizzo email mancante per: '+miss.map(nm).join(', ')+' (lo impostano in Impostazioni).':''))),window.hpShareRow?hpShareRow(e):null);
   const mm=modal(e.titolo,body,[btn('Chiudi',()=>mm.close()),btn('Modifica',()=>{mm.close();eventForm(e);},'','edit')],{wide:true,noFocus:true});}
 
 /* ---------- Articoli ---------- */
@@ -1445,6 +1456,7 @@ boot();
 </script>
 <script src="/maps.js"></script>
 <script src="/lists.js"></script>
+<script src="/drill.js"></script>
 <script src="/cf-addon.js"></script>
 </body>
 </html>
