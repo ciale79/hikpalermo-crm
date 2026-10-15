@@ -441,6 +441,8 @@ th.r .hp-sb{flex-direction:row-reverse}
 @keyframes hpflash{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
 .hp-drill{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .btn.hp-wa{background:#25D366;border-color:#25D366;color:#fff}.btn.hp-tg{background:#229ED9;border-color:#229ED9;color:#fff}
+.hp-prog{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}.hp-prog i{display:block;height:100%;background:var(--accent);transition:width .4s}
+.hp-salesbar{margin-bottom:12px}
 </style>
 </head>
 <body>
@@ -1407,8 +1409,8 @@ function svgMonths(a26,a25,opt={}){const W=520,H=210,pl=56,pb=24,pt=14,pr=10;con
 function legend(items){return el('div',{class:'legend'},items.map(([c,l,dash])=>el('span',{},el('i',{style:{background:dash?'transparent':c,borderTop:dash?'2px dashed '+c:'',height:dash?'0':''}}),l)));}
 function hbars(rows,opt={}){const mx=Math.max(...rows.map(r=>Math.abs(r[1])),1);return el('div',{class:'hb'},rows.map(r=>el('div',{class:'hr'+(r[3]?' hl':'')},el('span',{class:'hn',title:r[0]},r[0]),el('div',{class:'ht'},el('i',{style:{width:Math.max(0,r[1]/mx*100)+'%',background:r[3]?'var(--accent)':(opt.color||'var(--ink-3)')}})),el('span',{class:'num hv'},eur0(r[1])),r[2]!=null?yoyChip(r[1],r[2]):null)));}
 VIEWS.fatt={title:()=>'Fatturato',mount(){this.root=$('#view');if(this.q==null)this.q=0;this.update();},update(){const r=this.root;const F=S.fatt,sa=S.sales;
-  if(!F||!sa){r.replaceChildren(...[dbGate(),S.dbState==='loading'?loading():emptyBox('Dati di fatturato non ancora caricati','Manda a Claude il file Sales Analysis aggiornato per popolare questa pagina.')].filter(Boolean));return;}
-  const q=this.q;const M=F.m;const lab=q?'Q'+q+' 2026':'2026 da inizio anno';
+  if(!F||!sa){r.replaceChildren(...[dbGate(),S.dbState==='loading'?loading():emptyBox('Dati di fatturato non ancora caricati','Carica il file Sales Analysis (.xlsb o .xlsx) con il pulsante «Carica Sales Analysis» qui sopra.')].filter(Boolean));return;}
+  const q=this.q;const M=F.m;const Y=sa.anno||2026,PY=Y-1;const MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];const cutD=new Date((F.cut||sa.data||'')+'T12:00');const cutM=isNaN(cutD)?'':MESI[cutD.getMonth()];const cut25L=isNaN(cutD)?'':String(cutD.getDate()).padStart(2,'0')+'/'+String(cutD.getMonth()+1).padStart(2,'0')+'/'+PY;const lab=q?'Q'+q+' '+Y:Y+' da inizio anno';
   const itV=q?sa.italiaOwnQ[q-1]:sa.italiaOwn,siV=q?sa.siciliaOwnQ[q-1]:sa.siciliaOwn;
   const itT=q?sa.targetItaliaQ[q-1]:sa.targetItalia,siT=q?(sa.targetSiciliaQ||[])[q-1]:sa.targetSicilia;
   const prev=(a26,a25)=>q===4?null:(q?sumQ(a25,q):null);
@@ -1430,21 +1432,21 @@ VIEWS.fatt={title:()=>'Fatturato',mount(){this.root=$('#view');if(this.q==null)t
     return el('section',{class:'panel stack splitp',style:{'--c':col}},el('div',{class:'panel-h'},el('div',{class:'stack',style:'gap:2px'},el('span',{class:'eyebrow'},'Sicilia · '+lab),el('h3',{},name)),el('span',{class:'row',style:'gap:6px'},el('span',{class:'avatar sm ini'},owner.split(' ').map(w=>w[0]).join('')),el('b',{},owner))),
       el('div',{class:'row',style:'align-items:baseline;gap:12px'},el('span',{class:'bigv'},eur0(v)),pv!=null?yoyChip(v,pv):el('span',{class:'hint'},'trimestre in corso')),achLine(v,t),
       el('div',{class:'row',style:'gap:16px'},el('span',{class:'soft'},'Quota sulla Sicilia ',el('b',{},fN.format(round2(v/siV*100))+'%')),el('span',{class:'soft'},'Ordini aperti ',el('b',{class:'num'},eur0(oo)))),
-      svgMonths(a26,a25,{color:col,label:name+' mensile'}),legend([[col,'2026'],['var(--ink-3)','2025',true]]),
+      svgMonths(a26,a25,{color:col,label:name+' mensile'}),legend([[col,String(Y)],['var(--ink-3)',String(PY),true]]),
       el('h4',{},'Famiglie di prodotto principali (da inizio anno)'),hbars(fam.map(f=>[f[0],f[1]]),{color:col}),
       el('h4',{},'Per cliente (da inizio anno)'),hbars(F.clienti.map(c=>[c[0],key==='PRO'?c[4]:c[5]]).filter(x=>x[1]>0),{color:col}));};
   const splitRow=el('div',{class:'grid2'},split('ProExpert','Igor Vullo','PRO','si_pro_m','var(--accent)',(sa.targetSiciliaCh||{}).PRO,F.famPro),split('Solution','Paolo Cosentino','SOLUTION','si_sol_m','var(--info)',(sa.targetSiciliaCh||{}).SOLUTION,F.famSol));
   // andamento mensile
-  const mens=el('div',{class:'grid2'},el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Sicilia · andamento mensile'}),legend([['var(--accent)','2026'],['var(--ink-3)','2025',true]])),svgMonths(M.si_m26,M.si_m25,{color:'var(--accent)'}),el('p',{class:'hint'},'Ottobre 2026 parziale (fino al '+sa.dataLabel+').')),
-    el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Italia · andamento mensile'}),legend([['var(--info)','2026'],['var(--ink-3)','2025',true]])),svgMonths(M.it_m26,M.it_m25,{color:'var(--info)'}),el('p',{class:'hint'},'Ottobre 2026 parziale.')));
+  const mens=el('div',{class:'grid2'},el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Sicilia · andamento mensile'}),legend([['var(--accent)',String(Y)],['var(--ink-3)',String(PY),true]])),svgMonths(M.si_m26,M.si_m25,{color:'var(--accent)'}),el('p',{class:'hint'},cutM+' '+Y+' parziale (fino al '+sa.dataLabel+').')),
+    el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Italia · andamento mensile'}),legend([['var(--info)',String(Y)],['var(--ink-3)',String(PY),true]])),svgMonths(M.it_m26,M.it_m25,{color:'var(--info)'}),el('p',{class:'hint'},cutM+' '+Y+' parziale.')));
   // clienti
   const ooC=Object.fromEntries(F.oo.siClienti||[]);
-  const cli=el('section',{class:'panel stack'},el('h3',{text:'Clienti Sicilia · da inizio anno'}),el('div',{class:'tbl-wrap'},el('table',{},el('thead',{},el('tr',{},['Cliente','Tipo','2026','Stesso periodo 2025','Variazione','ProExpert','Solution','Ordini aperti'].map((h,i)=>el('th',{class:i>=2&&i!==4?'r':''},h)))),el('tbody',{},F.clienti.map(c=>el('tr',{},el('td',{},el('b',{},c[0])),el('td',{class:'muted'},c[1]),el('td',{class:'r num'},el('b',{},eur0(c[2]))),el('td',{class:'r num muted'},eur0(c[3])),el('td',{},yoyChip(c[2],c[3])),el('td',{class:'r num'},eur0(c[4])),el('td',{class:'r num'},eur0(c[5])),el('td',{class:'r num'},eur0(ooC[c[0]]||0))))))),el('p',{class:'hint'},F.nClienti+' clienti con fatturato in Sicilia nel 2026.'));
+  const cli=el('section',{class:'panel stack'},el('h3',{text:'Clienti Sicilia · da inizio anno'}),el('div',{class:'tbl-wrap'},el('table',{},el('thead',{},el('tr',{},['Cliente','Tipo',String(Y),'Stesso periodo '+PY,'Variazione','ProExpert','Solution','Ordini aperti'].map((h,i)=>el('th',{class:i>=2&&i!==4?'r':''},h)))),el('tbody',{},F.clienti.map(c=>el('tr',{},el('td',{},el('b',{},c[0])),el('td',{class:'muted'},c[1]),el('td',{class:'r num'},el('b',{},eur0(c[2]))),el('td',{class:'r num muted'},eur0(c[3])),el('td',{},yoyChip(c[2],c[3])),el('td',{class:'r num'},eur0(c[4])),el('td',{class:'r num'},eur0(c[5])),el('td',{class:'r num'},eur0(ooC[c[0]]||0))))))),el('p',{class:'hint'},F.nClienti+' clienti con fatturato in Sicilia nel '+Y+'.'));
   // categorie, canali, regioni
   const cat=el('section',{class:'panel stack'},el('h3',{text:'Sicilia · categorie di prodotto'}),hbars(F.macro.filter(m=>m[1]>1000).map(m=>[m[0],m[1],m[2]]),{color:'var(--info)'}));
   const can=el('section',{class:'panel stack'},el('h3',{text:'Sicilia · canali di vendita'}),hbars(F.canali.filter(c=>c[1]>1000).map(c=>[c[0]==='PRO'?'PRO (ProExpert)':c[0]==='SOLUTION'?'SOLUTION':c[0],c[1],c[2]]),{color:'var(--ink-3)'}));
   const totIt=F.regioni.reduce((a,x)=>a+x[1],0);
-  const reg=el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Classifica regioni · da inizio anno'}),el('span',{class:'hint'},'Sicilia '+(F.regioni.findIndex(x=>x[0]==='SICILIA')+1)+'ª su '+F.regioni.length)),hbars(F.regioni.map(x=>[x[0][0]+x[0].slice(1).toLowerCase(),x[1],x[2],x[0]==='SICILIA'])),el('p',{class:'hint'},'Totale nazionale '+eur0(totIt)+'. Variazioni sullo stesso periodo 2025 (fino all\'11/10/2025).'));
+  const reg=el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Classifica regioni · da inizio anno'}),el('span',{class:'hint'},'Sicilia '+(F.regioni.findIndex(x=>x[0]==='SICILIA')+1)+'ª su '+F.regioni.length)),hbars(F.regioni.map(x=>[x[0][0]+x[0].slice(1).toLowerCase(),x[1],x[2],x[0]==='SICILIA'])),el('p',{class:'hint'},'Totale nazionale '+eur0(totIt)+'. Variazioni sullo stesso periodo '+PY+' (fino al '+cut25L+').'));
   const kamP=el('section',{class:'panel stack'},el('h3',{text:'Portafoglio KAM · '+kam.nome}),hbars(kam.aree.map(a=>[a[0][0]+a[0].slice(1).toLowerCase(),a[1],a[2]]),{color:'var(--accent)'}),el('p',{class:'hint'},'Il file attribuisce ad Antonino Pumilia anche la Calabria: totale '+eur0(kamTot)+'.'));
   r.replaceChildren(...[dbGate(),head,kpis,el('div',{class:'grid2'},itP1,siP1),el('h2',{style:'margin-top:6px'},'Sicilia · ProExpert e Solution'),splitRow,mens,cli,el('div',{class:'grid2'},cat,can),el('div',{class:'grid2'},reg,kamP)].filter(Boolean));
 }};
@@ -1457,6 +1459,7 @@ boot();
 <script src="/maps.js"></script>
 <script src="/lists.js"></script>
 <script src="/drill.js"></script>
+<script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
 </body>
 </html>

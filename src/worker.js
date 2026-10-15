@@ -270,7 +270,7 @@ function canRead(u, col) {
 }
 async function canWrite(env, u, col, id) {
   if (!canRead(u, col)) return false;
-  if (col === 'config') return isAdmin(env, u);
+  if (col === 'config') return id === 'sales' || id === 'fatturato' ? true : isAdmin(env, u); // fatturato: lo aggiorna chiunque nel gruppo
   if (col === 'team') return id === u.id || isAdmin(env, u);
   return true;
 }
