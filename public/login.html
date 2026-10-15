@@ -37,6 +37,9 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:tra
 .msg.bad{display:block;background:var(--accent-soft);color:var(--bad)}
 .msg.ok{display:block;background:rgba(45,122,78,.12);color:var(--ok)}
 .hint{font-size:12px;color:var(--ink-3);margin-top:8px}
+.meter{height:4px;background:var(--line);border-radius:2px;margin-top:10px;overflow:hidden}.meter i{display:block;height:100%;width:0;transition:width .2s,background .2s}
+.chk{display:flex;align-items:center;gap:8px;font-weight:400}.chk input{width:auto}
+.link{display:block}
 [hidden]{display:none!important}
 @media (max-width:760px){body{grid-template-columns:1fr}.brand{padding:24px 16px}.brand p{display:none}.logo{font-size:32px}}
 </style>
@@ -51,17 +54,26 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:tra
   <div class="card">
     <section id="s1">
       <h1>Benvenuto</h1>
-      <p class="sub">Ti mandiamo un codice via email: niente password da ricordare.</p>
+      <p class="sub" id="sub1">Entra con la tua email aziendale e la password.</p>
       <div class="tabs" role="tablist">
         <button role="tab" id="tLogin" aria-selected="true">Accedi</button>
         <button role="tab" id="tReg" aria-selected="false">Registrati</button>
       </div>
-      <form id="f1" novalidate>
-        <div id="nameBox" hidden><label for="name">Nome e cognome</label><input id="name" autocomplete="name" maxlength="80"></div>
+      <form id="fLogin" novalidate>
         <label for="email">Email aziendale</label>
-        <input id="email" type="email" autocomplete="email" inputmode="email" required>
+        <input id="email" type="email" autocomplete="username" inputmode="email" required>
+        <label for="pw">Password</label>
+        <input id="pw" type="password" autocomplete="current-password" required>
+        <button class="btn" id="bLogin" type="submit">Accedi</button>
+        <button class="link" id="toCode" type="button">Primo accesso o password dimenticata? Ricevi un codice via email</button>
+      </form>
+      <form id="fCode" novalidate hidden>
+        <div id="nameBox" hidden><label for="name">Nome e cognome</label><input id="name" autocomplete="name" maxlength="80"></div>
+        <label for="email2">Email aziendale</label>
+        <input id="email2" type="email" autocomplete="email" inputmode="email" required>
         <button class="btn" id="b1" type="submit">Invia codice</button>
-        <p class="hint" id="regHint" hidden>I colleghi già inseriti nel gruppo entrano subito; per gli altri un amministratore approva la richiesta.</p>
+        <p class="hint" id="codeHint">Ti mandiamo un codice a 6 cifre: dopo averlo inserito scegli la tua password.</p>
+        <button class="link" id="toLogin" type="button">Ho già una password</button>
       </form>
     </section>
     <section id="s2" hidden>
@@ -70,13 +82,27 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:tra
       <form id="f2" novalidate>
         <label for="code">Codice</label>
         <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="\d{6}" required>
-        <button class="btn" id="b2" type="submit">Entra</button>
+        <button class="btn" id="b2" type="submit">Continua</button>
       </form>
-      <button class="link" id="again" type="button">Invia un nuovo codice</button> · <button class="link" id="back" type="button">Cambia email</button>
+      <button class="link" id="again" type="button">Invia un nuovo codice</button><button class="link" id="back" type="button">Cambia email</button>
+    </section>
+    <section id="s4" hidden>
+      <h1>Scegli la password</h1>
+      <p class="sub">Da ora entrerai con email e password. Almeno 8 caratteri, con lettere e numeri.</p>
+      <form id="f4" novalidate>
+        <input type="email" id="emailHid" autocomplete="username" hidden>
+        <label for="np1">Nuova password</label>
+        <input id="np1" type="password" autocomplete="new-password" required>
+        <label for="np2">Conferma password</label>
+        <input id="np2" type="password" autocomplete="new-password" required>
+        <div class="meter" aria-hidden="true"><i id="mbar"></i></div>
+        <label class="chk"><input type="checkbox" id="show"> Mostra password</label>
+        <button class="btn" id="b4" type="submit">Salva ed entra</button>
+      </form>
     </section>
     <section id="s3" hidden>
       <h1>Richiesta inviata</h1>
-      <p class="sub">La tua registrazione è in attesa di approvazione. Riceverai un'email appena un amministratore ti abilita, poi potrai accedere da questa pagina.</p>
+      <p class="sub">La tua registrazione è in attesa di approvazione. Riceverai un'email appena un amministratore ti abilita: al primo accesso userai un codice via email e sceglierai la password.</p>
       <button class="link" id="back2" type="button">Torna all'accesso</button>
     </section>
     <div class="msg" id="msg" role="status" aria-live="polite"></div>
@@ -84,26 +110,44 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:tra
 </main>
 <script>
 "use strict";
-const $=s=>document.querySelector(s);let mode='login';
+const $=s=>document.querySelector(s);let mode='login',reset=false;
 const show=(t,c)=>{const m=$('#msg');m.textContent=t||'';m.className='msg'+(t?' '+(c||'bad'):'');};
-const step=n=>{['#s1','#s2','#s3'].forEach((s,i)=>$(s).hidden=i!==n-1);show('');};
-function setMode(m){mode=m;$('#tLogin').setAttribute('aria-selected',m==='login');$('#tReg').setAttribute('aria-selected',m==='register');$('#nameBox').hidden=m!=='register';$('#regHint').hidden=m!=='register';show('');}
+const step=n=>{['#s1','#s2','#s3','#s4'].forEach(s=>$(s).hidden=s!=='#s'+n);show('');const f={1:mode==='login'?'#email':'#email2',2:'#code',4:'#np1'}[n];if(f)setTimeout(()=>$(f).focus(),30);};
+function setMode(m){mode=m;$('#tLogin').setAttribute('aria-selected',m!=='register');$('#tReg').setAttribute('aria-selected',m==='register');
+  $('#fLogin').hidden=m!=='login';$('#fCode').hidden=m==='login';$('#nameBox').hidden=m!=='register';
+  $('#toLogin').hidden=m==='register';$('#sub1').textContent=m==='login'?'Entra con la tua email aziendale e la password.':m==='register'?'Registrati con la tua email aziendale: un amministratore approva l\'accesso.':'Ricevi un codice via email per creare o reimpostare la password.';
+  $('#codeHint').textContent=m==='register'?'I colleghi già inseriti nel gruppo entrano subito; per gli altri un amministratore approva la richiesta.':'Ti mandiamo un codice a 6 cifre: dopo averlo inserito scegli la tua password.';
+  if(m!=='login')$('#email2').value=$('#email').value||$('#email2').value;else $('#email').value=$('#email2').value||$('#email').value;show('');}
 $('#tLogin').onclick=()=>setMode('login');$('#tReg').onclick=()=>setMode('register');
-try{const e=localStorage.getItem('hp_email');if(e)$('#email').value=e;}catch(e){}
-async function post(p,b){const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json','x-hp':'1'},body:JSON.stringify(b),credentials:'same-origin'});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error&&j.error.message||'Errore '+r.status);return j;}
-async function request(){const email=$('#email').value.trim();if(!email){show('Inserisci la tua email.');return;}
+$('#toCode').onclick=()=>{reset=true;setMode('code');$('#email2').focus();};$('#toLogin').onclick=()=>setMode('login');
+try{const e=localStorage.getItem('hp_email');if(e){$('#email').value=e;$('#email2').value=e;}}catch(e){}
+async function post(p,b){const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json','x-hp':'1'},body:JSON.stringify(b),credentials:'same-origin'});const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error&&j.error.message||'Errore '+r.status);e.code=j.error&&j.error.code;throw e;}return j;}
+const remember=e=>{try{localStorage.setItem('hp_email',e);}catch(x){}};
+$('#fLogin').onsubmit=async ev=>{ev.preventDefault();const email=$('#email').value.trim(),password=$('#pw').value;if(!email||!password){show('Inserisci email e password.');return;}
+  $('#bLogin').disabled=true;try{await post('/api/auth/login',{email,password});remember(email);location.href='/';}
+  catch(e){if(e.code==='no_password'){reset=false;setMode('code');show(e.message,'ok');}else if(e.code==='pending'){step(3);}else show(e.message);}
+  finally{$('#bLogin').disabled=false;}};
+async function request(){const email=$('#email2').value.trim();if(!email){show('Inserisci la tua email.');return;}
   if(mode==='register'&&!$('#name').value.trim()){show('Inserisci nome e cognome.');return;}
   $('#b1').disabled=true;$('#b1').textContent='Invio in corso…';
-  try{await post('/api/auth/request',{email,name:$('#name').value.trim(),mode});try{localStorage.setItem('hp_email',email);}catch(e){}$('#em').textContent=email;step(2);$('#code').value='';$('#code').focus();}
-  catch(e){show(e.message);if(/registrat/.test(e.message)&&mode==='login')setMode('register'),show(e.message);}
+  try{await post('/api/auth/request',{email,name:$('#name').value.trim(),mode:mode==='register'?'register':'login'});remember(email);$('#em').textContent=email;$('#emailHid').value=email;step(2);$('#code').value='';}
+  catch(e){if(e.code==='not_registered'){setMode('register');}show(e.message);}
   finally{$('#b1').disabled=false;$('#b1').textContent='Invia codice';}}
-$('#f1').onsubmit=e=>{e.preventDefault();request();};
+$('#fCode').onsubmit=e=>{e.preventDefault();request();};
 $('#f2').onsubmit=async e=>{e.preventDefault();const code=$('#code').value.replace(/\D/g,'');if(code.length!==6){show('Il codice ha 6 cifre.');return;}
-  $('#b2').disabled=true;try{const j=await post('/api/auth/verify',{email:$('#email').value.trim(),code});if(j.pending){step(3);return;}location.href='/';}
+  $('#b2').disabled=true;try{const j=await post('/api/auth/verify',{email:$('#email2').value.trim(),code,reset});if(j.pending){step(3);return;}if(j.needPassword){step(4);return;}location.href='/';}
   catch(e){show(e.message);}finally{$('#b2').disabled=false;}};
 $('#code').addEventListener('input',()=>{if($('#code').value.replace(/\D/g,'').length===6)$('#f2').requestSubmit();});
-$('#again').onclick=async()=>{try{await post('/api/auth/request',{email:$('#email').value.trim(),name:$('#name').value.trim(),mode});show('Nuovo codice inviato.','ok');}catch(e){show(e.message);}};
+function score(p){let s=0;if(p.length>=8)s++;if(p.length>=12)s++;if(/[a-z]/.test(p)&&/[A-Z]/.test(p))s++;if(/\d/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;return s;}
+$('#np1').addEventListener('input',()=>{const s=score($('#np1').value);const b=$('#mbar');b.style.width=(s*20)+'%';b.style.background=s<=2?'var(--accent)':s===3?'#A8701A':'#2D7A4E';});
+$('#show').onchange=e=>{$('#np1').type=$('#np2').type=e.target.checked?'text':'password';};
+$('#f4').onsubmit=async e=>{e.preventDefault();const a=$('#np1').value,b=$('#np2').value;
+  if(a.length<8){show('La password deve avere almeno 8 caratteri.');return;}if(!/[A-Za-z]/.test(a)||!/\d/.test(a)){show('Usa almeno una lettera e un numero.');return;}if(a!==b){show('Le due password non coincidono.');$('#np2').focus();return;}
+  $('#b4').disabled=true;try{await post('/api/auth/password',{password:a,confirm:b});location.href='/';}catch(x){show(x.message);}finally{$('#b4').disabled=false;}};
+$('#again').onclick=async()=>{try{await post('/api/auth/request',{email:$('#email2').value.trim(),name:$('#name').value.trim(),mode:mode==='register'?'register':'login'});show('Nuovo codice inviato.','ok');}catch(e){show(e.message);}};
 $('#back').onclick=()=>step(1);$('#back2').onclick=()=>{setMode('login');step(1);};
+(async()=>{const q=new URLSearchParams(location.search);if(q.get('step')==='pwd'){try{const r=await fetch('/api/me',{credentials:'same-origin'});if(r.ok){const m=await r.json();$('#emailHid').value=m.email;step(4);return;}}catch(e){}}
+  if(q.get('reset')){reset=true;setMode('code');}})();
 </script>
 </body>
 </html>

@@ -9,6 +9,25 @@
     me.appendChild(b);
   }
 
+  // Password: il blocco locale è sostituito dalla password di accesso a hikpalermo.com
+  window.pwdActive = () => false;
+  window.pwdRow = function () {
+    return el('div', { class: 'row between', style: 'border-top:1px solid var(--line-2);padding-top:10px' },
+      el('div', { class: 'row' }, ic('lock', 16), el('b', {}, 'Password di accesso'), el('span', { class: 'pill s-acq' }, 'Attiva')),
+      btn('Cambia password', pwdChange, 'sm', 'key'));
+  };
+  function pwdChange() {
+    const a = el('input', { type: 'password', id: 'cpw1', autocomplete: 'new-password' }), b = el('input', { type: 'password', id: 'cpw2', autocomplete: 'new-password' });
+    const msg = el('p', { class: 'hint' }, 'Almeno 8 caratteri, con lettere e numeri. Gli altri dispositivi collegati verranno disconnessi.');
+    const body = el('div', { class: 'stack' }, el('label', { class: 'fld' }, el('span', {}, 'Nuova password'), a), el('label', { class: 'fld' }, el('span', {}, 'Conferma password'), b), msg);
+    const m = modal('Cambia password', body, [el('span', { class: 'grow' }), btn('Annulla', () => m.close()), btn('Salva', async () => {
+      if (a.value.length < 8 || !/[A-Za-z]/.test(a.value) || !/\d/.test(a.value)) { toast('Almeno 8 caratteri, con lettere e numeri.', 'bad'); a.focus(); return; }
+      if (a.value !== b.value) { toast('Le due password non coincidono.', 'bad'); b.focus(); return; }
+      try { await HIK_CF.postJ('/api/auth/password', { password: a.value, confirm: b.value }); toast('Password aggiornata'); m.close(); } catch (e) { toast(e.message, 'bad'); }
+    }, 'pri', 'lock')]);
+    setTimeout(() => a.focus(), 50);
+  }
+
   // Pannello «Accessi al CRM» in Gruppo e impostazioni (solo amministratori)
   let users = null, loading = false;
   const ST = { active: ['Attivo', 'ok'], pending: ['In attesa', 'warn'], disabled: ['Disattivato', 'bad'] };
@@ -18,9 +37,9 @@
     loading = false; if (S.view === 'set') VIEWS.set.update();
   }
   async function act(u, action) {
-    const lab = { approve: 'approvare', reject: 'rifiutare', disable: 'disattivare', enable: 'riattivare', delete: 'eliminare' }[action];
+    const lab = { approve: 'approvare', reject: 'rifiutare', disable: 'disattivare', enable: 'riattivare', delete: 'eliminare', resetpwd: 'reimpostare la password e' }[action];
     if (action !== 'approve' && action !== 'enable' && !(await ask('Vuoi ' + lab + ' l\'accesso di ' + u.name + ' (' + u.email + ')?', 'Conferma'))) return;
-    try { await HIK_CF.postJ('/api/users', { id: u.id, action }); toast(action === 'approve' ? u.name + ' approvato: riceverà un\'email.' : 'Fatto'); }
+    try { await HIK_CF.postJ('/api/users', { id: u.id, action }); toast(action === 'approve' ? u.name + ' approvato: riceverà un\'email.' : action === 'resetpwd' ? 'Password azzerata: ' + u.name + ' ne creerà una nuova con un codice via email.' : 'Fatto'); }
     catch (e) { toast(e.message, 'bad'); }
     loadUsers();
   }
@@ -33,9 +52,9 @@
     const rows = users.map(u => {
       const st = ST[u.status] || [u.status, ''];
       const acts = u.status === 'pending' ? [btn('Approva', () => act(u, 'approve'), 'sm pri'), btn('Rifiuta', () => act(u, 'reject'), 'sm ghost')]
-        : u.status === 'active' ? (u.id === S.me ? [] : [btn('Disattiva', () => act(u, 'disable'), 'sm ghost')])
+        : u.status === 'active' ? (u.id === S.me ? [] : [u.has_pwd ? btn('Reimposta password', () => act(u, 'resetpwd'), 'sm ghost') : null, btn('Disattiva', () => act(u, 'disable'), 'sm ghost')])
           : [btn('Riattiva', () => act(u, 'enable'), 'sm'), btn('Elimina', () => act(u, 'delete'), 'sm ghost')];
-      return el('tr', {}, el('td', {}, el('b', {}, u.name || '—'), el('div', { class: 'hint' }, u.email)), el('td', {}, el('span', { class: 'pill', style: '--c:var(--' + st[1] + ')' }, st[0])), el('td', { class: 'hint' }, fmt(u.last_login)), el('td', {}, el('div', { class: 'row', style: 'justify-content:flex-end;gap:6px' }, ...acts)));
+      return el('tr', {}, el('td', {}, el('b', {}, u.name || '—'), el('div', { class: 'hint' }, u.email)), el('td', {}, el('span', { class: 'pill', style: '--c:var(--' + st[1] + ')' }, st[0]), u.status === 'active' && !u.has_pwd ? el('div', { class: 'hint' }, 'Password da creare') : null), el('td', { class: 'hint' }, fmt(u.last_login)), el('td', {}, el('div', { class: 'row', style: 'justify-content:flex-end;gap:6px' }, ...acts)));
     });
     return el('section', { class: 'panel stack', id: 'cfAccess' }, head,
       pend.length ? el('div', { class: 'banner' }, pend.length === 1 ? '1 richiesta di accesso da approvare.' : pend.length + ' richieste di accesso da approvare.') : null,

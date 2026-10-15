@@ -58,7 +58,7 @@ async function currentUser(req, env) {
   const tok = cookie(req, 'hp_s');
   if (!tok) return null;
   const h = await sha256(tok);
-  const r = await env.DB.prepare("SELECT u.id, u.email, u.name, u.status FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires>?").bind(h, now()).first();
+  const r = await env.DB.prepare("SELECT u.id, u.email, u.name, u.status, (u.pwd_hash IS NOT NULL) AS has_pwd FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires>?").bind(h, now()).first();
   if (!r || r.status !== 'active') return null;
   return r;
 }
@@ -66,6 +66,70 @@ async function newSession(env, uid) {
   const tok = rnd(32);
   await env.DB.prepare('INSERT INTO sessions(token_hash,user_id,expires,created) VALUES(?,?,?,?)').bind(await sha256(tok), uid, now() + SESSION_DAYS * 864e5, now()).run();
   return `hp_s=${tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
+}
+
+/* ---------------- password ---------------- */
+const PBKDF2_ITER = 100000; // massimo consentito dai Workers
+async function pwHash(pw, saltHex) {
+  const salt = Uint8Array.from(saltHex.match(/../g).map(h => parseInt(h, 16)));
+  const key = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITER }, key, 256);
+  return [...new Uint8Array(bits)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function pwProblem(pw) {
+  pw = String(pw || '');
+  if (pw.length < 8) return 'La password deve avere almeno 8 caratteri.';
+  if (pw.length > 200) return 'Password troppo lunga.';
+  if (!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return 'Usa almeno una lettera e un numero.';
+  return null;
+}
+function safeEq(a, b) { if (a.length !== b.length) return false; let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i); return r === 0; }
+
+/* ---------------- geocodifica (OpenStreetMap Nominatim, con cache) ---------------- */
+const HQ = { lat: 38.1418836, lng: 13.3379637, label: 'Hikvision · Viale Lazio 30b, Palermo' };
+async function geocode(env, q) {
+  q = String(q || '').trim().replace(/\s+/g, ' ').slice(0, 200);
+  if (q.length < 3) return [];
+  if (/\bhik(vision)?\b|viale lazio,? ?30/i.test(q) && /palermo|hik/i.test(q)) return [{ ...HQ }];
+  const key = q.toLowerCase();
+  const c = await env.DB.prepare('SELECT res FROM geocache WHERE q=?').bind(key).first();
+  if (c) return parse(c.res) || [];
+  let out = [];
+  try {
+    const u = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=it&accept-language=it&q=' + encodeURIComponent(q);
+    const r = await fetch(u, { headers: { 'user-agent': 'HIKPALERMO-CRM/1.0 (https://hikpalermo.com; notifiche@hikpalermo.com)', referer: 'https://hikpalermo.com/' } });
+    if (r.ok) out = (await r.json()).map(x => ({ lat: +x.lat, lng: +x.lon, label: x.display_name }));
+    else return [];
+  } catch { return []; }
+  await env.DB.prepare('INSERT OR REPLACE INTO geocache(q,res,at) VALUES(?,?,?)').bind(key, JSON.stringify(out), now()).run();
+  return out;
+}
+// Aggiunge le coordinate a eventi e commesse partendo dal luogo / indirizzo
+async function autoGeo(env, col, id, prev, data) {
+  if (!data) return;
+  let q = '';
+  if (col === 'eventi') q = String(data.luogo || '').trim();
+  else if (col === 'commesse') q = [data.indirizzo, data.citta].filter(x => x && String(x).trim()).join(', ');
+  else return;
+  const prevQ = prev ? (col === 'eventi' ? String(prev.luogo || '').trim() : [prev.indirizzo, prev.citta].filter(x => x && String(x).trim()).join(', ')) : '';
+  const manual = data.lat != null && (!prev || prev.lat !== data.lat || prev.lng !== data.lng);
+  if (manual) { if (data.geoAuto) await patchDoc(env, col, id, { geoAuto: null }); return; } // coordinate inserite a mano
+  if (data.lat != null && !data.geoAuto) return;        // posizione manuale: resta
+  if (data.lat != null && q === prevQ) return;          // già posizionato e indirizzo invariato
+  if (!q) { if (col === 'eventi' && data.lat != null && data.geoAuto) await patchDoc(env, col, id, { lat: null, lng: null, geoAuto: null }); return; }
+  if (data.geoQ === q && data.lat == null) return;      // già cercato senza risultati
+  const r = await geocode(env, q);
+  const g = r[0];
+  await patchDoc(env, col, id, g ? { lat: g.lat, lng: g.lng, geoAuto: true, geoQ: q } : { geoQ: q, ...(data.geoAuto ? { lat: null, lng: null, geoAuto: null } : {}) });
+}
+async function patchDoc(env, col, id, fields) {
+  const cur = await getDoc(env, col, id);
+  if (!cur) return;
+  const next = { ...cur.data, ...fields };
+  for (const k of Object.keys(fields)) if (fields[k] === null && (k === 'geoAuto')) delete next[k];
+  const v = Math.max(cur.v + 1, now());
+  await env.DB.prepare('UPDATE docs SET data=?, version=?, updated=? WHERE col=? AND id=?').bind(JSON.stringify(next), v, now(), col, id).run();
+  await broadcast(env, { col, id, v, data: next, by: 'server' });
 }
 
 /* ---------------- email (Resend) ---------------- */
@@ -121,6 +185,7 @@ const b64 = s => { const b = enc.encode(s); let o = ''; for (let i = 0; i < b.le
 
 /* ---------------- hook dopo le scritture ---------------- */
 async function afterWrite(env, u, op, col, id, prev, data) {
+  if (op !== 'delete' && (col === 'eventi' || col === 'commesse')) { try { await autoGeo(env, col, id, prev, data); } catch (e) { console.log('geo', e); } }
   // Notifiche: ogni voce del feed con destinatari diventa una email
   if (col === 'feed' && op === 'set' && !prev && data && Array.isArray(data.to) && data.to.length) {
     if (data.t === 'evento' && !data.ref && /^ha annullato/.test(data.msg || '')) return; // gestito dalla cancellazione dell'evento
@@ -300,8 +365,8 @@ async function authVerify(req, env) {
   }
   if (user.status === 'pending') return json({ ok: true, pending: true });
   if (user.status !== 'active') return err('disabled', 'Accesso disattivato: contatta un amministratore.', 403);
-  await env.DB.prepare('UPDATE users SET last_login=? WHERE id=?').bind(now(), user.id).run();
-  return json({ ok: true }, 200, { 'set-cookie': await newSession(env, user.id) });
+  await env.DB.prepare('UPDATE users SET last_login=?, fails=0, lock_until=0 WHERE id=?').bind(now(), user.id).run();
+  return json({ ok: true, needPassword: !user.pwd_hash || !!b.reset }, 200, { 'set-cookie': await newSession(env, user.id) });
 }
 
 async function adminEmails(env) {
@@ -318,6 +383,43 @@ async function notifyAdminsPending(env, u) {
     html: mailShell('Nuova richiesta di accesso', `<p><b>${esc(u.name)}</b> (${esc(u.email)}) si è registrato e attende la tua approvazione.</p>
 <p style="font-size:13px;color:#45576A">Approva o rifiuta da <b>Gruppo e impostazioni → Richieste di accesso</b>.</p>`, ['Apri il CRM', env.APP_URL + '/'])
   });
+}
+
+async function authLogin(req, env) {
+  const b = await req.json().catch(() => ({}));
+  const email = normEmail(b.email);
+  const pw = String(b.password || '');
+  const u = await env.DB.prepare('SELECT * FROM users WHERE email=?').bind(email).first();
+  if (!u) {
+    const team = await teamByEmail(env, email);
+    if (team || email === normEmail(env.OWNER_EMAIL)) return err('no_password', 'Primo accesso: ricevi un codice via email per creare la tua password.', 409);
+    return err('bad_login', 'Email o password non corretti.', 401);
+  }
+  if (u.status === 'pending') return err('pending', 'La tua registrazione è in attesa di approvazione da parte di un amministratore.', 403);
+  if (u.status !== 'active') return err('disabled', 'Accesso disattivato: contatta un amministratore.', 403);
+  if (!u.pwd_hash) return err('no_password', 'Non hai ancora una password: ricevi un codice via email per crearla.', 409);
+  if (u.lock_until && u.lock_until > now()) return err('locked', 'Troppi tentativi errati: riprova tra qualche minuto o accedi con un codice via email.', 429);
+  const h = await pwHash(pw, u.pwd_salt);
+  if (!safeEq(h, u.pwd_hash)) {
+    const f = (u.fails || 0) + 1;
+    await env.DB.prepare('UPDATE users SET fails=?, lock_until=? WHERE id=?').bind(f, f >= 8 ? now() + 15 * 60e3 : 0, u.id).run();
+    return err('bad_login', 'Email o password non corretti.', 401);
+  }
+  await env.DB.prepare('UPDATE users SET last_login=?, fails=0, lock_until=0 WHERE id=?').bind(now(), u.id).run();
+  return json({ ok: true }, 200, { 'set-cookie': await newSession(env, u.id) });
+}
+async function setPassword(req, env, u) {
+  const b = await req.json().catch(() => ({}));
+  const pw = String(b.password || '');
+  const pb = pwProblem(pw);
+  if (pb) return err('weak_password', pb);
+  if (b.confirm != null && b.confirm !== pw) return err('mismatch', 'Le due password non coincidono.');
+  const salt = rndHex(16);
+  await env.DB.prepare('UPDATE users SET pwd_hash=?, pwd_salt=?, fails=0, lock_until=0 WHERE id=?').bind(await pwHash(pw, salt), salt, u.id).run();
+  // chiude le altre sessioni aperte su altri dispositivi
+  const tok = cookie(req, 'hp_s');
+  if (tok) await env.DB.prepare('DELETE FROM sessions WHERE user_id=? AND token_hash<>?').bind(u.id, await sha256(tok)).run();
+  return json({ ok: true });
 }
 
 /* ---------------- Claude ---------------- */
@@ -343,7 +445,7 @@ async function api(req, env, ctx, url, u) {
   if (p === '/api/me') {
     const r = await ruoli(env);
     const team = await getDoc(env, 'team', u.id);
-    return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id });
+    return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd });
   }
   if (p === '/api/db' && m === 'GET') {
     const col = url.searchParams.get('col') || '';
@@ -377,7 +479,7 @@ async function api(req, env, ctx, url, u) {
   if (p === '/api/users') {
     if (!(await isAdmin(env, u))) return err('permission_denied', 'Solo per amministratori', 403);
     if (m === 'GET') {
-      const { results } = await env.DB.prepare('SELECT id,email,name,status,created,last_login FROM users ORDER BY created DESC').all();
+      const { results } = await env.DB.prepare('SELECT id,email,name,status,created,last_login,(pwd_hash IS NOT NULL) AS has_pwd FROM users ORDER BY created DESC').all();
       return json(results);
     }
     if (m === 'POST') {
@@ -390,6 +492,8 @@ async function api(req, env, ctx, url, u) {
         if (b.action === 'approve') await sendMail(env, { to: t.email, kind: 'approved', subject: 'Accesso al CRM HIK PALERMO approvato', html: mailShell('Benvenuto in HIK PALERMO', `<p>Ciao ${esc(t.name)}, il tuo accesso è stato approvato. Entra con la tua email: ti invieremo un codice.</p>`, ['Entra nel CRM', env.APP_URL + '/login']) });
       } else if (b.action === 'reject' || b.action === 'disable') {
         await env.DB.batch([env.DB.prepare("UPDATE users SET status='disabled' WHERE id=?").bind(t.id), env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id)]);
+      } else if (b.action === 'resetpwd') {
+        await env.DB.batch([env.DB.prepare('UPDATE users SET pwd_hash=NULL, pwd_salt=NULL WHERE id=?').bind(t.id), env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id)]);
       } else if (b.action === 'delete') {
         await env.DB.batch([env.DB.prepare('DELETE FROM users WHERE id=?').bind(t.id), env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id)]);
       } else return err('invalid_argument', 'Azione non valida');
@@ -415,6 +519,8 @@ async function api(req, env, ctx, url, u) {
     return json({ ok: true });
   }
   if (p === '/api/claude' && m === 'POST') return claudeProxy(req, env);
+  if (p === '/api/auth/password' && m === 'POST') return setPassword(req, env, u);
+  if (p === '/api/geocode' && m === 'GET') return json(await geocode(env, url.searchParams.get('q')));
   if (p === '/api/auth/logout' && m === 'POST') {
     const tok = cookie(req, 'hp_s');
     if (tok) await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(await sha256(tok)).run();
@@ -437,6 +543,7 @@ export default {
     try {
       if (p === '/api/auth/request' && req.method === 'POST') return await authRequest(req, env);
       if (p === '/api/auth/verify' && req.method === 'POST') return await authVerify(req, env);
+      if (p === '/api/auth/login' && req.method === 'POST') return await authLogin(req, env);
       const u = await currentUser(req, env);
       if (u && (p === '/login' || p === '/login.html')) return Response.redirect(url.origin + '/', 302);
       if (PUBLIC_PATHS.has(p)) return env.ASSETS.fetch(p === '/login.html' ? new Request(url.origin + '/login', req) : req);

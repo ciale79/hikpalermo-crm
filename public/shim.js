@@ -3,7 +3,7 @@
   'use strict';
   const H = { 'x-hp': '1' };
   let ME = null;
-  const meP = fetch('/api/me', { credentials: 'same-origin' }).then(r => { if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); }).then(j => (ME = j));
+  const meP = fetch('/api/me', { credentials: 'same-origin' }).then(r => { if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); }).then(j => { if (j && j.needPassword) { location.href = '/login?step=pwd'; throw new Error('pwd'); } return (ME = j); });
 
   function E(code, message) { const e = new Error(message || code); e.code = code; return e; }
   async function call(path, opt = {}) {

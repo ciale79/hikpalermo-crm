@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script src="/shim.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <title>HIK Palermo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -405,6 +407,19 @@ body[data-lockwait] .app{visibility:hidden}
 }
 @media (max-width:480px){.kpis{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.kpi .v{font-size:1.35rem}.nav button span.lbl{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* mappe GIS */
+.lmap{height:440px;border-radius:var(--r);overflow:hidden;position:relative;z-index:0;border:1px solid var(--line-2);background:var(--surface-2)}
+.lmap.one{height:300px}
+.hp-pin{filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.hp-hq{filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))}
+.hp-hq .hq-b{background:#C8102E;color:#fff;border:2px solid #fff;border-radius:4px;padding:3px 8px;text-align:center;line-height:1.05;font-family:var(--font-display);font-weight:800;letter-spacing:.6px}
+.hp-hq .hq-b span{display:block;font-size:13px}.hp-hq .hq-b small{display:block;font-size:8px;letter-spacing:2px;opacity:.9}
+.hp-hq .hq-t{width:0;height:0;margin:0 auto;border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid #C8102E}
+.hp-pop{display:flex;gap:10px;margin-top:6px}.hp-pop a{color:var(--accent);font-weight:600}
+.hp-sub{color:#45576A;font-size:12px}
+.hp-fit{width:30px;height:30px;line-height:30px;text-align:center;background:#fff;color:#14212C!important;font-size:16px;text-decoration:none;display:block}
+.leaflet-container{font-family:var(--font-body)}
 </style>
 </head>
 <body>
@@ -800,7 +815,7 @@ function commessaForm(c){const isNew=!c.id;const d={...c};const year=new Date().
   avR.addEventListener('input',drawAv);avMan.addEventListener('change',drawAv);f.stato.addEventListener('change',drawAv);drawAv();
   const avBox=el('div',{class:'fld full'},el('span',{},'Stato di avanzamento'),avM,el('div',{class:'row',style:'flex-wrap:nowrap'},el('label',{class:'row',style:'gap:6px;white-space:nowrap'},avMan,'Imposta a mano'),avR),el('span',{class:'hint'},'In automatico segue lo stato: Opportunità 10% · Sopralluogo 25% · Progettazione 40% · Offerta 55% · Trattativa 75% · Acquisita 100%.'));
   const body=el('div',{class:'fgrid'},fld('Nome commessa *',f.nome,'full'),fld('Titolo',f.tit,'full'),fld('Valore commessa €',f.val),fld('Utile €',f.ut),fld('Stato progetto',f.stp),fld('Data inserimento',f.dins),fld('Codice',f.codice),fld('Cliente',el('div',{class:'row',style:'flex-wrap:nowrap'},f.cli,btn('',()=>clienteForm({},nc=>{fillSel(f.cli,[['','— Seleziona cliente —'],...[...S.clienti.values(),nc].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i).sort(byName).map(x=>[x.id,x.nome])],nc.id);}),'sm','plus'))),fld('Stato',f.stato),fld('Tipo di commessa',f.tipo),rifW,fld('Responsabile',f.resp),fld('Data apertura',f.ap),fld('Scadenza / consegna',f.sc),fld('Probabilità di chiusura %',f.prob),avBox,fld('Indirizzo cantiere',f.ind),fld('Città',f.citta),
-    el('div',{class:'fld full'},el('span',{},'Posizione GPS'),f.gps,el('div',{class:'row'},gpsMsg,findL),el('span',{class:'hint'},'Su Google Maps tieni premuto sul punto esatto, copia le coordinate o il link e incollali qui.')),fld('Note',f.note,'full'));
+    el('div',{class:'fld full'},el('span',{},'Posizione GPS'),f.gps,el('div',{class:'row'},gpsMsg,findL,window.hpGeoBtn?hpGeoBtn(f):null),el('span',{class:'hint'},'Usa «Trova dall\'indirizzo», oppure su Google Maps tieni premuto sul punto esatto e incolla qui coordinate o link. Se lasci vuoto, la posizione si ricava dall\'indirizzo al salvataggio.')),fld('Note',f.note,'full'));
   const m=modal(isNew?'Nuova commessa':'Modifica commessa',body,[!isNew?btn('Elimina',async()=>{if(!await ask('Eliminare la commessa «'+c.nome+'»? Le offerte collegate restano nell\'archivio.'))return;if(await remove('commesse',c.id)){m.close();go('commesse');}},'danger','trash'):null,el('span',{class:'grow'}),btn('Annulla',()=>m.close()),btn(isNew?'Crea commessa':'Salva',save,'pri')].filter(Boolean),{wide:true});
   async function save(){const nome=f.nome.value.trim();if(!nome){f.nome.focus();toast('Inserisci il nome della commessa.','bad');return;}const p=parseCoords(f.gps.value);if(f.gps.value.trim()&&!p){toast('Coordinate non riconosciute: usa il formato 45.4642, 9.1900.','bad');return;}
     const id=c.id||newId('commesse');const o={...c,nome,codice:f.codice.value.trim(),clienteId:f.cli.value||null,stato:f.stato.value,chiusaAt:(WON.has(f.stato.value)||f.stato.value==='persa')?((c.chiusaAt&&(WON.has(c.stato)||c.stato==='persa'))?c.chiusaAt:Date.now()):null,titolo:f.tit.value.trim(),valore:f.val.value===''?null:+f.val.value,utile:f.ut.value===''?null:+f.ut.value,statoProgetto:f.stp.value||null,dataIns:f.dins.value||null,tipoCom:f.tipo.value,rifGara:f.tipo.value==='normale'?'':f.rif.value.trim(),avanzMan:avMan.checked,avanz:avMan.checked?+avR.value:null,resp:f.resp.value||null,apertura:f.ap.value||null,scadenza:f.sc.value||null,prob:f.prob.value===''?null:+f.prob.value,indirizzo:f.ind.value.trim(),citta:f.citta.value.trim(),lat:p?p.lat:null,lng:p?p.lng:null,note:f.note.value,upd:Date.now()};delete o.id;if(isNew){o.by=S.me;o.at=Date.now();}
@@ -1418,6 +1433,7 @@ const _go=go;go=function(v,sel,tab){if(S.view==='commesse'&&VIEWS.commesse.leave
 const startHash=(location.hash||'').slice(1);if(NAV.some(n=>n[0]===startHash))S.view=startHash;
 boot();
 </script>
+<script src="/maps.js"></script>
 <script src="/cf-addon.js"></script>
 </body>
 </html>
