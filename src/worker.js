@@ -4,6 +4,7 @@
 import seed from '../seed/data.json';
 import mag1009 from '../seed/magazzino-1009.json';
 import extraImport from '../seed/import-bolle.json';
+import extraLinks from '../seed/import-links.json';
 
 const SESSION_DAYS = 60;
 const OTP_MIN = 10;
@@ -543,7 +544,8 @@ async function migrateMag(env) {
   await broadcast(env, { reload: 'magazzino' });
 }
 // Import una tantum di documenti preparati (es. schede demo dalle bolle): non sovrascrive documenti esistenti
-async function migrateExtra(env) {
+async function migrateExtra(env) { for (const x of [extraImport, extraLinks]) await migrateOne(env, x); }
+async function migrateOne(env, extraImport) {
   const key = 'mig_' + String(extraImport.key || '').replace(/[^A-Za-z0-9_]/g, '');
   if (key === 'mig_' || await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id=?").bind(key).first()) return;
   const t = now();
