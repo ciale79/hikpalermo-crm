@@ -465,6 +465,7 @@ th.r .hp-sb{flex-direction:row-reverse}
 .pa-notes{margin:4px 0 0;padding-left:20px;font-size:.85rem;color:var(--accent)}
 .pa-notes li{margin:4px 0}.pa-notes b{color:var(--ink)}
 @media (max-width:760px){.pa-tr{grid-template-columns:90px 1fr;}.pa-tv{grid-column:1/-1;text-align:left}}
+.ev-by{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:.8rem;color:var(--ink-3)}.ev-by b{color:var(--ink-2);font-weight:600}.ev-by .avatar{width:18px;height:18px;font-size:.55rem}
 </style>
 </head>
 <body>
@@ -764,7 +765,7 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
 function matrix(){const g=el('div',{class:'matrix'},el('span'),TIERS.map(t=>el('span',{class:'h'},TLAB[t])));const cl=[...S.clienti.values()];
   for(const [L,lab,key] of [['pro','Pro','statusPro'],['sol','Solution','statusSol']]){const counts=TIERS.map(t=>cl.filter(c=>c[key]===t).length);const mx=Math.max(1,...counts);g.append(el('span',{class:'eyebrow'},lab));TIERS.forEach((t,i)=>g.append(el('button',{class:'c',type:'button',style:{'--c':`var(--t-${t.toLowerCase()})`,'--a':String(Math.round(counts[i]/mx*45))},title:`${lab} ${TLAB[t]}: apri elenco`,onclick:()=>{S.fCli={...S.fCli,pro:L==='pro'?t:'',sol:L==='sol'?t:''};go('clienti');}},counts[i])));}
   return g;}
-function evLi(e){const d=new Date(e.start);return el('div',{class:'ev-li',onclick:()=>eventDetail(e)},el('div',{class:'d'},el('small',{},d.toLocaleDateString('it-IT',{weekday:'short'})),el('b',{},d.getDate()),el('small',{},d.toLocaleDateString('it-IT',{month:'short'}))),el('div',{class:'t'},el('div',{},e.titolo),el('div',{class:'row',style:'gap:6px'},el('span',{class:'pill e-'+e.tipo},ETL[e.tipo]||'Evento'),el('span',{class:'soft num'},fT(e.start)+'–'+fT(e.end)),e.commessaId&&S.commesse.get(e.commessaId)?el('span',{class:'muted'},'· '+S.commesse.get(e.commessaId).nome):null)));}
+function evLi(e){const d=new Date(e.start);return el('div',{class:'ev-li',onclick:()=>eventDetail(e)},el('div',{class:'d'},el('small',{},d.toLocaleDateString('it-IT',{weekday:'short'})),el('b',{},d.getDate()),el('small',{},d.toLocaleDateString('it-IT',{month:'short'}))),el('div',{class:'t'},el('div',{},e.titolo),el('div',{class:'row',style:'gap:6px'},el('span',{class:'pill e-'+e.tipo},ETL[e.tipo]||'Evento'),el('span',{class:'soft num'},fT(e.start)+'–'+fT(e.end)),e.commessaId&&S.commesse.get(e.commessaId)?el('span',{class:'muted'},'· '+S.commesse.get(e.commessaId).nome):null),e.by?el('div',{class:'ev-by',title:'Creato da '+nm(e.by)},av(e.by,'avatar sm'),el('span',{},'Creato da ',el('b',{},e.by===S.me?'te':nm(e.by)))):null));}
 
 /* ---------- Commesse ---------- */
 VIEWS.commesse={title:()=>S.sel?'Commessa':'Commesse',mount(){if(S.sel)return comDetail.mount();const f=S.fCom;const r=$('#view');
