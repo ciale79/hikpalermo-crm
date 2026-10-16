@@ -1520,7 +1520,7 @@ VIEWS.fatt={title:()=>'Fatturato',mount(){this.root=$('#view');if(this.q==null)t
   const kpis=el('div',{class:'kpis'},
     tile('Italia',itV,itP!=null?yoyChip(itV,itP):el('span',{class:'hint'},'trimestre in corso'),achLine(itV,itT)),
     tile('Sicilia',siV,siP!=null?yoyChip(siV,siP):el('span',{class:'hint'},'trimestre in corso'),siT?achLine(siV,siT):el('span',{class:'hint'},'Quota sul nazionale '+fN.format(round2(siV/itV*100))+'%')),
-    tile('Ordini aperti',F.oo.italia,el('span',{class:'s'},'Italia'),el('span',{class:'s'},'Sicilia '+eur0(F.oo.sicilia))),
+    tile('Ordini aperti',F.oo.sicilia,el('span',{class:'s'},'Sicilia'),el('span',{class:'s'},'Italia '+eur0(F.oo.italia))),
     tile('KAM '+kam.nome,kamTot,yoyChip(kamTot,kamPrev),el('span',{class:'s'},kam.aree.map(a=>a[0][0]+a[0].slice(1).toLowerCase()+' '+eurShort(a[1])).join(' · ')+' · da inizio anno')));
   // Italia vs target
   const itP1=el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Italia · fatturato e obiettivo per trimestre'}),legend([['var(--info)','Fatturato'],['var(--ink)','Obiettivo',true]])),svgQBars([{n:'Italia',v:sa.italiaOwnQ,c:'var(--info)'}],sa.targetItaliaQ,{label:'Italia per trimestre'}),el('p',{class:'hint'},'* Q4 fino al '+sa.dataLabel+'. Obiettivo annuale '+eur0(sa.targetItalia)+': raggiunto '+fN.format(round2(sa.italiaOwn/sa.targetItalia*100))+'%.'));
