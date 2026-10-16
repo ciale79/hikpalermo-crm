@@ -14,6 +14,9 @@
   const hue = r => r == null ? null : r >= 100 ? 125 : r >= 50 ? 32 : 0;
   const achBar = (r) => r == null ? el('span', { class: 'hint' }, '—') :
     el('div', { class: 'pa-ach', 'data-sort': String(Math.round(r * 10) / 10) }, el('div', { class: 'abar' }, el('i', { style: { width: Math.min(100, r) + '%', '--h': String(hue(r)) } })), el('b', { style: { color: 'hsl(' + hue(r) + ' 70% 38%)' } }, fN.format(Math.round(r)) + '%'));
+  const ACC = { NUOVO: 'var(--ok)', RINNOVATO: 'var(--info)', SCADUTO: 'var(--accent)', 'NON RINNOVATO': 'var(--ink-3)' };
+  const accChip = a => a ? el('span', { class: 'pill', style: '--c:' + (ACC[a] || 'var(--ink-3)') }, a.charAt(0) + a.slice(1).toLowerCase()) : el('span', { class: 'muted' }, '—');
+  window.hpAccChip = accChip;
   const euro = v => v == null ? '—' : eur0(v);
   const won = new Set(['acq', 'exec', 'chiusa']);
   function comStats(cid) {
@@ -28,11 +31,12 @@
     const cliSel = c ? null : selectEl('paCli', [['', '— Scegli il cliente —'], ...[...S.clienti.values()].filter(x => !x.partner).sort(byName).map(x => [x.id, x.nome])], '');
     const f = {
       tier: selectEl('paTier', TIERS.slice().reverse().map(t => [t, TLAB[t]]), p.tier), cat: selectEl('paCat', [['SOLUTION', 'Solution'], ['PRO', 'Pro'], ['PRO/SOL', 'Pro e Solution']], p.catalogo),
+      prog: selectEl('paProg', [['', '—'], ['ProExpert', 'ProExpert'], ['Solution', 'Solution'], ['Privilege', 'Privilege']], p.programma || ''), acc: selectEl('paAcc', [['', '—'], ['NUOVO', 'Nuovo'], ['RINNOVATO', 'Rinnovato'], ['SCADUTO', 'Scaduto'], ['NON RINNOVATO', 'Non rinnovato']], p.accordo || ''), cod: inp('paCod', p.codice || '', { placeholder: 'Codice tessera' }),
       reg: inp('paReg', p.regione || ''), tg: inp('paTg', p.target ?? '', { type: 'number', min: 0, step: 500 }),
       q: [0, 1, 2, 3].map(k => inp('paQ' + k, (p.so || [])[k] ?? '', { type: 'number', step: 500, placeholder: '—' })), nota: el('textarea', { id: 'paNota', value: p.nota || '', style: 'min-height:70px' })
     };
     const body = el('div', { class: 'fgrid' }, cliSel ? fld('Cliente *', cliSel, 'full') : null,
-      fld('Stato partnership', f.tier), fld('Catalogo', f.cat), fld('Regione', f.reg), fld('Target ' + p.anno + ' (€)', f.tg),
+      fld('Stato partnership', f.tier), fld('Catalogo', f.cat), fld('Programma', f.prog), fld('Accordo ' + p.anno, f.acc), fld('Codice partner', f.cod), fld('Regione', f.reg), fld('Target ' + p.anno + ' (€)', f.tg),
       el('div', { class: 'fld full' }, el('span', {}, 'Sell-out per trimestre (€)'), el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:8px' }, f.q.map((x, k) => el('label', { class: 'fld grow' }, el('span', {}, 'Q' + (k + 1)), x)))),
       fld('Note', f.nota, 'full'),
       el('p', { class: 'hint full' }, 'Lo stato partnership aggiorna anche lo status Pro / Solution della scheda cliente, in base al catalogo.'));
@@ -43,9 +47,9 @@
       btn('Salva', async () => {
         const cid = c ? c.id : cliSel.value; if (!cid) { toast('Scegli il cliente.', 'bad'); return; }
         const cur = S.clienti.get(cid); const num = x => x.value === '' ? null : +x.value;
-        const np = { ...p, tier: f.tier.value, catalogo: f.cat.value, regione: f.reg.value.trim().toUpperCase(), target: num(f.tg) || 0, so: f.q.map(num), nota: f.nota.value.trim(), upd: Date.now() };
+        const np = { ...p, tier: f.tier.value, catalogo: f.cat.value, programma: f.prog.value, accordo: f.acc.value, codice: f.cod.value.trim(), regione: f.reg.value.trim().toUpperCase(), target: num(f.tg) || 0, so: f.q.map(num), nota: f.nota.value.trim(), upd: Date.now() };
         const up = { partner: np, upd: Date.now() };
-        if (np.catalogo.includes('SOL')) up.statusSol = np.tier; if (np.catalogo.includes('PRO')) up.statusPro = np.tier;
+        up.statusSol = np.catalogo.includes('SOL') ? np.tier : null; up.statusPro = np.catalogo.includes('PRO') ? np.tier : null;
         if (await patch('clienti', cid, up)) { m.close(); toast('Partner salvato'); if (!c) feed('cliente', 'ha aggiunto «' + cur.nome + '» alla review partner', { k: 'cliente', id: cid }); }
       }, 'pri', 'check')]);
   }
@@ -82,7 +86,7 @@
       const r = this.root; const f = S.fPar;
       const all = [...S.clienti.values()].filter(c => c.partner);
       const ql = f.q.toLowerCase();
-      const rows = all.filter(c => (!f.cat || (c.partner.catalogo || '').includes(f.cat)) && (!f.tier || c.partner.tier === f.tier) && (!ql || (c.nome + ' ' + (c.partner.nomeReview || '') + ' ' + (c.partner.regione || '')).toLowerCase().includes(ql)))
+      const rows = all.filter(c => (!f.cat || (c.partner.catalogo || '').includes(f.cat)) && (!f.tier || c.partner.tier === f.tier) && (!f.acc || (c.partner.accordo || '') === f.acc) && (!ql || (c.nome + ' ' + (c.partner.nomeReview || '') + ' ' + (c.partner.regione || '')).toLowerCase().includes(ql)))
         .sort((a, b) => (ORD[a.partner.tier] ?? 9) - (ORD[b.partner.tier] ?? 9) || (b.partner.target || 0) - (a.partner.target || 0));
       const anno = (all[0] && all[0].partner.anno) || new Date().getFullYear();
       const T = rows.reduce((a, c) => { const so = soTot(c.partner); a.t += c.partner.target || 0; a.s += so; a.h1 += (+c.partner.so?.[0] || 0) + (+c.partner.so?.[1] || 0); if (c.partner.target) { a.tc += c.partner.target; a.sc += so; a.gap += Math.max(0, c.partner.target - so); } return a; }, { t: 0, s: 0, h1: 0, tc: 0, sc: 0, gap: 0 });
@@ -93,13 +97,14 @@
         el('div', { class: 'filters' },
           el('input', { type: 'search', placeholder: 'Cerca partner…', value: f.q, oninput: e => { f.q = e.target.value; this.update(); } }),
           selectEl('fpCat', [['', 'Tutti i cataloghi'], ['SOLUTION', 'Solution'], ['PRO', 'Pro']], f.cat, { onchange: e => { f.cat = e.target.value; this.update(); } }),
+          selectEl('fpAcc', [['', 'Tutti gli accordi'], ['NUOVO', 'Nuovi'], ['RINNOVATO', 'Rinnovati'], ['SCADUTO', 'Scaduti'], ['NON RINNOVATO', 'Non rinnovati']], f.acc || '', { onchange: e => { f.acc = e.target.value; this.update(); } }),
           selectEl('fpTier', [['', 'Tutti gli stati'], ...TIERS.slice().reverse().map(t => [t, TLAB[t]])], f.tier, { onchange: e => { f.tier = e.target.value; this.update(); } })),
         btn('Aggiungi partner', () => partnerForm(null), 'pri', 'plus'));
 
       const tile = (t, v, s, x) => el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, t), el('span', { class: 'v' }, v), s ? el('span', { class: 's' }, s) : null, x || null);
       const rTot = pct(T.sc, T.tc);
       const kpis = el('div', { class: 'kpis' },
-        tile('Partner', String(rows.length), TIERS.slice().reverse().map(t => { const n = rows.filter(c => c.partner.tier === t).length; return n ? n + ' ' + TLAB[t] : null; }).filter(Boolean).join(' · ')),
+        tile('Partner', String(rows.length), TIERS.slice().reverse().map(t => { const n = rows.filter(c => c.partner.tier === t).length; return n ? n + ' ' + TLAB[t] : null; }).filter(Boolean).join(' · '), el('span', { class: 's' }, ['NUOVO', 'RINNOVATO', 'SCADUTO'].map(a => { const n = rows.filter(c => c.partner.accordo === a).length; const L = { NUOVO: ['nuovo', 'nuovi'], RINNOVATO: ['rinnovato', 'rinnovati'], SCADUTO: ['scaduto', 'scaduti'] }[a]; return n ? n + ' ' + L[n === 1 ? 0 : 1] : null; }).filter(Boolean).join(' · '))),
         tile('Target ' + anno, eur0(T.t), 'Sell-out ' + (qLab || 'anno') + ' ' + eur0(T.s)),
         tile('Raggiungimento', rTot == null ? '—' : fN.format(Math.round(rTot)) + '%', 'sui partner con target', achBar(rTot)),
         tile('Gap verso target', eur0(T.gap), 'da recuperare in ' + (lastQ ? 'Q' + (lastQ + 1) + '–Q4' : 'corso d\'anno')));
@@ -125,14 +130,14 @@
         const q = k => { const v = (p.so || [])[k]; return el('td', { class: 'r num' + (v == null ? ' muted' : '') }, v == null ? '—' : eur0(v)); };
         return el('tr', { class: 'click', onclick: () => partnerForm(c) },
           el('td', { style: 'min-width:150px' }, el('b', {}, c.nome, mark)),
-          el('td', {}, p.regione || '—'), el('td', { 'data-sort': String(ORD[p.tier] ?? 9) }, tierChip(p.tier)), el('td', {}, p.catalogo || '—'),
+          el('td', { class: 'mono' }, p.codice || '—'), el('td', {}, p.regione || '—'), el('td', { 'data-sort': String(ORD[p.tier] ?? 9) }, tierChip(p.tier)), el('td', {}, p.programma || p.catalogo || '—'), el('td', {}, accChip(p.accordo)),
           el('td', { class: 'r num' }, p.target ? eur0(p.target) : '—'), q(0), q(1), q(2), q(3),
           el('td', { class: 'r num' }, el('b', {}, eur0(so))), el('td', { 'data-sort': r == null ? '-1' : String(r) }, achBar(r)),
           el('td', { class: 'r num' }, p.target ? el('span', { style: { color: so >= p.target ? 'var(--ok)' : '' } }, eur0(p.target - so)) : '—'),
           el('td', { class: 'r num', 'data-sort': String(cs.n) }, cs.n ? el('a', { href: '#', onclick: e => { e.preventDefault(); e.stopPropagation(); hpDrill('Cliente ' + c.nome, x => x.clienteId === c.id); } }, cs.n + ' · ' + eurShort(cs.w + cs.pipe)) : '—'));
       }));
       const table = el('section', { class: 'panel stack' }, el('div', { class: 'panel-h' }, el('h3', { text: 'Review partner ' + anno }), el('span', { class: 'hint' }, 'Clic su una riga per aggiornare target e sell-out')),
-        rows.length ? el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Partner', 'Regione', 'Stato', 'Catalogo', 'Target ' + anno, 'Q1', 'Q2', 'Q3', 'Q4', 'Sell-out', 'Ach % vs target', 'Gap vs target', 'Commesse CRM'].map((h, k) => el('th', { class: k >= 4 && k !== 10 ? 'r' : '' }, h)))), tb))
+        rows.length ? el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Partner', 'Codice', 'Regione', 'Stato', 'Programma', 'Accordo', 'Target ' + anno, 'Q1', 'Q2', 'Q3', 'Q4', 'Sell-out', 'Ach % vs target', 'Gap vs target', 'Commesse CRM'].map((h, k) => el('th', { class: k >= 6 && k !== 12 ? 'r' : '' }, h)))), tb))
           : emptyBox('Nessun partner', 'Aggiungi i partner dalla lista clienti con target e sell-out per trimestre.', btn('Aggiungi partner', () => partnerForm(null), 'pri', 'plus')));
 
       // nuovi clienti
@@ -157,6 +162,34 @@
   };
   function legendRow() { return el('span', { class: 'row', style: 'gap:10px;font-size:.75rem' }, el('span', { class: 'row', style: 'gap:4px' }, el('i', { class: 'pa-lg tg' }), 'Target'), el('span', { class: 'row', style: 'gap:4px' }, el('i', { class: 'pa-lg so' }), 'Sell-out')); }
 
+  // la scheda cliente mostra il riquadro partner e i dati anagrafici aggiuntivi
+  const EXTRA = [['regione', 'Regione'], ['provincia', 'Provincia'], ['tipologia', 'Tipologia'], ['fatturatoAnno', 'Fatturato annuo'], ['fatturatoHik', 'Fatturato Hikvision'], ['cosaInstalla', 'Cosa installa'], ['distributore', 'Distributore'], ['titolare', 'Referente è titolare'], ['dataAdesione', 'Adesione programma']];
+  function extraForm(c) {
+    const f = Object.fromEntries(EXTRA.map(([k]) => [k, inp('x_' + k, c[k] || '')]));
+    const m = modal('Anagrafica partner · ' + c.nome, el('div', { class: 'fgrid' }, EXTRA.map(([k, l]) => fld(l, f[k]))), [el('span', { class: 'grow' }), btn('Annulla', () => m.close()),
+      btn('Salva', async () => { const up = { upd: Date.now() }; EXTRA.forEach(([k]) => { up[k] = f[k].value.trim(); }); if (await patch('clienti', c.id, up)) m.close(); }, 'pri', 'check')]);
+  }
+  const cdOrig = cliDetail.update;
+  cliDetail.update = function () {
+    const out = cdOrig.apply(this, arguments);
+    try {
+      const c = S.clienti.get(S.sel); const r = this.root;
+      if (!c || !r) return out;
+      r.querySelector('#hpPartnerBox')?.remove();
+      const p = c.partner; const has = p || EXTRA.some(([k]) => c[k]);
+      if (!has) return out;
+      const dd = (l, v) => v == null || v === '' ? null : [el('dt', {}, l), el('dd', {}, v)];
+      const so = p ? (p.so || []).reduce((a, b) => a + (+b || 0), 0) : 0;
+      const box = el('section', { class: 'panel', id: 'hpPartnerBox' },
+        el('div', { class: 'panel-h' }, el('h3', { text: p ? 'Partner ' + (p.anno || '') : 'Anagrafica aggiuntiva' }), el('div', { class: 'row' }, btn('Anagrafica', () => extraForm(c), 'sm', 'edit'), p ? btn('Target e sell-out', () => partnerForm(c), 'sm', 'edit') : null)),
+        el('dl', { class: 'dl' },
+          p ? [dd('Codice partner', p.codice ? el('b', { class: 'mono' }, p.codice) : null), dd('Programma', p.programma || p.catalogo), dd('Livello', tierChip(p.tier)), dd('Accordo ' + (p.anno || ''), accChip(p.accordo)), dd('Contratto', p.statoContratto), dd('Target', p.target ? eur0(p.target) : null), dd('Sell-out', eur0(so) + (p.target ? ' · ' + Math.round(so / p.target * 100) + '%' : ''))] : null,
+          EXTRA.map(([k, l]) => dd(l, c[k])).filter(Boolean)));
+      const head = r.firstElementChild;
+      if (head && head.nextSibling) r.insertBefore(box, head.nextSibling); else r.appendChild(box);
+    } catch (e) { console.error(e); }
+    return out;
+  };
   // la scheda cliente mostra il riquadro partner
   try { renderNav(); } catch (e) { }
 })();
