@@ -99,7 +99,7 @@
           selectEl('fpCat', [['', 'Tutti i cataloghi'], ['SOLUTION', 'Solution'], ['PRO', 'Pro']], f.cat, { onchange: e => { f.cat = e.target.value; this.update(); } }),
           selectEl('fpAcc', [['', 'Tutti gli accordi'], ['NUOVO', 'Nuovi'], ['RINNOVATO', 'Rinnovati'], ['SCADUTO', 'Scaduti'], ['NON RINNOVATO', 'Non rinnovati']], f.acc || '', { onchange: e => { f.acc = e.target.value; this.update(); } }),
           selectEl('fpTier', [['', 'Tutti gli stati'], ...TIERS.slice().reverse().map(t => [t, TLAB[t]])], f.tier, { onchange: e => { f.tier = e.target.value; this.update(); } })),
-        btn('Aggiungi partner', () => partnerForm(null), 'pri', 'plus'));
+        el('div', { class: 'row' }, btn('Carica report Excel', () => window.hpPartnerImport && hpPartnerImport(), '', 'up'), btn('Aggiungi partner', () => partnerForm(null), 'pri', 'plus')));
 
       const tile = (t, v, s, x) => el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, t), el('span', { class: 'v' }, v), s ? el('span', { class: 's' }, s) : null, x || null);
       const rTot = pct(T.sc, T.tc);
