@@ -401,6 +401,7 @@
   async function pdfLibs() {
     if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     if (!window.jspdf.jsPDF.API.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    await logo();
     return window.jspdf.jsPDF;
   }
   const loadImg = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('img')); im.src = src; });
@@ -419,10 +420,25 @@
     } catch (e) { return null; }
   }
   const RED = [200, 16, 46], INK = [28, 36, 48], SOFT = [110, 122, 138];
+  // Logo ufficiale: file /hik-logo.svg o /hik-logo.png nella cartella public (convertito in PNG ad alta risoluzione)
+  let LOGO;
+  async function logo() {
+    if (LOGO !== undefined) return LOGO;
+    for (const src of ['/hik-logo.svg', '/hik-logo.png']) {
+      try {
+        const r = await fetch(src, { method: 'HEAD' }); if (!r.ok) continue;
+        const img = await loadImg(src); const w = img.naturalWidth || 800, h = img.naturalHeight || 160; const k = 900 / w;
+        const c = document.createElement('canvas'); c.width = 900; c.height = Math.round(h * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        return (LOGO = { url: c.toDataURL('image/png'), ar: w / h });
+      } catch (e) { }
+    }
+    return (LOGO = null);
+  }
   function header(doc, title, n, date) {
     const W = doc.internal.pageSize.getWidth();
     doc.setFillColor(...RED); doc.rect(0, 0, W, 4, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...RED); doc.text('HIKVISION', 14, 18);
+    if (LOGO) { const h = Math.min(10, 52 / LOGO.ar); doc.addImage(LOGO.url, 'PNG', 14, 19.5 - h, h * LOGO.ar, h, 'hiklogo', 'FAST'); }
+    else { doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...RED); doc.text('HIKVISION', 14, 18); }
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...SOFT); doc.text('Filiale di Palermo - Viale Lazio 30/B - Palermo', 14, 23.5);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5); doc.setTextColor(...INK); doc.text(title, W - 14, 15, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
@@ -450,7 +466,7 @@
   }
   function signatures(doc, y) {
     const W = doc.internal.pageSize.getWidth(); const H = doc.internal.pageSize.getHeight();
-    if (y > H - 62) { doc.addPage(); y = 20; }
+    if (y > H - 72) { doc.addPage(); y = 20; }
     const cw = (W - 28 - 10) / 2;
     const sig = (x, yy, t, s) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...INK); doc.text(t, x, yy); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT); doc.text(s, x, yy + 4); doc.setDrawColor(150, 156, 166); doc.line(x, yy + 18, x + cw, yy + 18); };
     sig(14, y, 'Consegnato da (Hikvision)', 'Nome e firma'); sig(14 + cw + 10, y, 'Ricevuto da (cliente)', 'Timbro, nome e firma');
