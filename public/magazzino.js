@@ -465,7 +465,7 @@
   async function backHome(id) {
     const x = S.mag.get(id); if (!x) return; const now = Date.now();
     const par = x.parentId && S.mag.get(x.parentId);
-    if (par) { await patch('magazzino', par.id, { qty: (par.qty || 0) + (x.qty || 1), qRil: (par.qRil ?? par.qty ?? 0) + (x.qty || 1), stato: par.stato === 'mancante' ? 'sede' : par.stato, upd: now }); await remove('magazzino', id); }
+    if (par) { const up = { qty: (par.qty || 0) + (x.qty || 1), qRil: (par.qRil ?? par.qty ?? 0) + (x.qty || 1), stato: par.stato === 'mancante' ? 'sede' : par.stato, upd: now }; if (par.qManc > 0) up.qManc = Math.max(0, par.qManc - (x.qty || 1)); await patch('magazzino', par.id, up); await remove('magazzino', id); }
     else await patch('magazzino', id, { stato: 'sede', demoId: null, upd: now });
   }
   async function returnItems(dm, ids, esito) {
