@@ -3,6 +3,7 @@
 // promemoria giornalieri con Cron, proxy verso Claude per l'analisi dei capitolati.
 import seed from '../seed/data.json';
 import mag1009 from '../seed/magazzino-1009.json';
+import extraImport from '../seed/import-bolle.json';
 
 const SESSION_DAYS = 60;
 const OTP_MIN = 10;
@@ -533,6 +534,16 @@ async function migrateMag(env) {
   await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', 'mig_mag1009', JSON.stringify({ at: t, n: mag1009.length }), t, t).run();
   await broadcast(env, { reload: 'magazzino' });
 }
+// Import una tantum di documenti preparati (es. schede demo dalle bolle): non sovrascrive documenti esistenti
+async function migrateExtra(env) {
+  const key = 'mig_' + String(extraImport.key || '').replace(/[^A-Za-z0-9_]/g, '');
+  if (key === 'mig_' || await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id=?").bind(key).first()) return;
+  const t = now();
+  const stmts = extraImport.docs.map(d => env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind(d.col, d.id, JSON.stringify(d.data), t, t));
+  for (let i = 0; i < stmts.length; i += 80) await env.DB.batch(stmts.slice(i, i + 80));
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', key, JSON.stringify({ at: t, n: extraImport.docs.length }), t, t).run();
+  for (const c of new Set(extraImport.docs.map(d => d.col))) await broadcast(env, { reload: c });
+}
 // In background (cron ogni 10 minuti): immagini dal web per gli articoli di magazzino senza foto né immagine a listino
 async function fillMagImages(env, limit = 4) {
   if (!env.ANTHROPIC_API_KEY) return;
@@ -556,7 +567,7 @@ async function api(req, env, ctx, url, u) {
   if (m !== 'GET' && req.headers.get('x-hp') !== '1') return err('csrf', 'Richiesta non valida', 403);
 
   if (p === '/api/me') {
-    ctx.waitUntil(migrateMag(env).catch(e => console.log('mig', e && e.stack || e)));
+    ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).catch(e => console.log('mig', e && e.stack || e)));
     const r = await ruoli(env);
     const team = await getDoc(env, 'team', u.id);
     return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd });
@@ -693,7 +704,7 @@ export default {
 
   // Ogni mattina (06:00 UTC): promemoria degli eventi di domani + pulizia
   async scheduled(ev, env, ctx) {
-    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).catch(e => console.log('mig', e && e.stack || e)); await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); return; }
+    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).catch(e => console.log('mig', e && e.stack || e)); await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); return; }
     const t = now();
     await env.DB.batch([env.DB.prepare('DELETE FROM otp WHERE expires<?').bind(t - 864e5), env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(t)]);
     const tomorrow = romeDay(t + 864e5);
