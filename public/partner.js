@@ -121,7 +121,7 @@
       const notes = [];
       const tb = el('tbody', {}, rows.map(c => {
         const p = c.partner; const so = soTot(p); const r = pct(so, p.target); const cs = comStats(c.id);
-        let mark = null; if (p.nota) { notes.push([c, p.nota]); mark = el('sup', { class: 'pa-mk', title: p.nota }, String(notes.length)); }
+        const mark = null;
         const q = k => { const v = (p.so || [])[k]; return el('td', { class: 'r num' + (v == null ? ' muted' : '') }, v == null ? '—' : eur0(v)); };
         return el('tr', { class: 'click', onclick: () => partnerForm(c) },
           el('td', { style: 'min-width:150px' }, el('b', {}, c.nome, mark)),
@@ -133,8 +133,7 @@
       }));
       const table = el('section', { class: 'panel stack' }, el('div', { class: 'panel-h' }, el('h3', { text: 'Review partner ' + anno }), el('span', { class: 'hint' }, 'Clic su una riga per aggiornare target e sell-out')),
         rows.length ? el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Partner', 'Regione', 'Stato', 'Catalogo', 'Target ' + anno, 'Q1', 'Q2', 'Q3', 'Q4', 'Sell-out', 'Ach % vs target', 'Gap vs target', 'Commesse CRM'].map((h, k) => el('th', { class: k >= 4 && k !== 10 ? 'r' : '' }, h)))), tb))
-          : emptyBox('Nessun partner', 'Aggiungi i partner dalla lista clienti con target e sell-out per trimestre.', btn('Aggiungi partner', () => partnerForm(null), 'pri', 'plus')),
-        notes.length ? el('ol', { class: 'pa-notes' }, notes.map(([c, n]) => el('li', {}, el('b', {}, c.nome + ': '), n))) : null);
+          : emptyBox('Nessun partner', 'Aggiungi i partner dalla lista clienti con target e sell-out per trimestre.', btn('Aggiungi partner', () => partnerForm(null), 'pri', 'plus')));
 
       // nuovi clienti
       const pros = [...S.clienti.values()].filter(c => c.prospect).sort((a, b) => (b.prospect.potenziale || 0) - (a.prospect.potenziale || 0));
