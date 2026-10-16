@@ -107,20 +107,28 @@ async function geocode(env, q) {
   return out;
 }
 // Aggiunge le coordinate a eventi e commesse partendo dal luogo / indirizzo
+// indirizzo del cliente: evita di ripetere la città se è già nell'indirizzo
+function cliAddr(d) {
+  const ind = String(d.indirizzo || '').trim(), c = String(d.citta || '').trim(), pr = String(d.prov || '').trim();
+  const parts = [ind]; if (c && !ind.toLowerCase().includes(c.toLowerCase())) parts.push(c); if (pr && !new RegExp('\\b' + pr + '\\b').test(ind)) parts.push(pr);
+  return ind || c ? parts.filter(Boolean).join(', ') : '';
+}
 async function autoGeo(env, col, id, prev, data) {
   if (!data) return;
   let q = '';
   if (col === 'eventi') q = String(data.luogo || '').trim();
   else if (col === 'commesse') q = [data.indirizzo, data.citta].filter(x => x && String(x).trim()).join(', ');
+  else if (col === 'clienti') q = cliAddr(data);
   else return;
-  const prevQ = prev ? (col === 'eventi' ? String(prev.luogo || '').trim() : [prev.indirizzo, prev.citta].filter(x => x && String(x).trim()).join(', ')) : '';
+  const prevQ = prev ? (col === 'eventi' ? String(prev.luogo || '').trim() : col === 'clienti' ? cliAddr(prev) : [prev.indirizzo, prev.citta].filter(x => x && String(x).trim()).join(', ')) : '';
   const manual = data.lat != null && (!prev || prev.lat !== data.lat || prev.lng !== data.lng);
   if (manual) { if (data.geoAuto) await patchDoc(env, col, id, { geoAuto: null }); return; } // coordinate inserite a mano
   if (data.lat != null && !data.geoAuto) return;        // posizione manuale: resta
   if (data.lat != null && q === prevQ) return;          // già posizionato e indirizzo invariato
   if (!q) { if (col === 'eventi' && data.lat != null && data.geoAuto) await patchDoc(env, col, id, { lat: null, lng: null, geoAuto: null }); return; }
   if (data.geoQ === q && data.lat == null) return;      // già cercato senza risultati
-  const r = await geocode(env, q);
+  let r = await geocode(env, q);
+  if (!r[0] && col === 'clienti' && data.citta) r = await geocode(env, [data.citta, data.prov, 'Italia'].filter(Boolean).join(', ')); // ripiego: centro città
   const g = r[0];
   await patchDoc(env, col, id, g ? { lat: g.lat, lng: g.lng, geoAuto: true, geoQ: q } : { geoQ: q, ...(data.geoAuto ? { lat: null, lng: null, geoAuto: null } : {}) });
 }
@@ -206,7 +214,7 @@ async function publicIcs(env, url) {
 
 /* ---------------- hook dopo le scritture ---------------- */
 async function afterWrite(env, u, op, col, id, prev, data) {
-  if (op !== 'delete' && (col === 'eventi' || col === 'commesse')) { try { await autoGeo(env, col, id, prev, data); } catch (e) { console.log('geo', e); } }
+  if (op !== 'delete' && (col === 'eventi' || col === 'commesse' || col === 'clienti')) { try { await autoGeo(env, col, id, prev, data); } catch (e) { console.log('geo', e); } }
   // Notifiche: ogni voce del feed con destinatari diventa una email
   if (col === 'feed' && op === 'set' && !prev && data && Array.isArray(data.to) && data.to.length) {
     if (data.t === 'evento' && !data.ref && /^ha annullato/.test(data.msg || '')) return; // gestito dalla cancellazione dell'evento

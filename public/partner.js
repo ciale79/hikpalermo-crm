@@ -25,6 +25,27 @@
     return { n, w, pipe };
   }
 
+  /* ---------------- partner sulla mappa del cruscotto ---------------- */
+  const PCOL = '#D4A017';
+  window.hpPartnerColor = PCOL;
+  window.hpPartnerPts = function () {
+    const seen = new Map();
+    return [...S.clienti.values()].filter(c => c.partner && c.lat != null && c.lng != null).map(c => {
+      const p = c.partner;
+      // partner con le stesse coordinate (es. solo città): li dispongo a raggiera per non sovrapporli
+      const k = c.lat.toFixed(4) + ',' + c.lng.toFixed(4); const n = seen.get(k) || 0; seen.set(k, n + 1);
+      const ang = n * 2.4, rad = n ? 0.004 * Math.sqrt(n) : 0;
+      return { lat: c.lat + rad * Math.sin(ang), lng: c.lng + rad * Math.cos(ang), kind: 'partner', color: PCOL, title: c.nome + ' · Partner ' + (TLAB[p.tier] || p.tier || ''), sub: [p.programma || p.catalogo, p.accordo ? 'accordo ' + p.accordo.toLowerCase() : '', c.citta].filter(Boolean).join(' · '), on: () => go('clienti', c.id) };
+    });
+  };
+  // posiziona i partner che hanno un indirizzo ma non ancora le coordinate (il server cerca l'indirizzo)
+  let geoRun = false;
+  window.hpPartnerGeo = async function () {
+    if (geoRun) return; geoRun = true;
+    const todo = [...S.clienti.values()].filter(c => c.partner && c.lat == null && !c.geoQ && (c.indirizzo || c.citta));
+    for (const c of todo) { await patch('clienti', c.id, { geoReq: Date.now() }); await new Promise(r => setTimeout(r, 1300)); }
+  };
+
   /* ---------------- modulo partner ---------------- */
   function partnerForm(c) {
     const p = JSON.parse(JSON.stringify(c && c.partner || { anno: new Date().getFullYear(), regione: 'SICILIA', tier: 'SILVER', catalogo: 'PRO', target: 0, so: [null, null, null, null], nota: '' }));

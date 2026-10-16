@@ -12,6 +12,11 @@
     if (m) return getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim() || '#C8102E';
     return c;
   }
+  function starPin(c) {
+    const w = 30, h = 38;
+    return L.divIcon({ className: 'hp-pin hp-star', iconSize: [w, h], iconAnchor: [w / 2, h], popupAnchor: [0, -h + 4], tooltipAnchor: [w / 2 - 2, -h / 2],
+      html: `<svg width="${w}" height="${h}" viewBox="0 0 26 34" aria-hidden="true"><path d="M13 33s11-11.2 11-19.5A11 11 0 0 0 2 13.5C2 21.8 13 33 13 33z" fill="${color(c)}" stroke="#fff" stroke-width="2"/><path d="M13 6.6l2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z" fill="#fff"/></svg>` });
+  }
   function pin(c, big) {
     const w = big ? 34 : 26, h = big ? 44 : 34;
     return L.divIcon({ className: 'hp-pin', iconSize: [w, h], iconAnchor: [w / 2, h], popupAnchor: [0, -h + 4], tooltipAnchor: [w / 2 - 2, -h / 2],
@@ -66,7 +71,7 @@
     b.sig = sig; b.points = points; b.ids = points.map(p => p.lat + ',' + p.lng).sort().join('|');
     b.layer.clearLayers();
     for (const p of points) {
-      const mk = L.marker([p.lat, p.lng], { icon: pin(p.color, p.big), title: p.title || '', riseOnHover: true });
+      const mk = L.marker([p.lat, p.lng], { icon: p.kind === 'partner' ? starPin(p.color) : pin(p.color, p.big), title: p.title || '', riseOnHover: true, zIndexOffset: p.kind === 'partner' ? 500 : 0 });
       const html = `<b>${escH(p.title || '')}</b>${p.sub ? '<br><span class="hp-sub">' + escH(p.sub) + '</span>' : ''}<div class="hp-pop">` +
         (p.on && !b.single ? '<a href="#" data-k="open">Apri</a>' : '') +
         `<a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}" target="_blank" rel="noopener">Naviga</a>` +
@@ -87,7 +92,7 @@
     let b = boxes.get(key);
     if (!b) { const el = document.createElement('div'); el.className = 'lmap' + (single ? ' one' : ''); el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Mappa'); b = { el, single }; boxes.set(key, b); }
     b.single = single;
-    const sig = JSON.stringify(points.map(p => [p.lat, p.lng, p.title, p.color, p.sub]));
+    const sig = JSON.stringify(points.map(p => [p.lat, p.lng, p.title, p.color, p.sub, p.kind]));
     requestAnimationFrame(() => draw(b, points, sig));
     return b.el;
   };

@@ -488,6 +488,8 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .linkish{background:none;border:0;padding:0 2px;color:var(--accent);cursor:pointer;font:inherit;font-size:.8rem}
 .mg-scan{font-family:var(--font-mono);font-size:1rem;flex:1;min-width:0}
 .ov{grid-template-columns:minmax(0,1fr)}
+.hp-mdot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.hp-mdot.star{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);width:13px;height:13px;border:0;box-shadow:none;border-radius:0}
 .mg-inv{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
 .mg-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .mg-cur,.mg-pr{min-width:0}
@@ -810,7 +812,8 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
   const stP=el('section',{class:'panel'},el('h3',{text:'Commesse per stato'}),S.commesse.size?el('div',{class:'bars'},byS.map(([k,l,a])=>el('div',{class:'bar-r'},el('span',{},l),el('div',{class:'tr'},el('i',{style:{width:(a.length/maxC*100)+'%',background:CCOL[k]}})),el('span',{class:'num r'},a.length)))):emptyBox('Ancora nessuna commessa','Crea la prima commessa dalla sezione Commesse.',btn('Nuova commessa',()=>commessaForm({}),'pri sm','plus')));
   const mx=el('section',{class:'panel'},el('h3',{text:'Clienti per status di partnership'}),matrix());
   const pts=[...S.commesse.values()].filter(c=>c.lat!=null&&c.lng!=null).map(c=>({lat:c.lat,lng:c.lng,color:CCOL[c.stato||'opp'],title:c.nome+' · '+(CSTL[c.stato]||''),on:()=>go('commesse',c.id)}));
-  const mapP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Mappa commesse'}),el('span',{class:'hint'},pts.length+' con posizione GPS')),mapSvg(pts));
+  const ppts=window.hpPartnerPts?hpPartnerPts():[];if(window.hpPartnerGeo)setTimeout(hpPartnerGeo,1500);
+  const mapP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Mappa commesse e partner'}),el('span',{class:'hint'},pts.length+' commesse · '+ppts.length+' partner')),mapSvg(pts.concat(ppts)),el('div',{class:'row hp-mlg',style:'margin-top:8px;gap:10px;font-size:.78rem'},el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot',style:{background:'var(--accent)'}}),'Commesse (colore per stato)'),el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot star',style:{background:window.hpPartnerColor||'#D4A017'}}),'Partner'),el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot',style:{background:'#C8102E',borderRadius:'3px'}}),'Sede Hikvision')));
   r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),kpis,evP,el('div',{class:'split'},el('div',{class:'stack'},stP,mx),mapP)].filter(Boolean));
 }};
 function matrix(){const g=el('div',{class:'matrix'},el('span'),TIERS.map(t=>el('span',{class:'h'},TLAB[t])));const cl=[...S.clienti.values()];
