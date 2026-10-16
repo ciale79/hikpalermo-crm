@@ -118,9 +118,19 @@
           el('div', { class: 'pa-tb' }, el('i', { class: 'tg', style: { width: (tg / mx * 100) + '%' } }), el('i', { class: 'so', style: { width: (so / mx * 100) + '%', '--h': String(hue(pct(so, tg)) ?? 200) } })),
           el('div', { class: 'pa-tv' }, el('b', {}, eurShort(so)), el('small', { class: 'muted' }, ' / ' + eurShort(tg) + (tg ? ' · ' + Math.round(so / tg * 100) + '%' : '')))))));
       // classifica raggiungimento
-      const rk = rows.filter(c => c.partner.target).map(c => [c, pct(soTot(c.partner), c.partner.target)]).sort((a, b) => b[1] - a[1]);
-      const rank = el('section', { class: 'panel' }, el('div', { class: 'panel-h' }, el('h3', { text: 'Raggiungimento target' }), el('span', { class: 'hint' }, 'verde ≥100% · arancio ≥50% · rosso <50%')),
-        el('div', { class: 'pa-rank' }, rk.map(([c, p]) => el('div', { class: 'pa-rr hp-click', onclick: () => partnerForm(c) }, el('span', { class: 'pa-rn', title: c.nome }, c.nome), achBar(p)))));
+      const rkBy = f.rk || 'fatt';
+      const rkData = rows.map(c => { const cs = comStats(c.id); return { c, so: soTot(c.partner), n: cs.n, val: cs.w + cs.pipe }; })
+        .sort((a, b) => rkBy === 'com' ? (b.n - a.n || b.so - a.so) : (b.so - a.so || b.n - a.n));
+      const mxSo = Math.max(1, ...rkData.map(x => x.so)), mxN = Math.max(1, ...rkData.map(x => x.n));
+      const segB = (k, l) => el('button', { type: 'button', class: rkBy === k ? 'on' : '', 'aria-pressed': String(rkBy === k), onclick: () => { f.rk = k; this.update(); } }, l);
+      const rank = el('section', { class: 'panel' },
+        el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', { text: 'Fatturato e commesse per cliente' }), el('span', { class: 'hint' }, 'Sell-out ' + (qLab || anno) + ' · commesse nel CRM')),
+          el('div', { class: 'seg' }, segB('fatt', 'Per fatturato'), segB('com', 'Per commesse'))),
+        el('div', { class: 'pa-rank' }, el('div', { class: 'pa-rh' }, el('span', {}, 'Cliente'), el('span', {}, 'Fatturato'), el('span', {}, 'Commesse')),
+          rkData.map(x => el('div', { class: 'pa-rr2 hp-click', onclick: () => partnerForm(x.c), title: x.c.nome },
+            el('span', { class: 'pa-rn' }, x.c.nome),
+            el('div', { class: 'pa-bar' }, el('i', { style: { width: (x.so / mxSo * 100) + '%' } }), el('b', {}, x.so ? eurShort(x.so) : '—')),
+            el('div', { class: 'pa-bar n' }, el('i', { style: { width: (x.n / mxN * 100) + '%' } }), el('b', { title: x.n ? 'Valore commesse ' + eur0(x.val) : '' }, x.n ? String(x.n) : '—'))))));
 
       // tabella partner
       const notes = [];
