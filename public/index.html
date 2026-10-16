@@ -488,6 +488,11 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .linkish{background:none;border:0;padding:0 2px;color:var(--accent);cursor:pointer;font:inherit;font-size:.8rem}
 .mg-scan{font-family:var(--font-mono);font-size:1rem;flex:1;min-width:0}
 .ov{grid-template-columns:minmax(0,1fr)}
+.hp-catrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface)}
+.hp-catrow.del{background:var(--surface-2)}
+.hp-catrow.del>span{flex:1;min-width:0}
+.hp-catrow.del select{width:auto;max-width:260px;flex:none}
+.hp-catrow input[type=text]{min-width:0}
 .hp-catsel{font-size:.82rem;padding:3px 6px;max-width:190px;border-radius:6px}
 .hp-mdot{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px var(--line)}
 .hp-mdot.star{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);width:13px;height:13px;border:0;box-shadow:none;border-radius:0}
@@ -936,9 +941,9 @@ VIEWS.clienti={title:()=>S.sel?'Cliente':'Clienti',mount(){if(S.sel)return cliDe
   const sol=selectEl('flSol',[['','Status Solution: tutti'],...TIERS.map(t=>[t,'Solution · '+TLAB[t]])],f.sol,{onchange:e=>{f.sol=e.target.value;this.update();}});
   const grp=el('label',{class:'row',style:'gap:6px'},el('input',{type:'checkbox',id:'flGrp',checked:f.group,onchange:e=>{f.group=e.target.checked;this.update();}}),'Raggruppa per categoria');
   this.body=el('div',{class:'stack'});
-  r.append(el('div',{class:'row between'},el('div',{class:'filters'},q,this.catSel,pro,sol,grp),btn('Nuovo cliente',()=>clienteForm({}),'pri','plus')),this.body);this.update();},
- update(){if(S.sel)return cliDetail.update();const f=S.fCli;fillSel(this.catSel,[['','Tutte le categorie'],...cfg().categorie.map(c=>[c,c])],f.cat);
-  const ql=f.q.toLowerCase();let rows=[...S.clienti.values()].filter(c=>(!f.cat||c.categoria===f.cat)&&(!f.pro||c.statusPro===f.pro)&&(!f.sol||c.statusSol===f.sol)&&(!ql||(c.nome+' '+(c.citta||'')+' '+(c.piva||'')+' '+(c.referente||'')).toLowerCase().includes(ql))).sort(byName);
+  r.append(el('div',{class:'row between'},el('div',{class:'filters'},q,this.catSel,pro,sol,grp),el('div',{class:'row'},btn('Categorie',()=>window.hpCatManager&&hpCatManager(),'','gear'),btn('Nuovo cliente',()=>clienteForm({}),'pri','plus'))),this.body);this.update();},
+ update(){if(S.sel)return cliDetail.update();const f=S.fCli;{const cn=new Map();for(const c of S.clienti.values())cn.set(c.categoria||'',(cn.get(c.categoria||'')||0)+1);const cs=cfg().categorie;const ex=[...cn.keys()].filter(k=>k&&!cs.includes(k));fillSel(this.catSel,[['','Tutte le categorie'],...cs.concat(ex).map(c=>[c,c+' ('+(cn.get(c)||0)+')']),['__none','Senza categoria ('+(cn.get('')||0)+')']],f.cat);}
+  const ql=f.q.toLowerCase();let rows=[...S.clienti.values()].filter(c=>(!f.cat||(f.cat==='__none'?!c.categoria:c.categoria===f.cat))&&(!f.pro||c.statusPro===f.pro)&&(!f.sol||c.statusSol===f.sol)&&(!ql||(c.nome+' '+(c.citta||'')+' '+(c.piva||'')+' '+(c.referente||'')).toLowerCase().includes(ql))).sort(byName);
   const gate=[dbGate(),loading()].filter(Boolean);
   if(!rows.length){this.body.replaceChildren(...gate,S.clienti.size?emptyBox('Nessun cliente con questi filtri','Cambia i filtri di categoria o di status.'):emptyBox('Nessun cliente','Aggiungi i clienti con categoria, status Pro e Solution e i loro sconti: le offerte li applicano in automatico.',btn('Nuovo cliente',()=>clienteForm({}),'pri','plus')));return;}
   const comBy=new Map();S.commesse.forEach(c=>{if(!c.clienteId)return;const a=comBy.get(c.clienteId)||{n:0,N:0};a.n++;a.N+=comVal(c.id).N;comBy.set(c.clienteId,a);});
@@ -1245,7 +1250,7 @@ VIEWS.set={title:()=>'Gruppo e impostazioni',mount(){this.root=$('#view');this.e
   if(adm){
     const catBox=el('div',{class:'row'});const cats=[...C.categorie];const drawCats=()=>catBox.replaceChildren(...cats.map((c,i)=>el('span',{class:'pill'},c,el('button',{type:'button',class:'icon-btn',style:'width:20px;height:20px','aria-label':'Rimuovi '+c,onclick:()=>{cats.splice(i,1);drawCats();}},ic('x',12)))));drawCats();
     const newCat=inp('newCat','',{placeholder:'Nuova categoria',style:'max-width:240px'});
-    const catP=el('section',{class:'panel stack'},el('h3',{text:'Categorie clienti'}),catBox,el('div',{class:'row'},newCat,btn('Aggiungi',()=>{const v=newCat.value.trim();if(v&&!cats.includes(v)){cats.push(v);newCat.value='';drawCats();}},'sm','plus'),btn('Salva categorie',async()=>{if(await put('config','app',{...S.config,categorie:cats})){toast('Categorie salvate');stopEdit();}},'pri sm')));
+    const catP=el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Categorie clienti'}),btn('Gestione completa',()=>window.hpCatManager&&hpCatManager(),'sm','gear')),catBox,el('div',{class:'row'},newCat,btn('Aggiungi',()=>{const v=newCat.value.trim();if(v&&!cats.includes(v)){cats.push(v);newCat.value='';drawCats();}},'sm','plus'),btn('Salva categorie',async()=>{if(await put('config','app',{...S.config,categorie:cats})){toast('Categorie salvate');stopEdit();}},'pri sm')));
     const def=JSON.parse(JSON.stringify(C.defaults));def.pro=def.pro||{};def.sol=def.sol||{};
     const dt=el('table',{class:'disc-tbl'},el('thead',{},el('tr',{},el('th',{},'Status'),el('th',{class:'r'},'Listino Pro %'),el('th',{class:'r'},'Listino Solution %'))),el('tbody',{},TIERS.map(t=>el('tr',{},el('td',{},tierChip(t)),['pro','sol'].map(L=>el('td',{class:'r'},el('input',{type:'number',min:0,max:100,step:.5,class:'ln-in',value:def[L][t]??'','aria-label':LIST[L]+' '+TLAB[t],oninput:e=>{def[L][t]=e.target.value===''?'':+e.target.value;}})))))));
     const defP=el('section',{class:'panel stack'},el('h3',{text:'Sconti base suggeriti per status'}),el('p',{class:'hint'},'Valori di partenza: nella scheda cliente il pulsante «Usa predefinito» li copia nello sconto base. Lo sconto effettivo resta quello della scheda cliente.'),el('div',{class:'tbl-wrap',style:'max-width:460px'},dt),el('div',{},btn('Salva sconti suggeriti',async()=>{if(await put('config','app',{...S.config,defaults:def})){toast('Sconti suggeriti salvati');stopEdit();}},'pri sm')));
@@ -1545,6 +1550,7 @@ boot();
 <script src="/partner.js"></script>
 <script src="/partner-import.js"></script>
 <script src="/magazzino.js"></script>
+<script src="/categorie.js"></script>
 <script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
 </body>
