@@ -105,7 +105,7 @@
       const rTot = pct(T.sc, T.tc);
       const kpis = el('div', { class: 'kpis' },
         tile('Partner', String(rows.length), TIERS.slice().reverse().map(t => { const n = rows.filter(c => c.partner.tier === t).length; return n ? n + ' ' + TLAB[t] : null; }).filter(Boolean).join(' · '), el('span', { class: 's' }, ['NUOVO', 'RINNOVATO', 'SCADUTO'].map(a => { const n = rows.filter(c => c.partner.accordo === a).length; const L = { NUOVO: ['nuovo', 'nuovi'], RINNOVATO: ['rinnovato', 'rinnovati'], SCADUTO: ['scaduto', 'scaduti'] }[a]; return n ? n + ' ' + L[n === 1 ? 0 : 1] : null; }).filter(Boolean).join(' · '))),
-        tile('Target ' + anno, eur0(T.t), 'Sell-out ' + (qLab || 'anno') + ' ' + eur0(T.s)),
+        tile('Target ' + anno, eur0(T.t), 'Sell-out ' + anno + ' ' + eur0(T.s) + (lastQ && lastQ < 4 ? ' (dati fino a Q' + lastQ + ')' : '')),
         tile('Raggiungimento', rTot == null ? '—' : fN.format(Math.round(rTot)) + '%', 'sui partner con target', achBar(rTot)),
         tile('Gap verso target', eur0(T.gap), 'da recuperare in ' + (lastQ ? 'Q' + (lastQ + 1) + '–Q4' : 'corso d\'anno')));
 
@@ -124,7 +124,7 @@
       const mxSo = Math.max(1, ...rkData.map(x => x.so)), mxN = Math.max(1, ...rkData.map(x => x.n));
       const segB = (k, l) => el('button', { type: 'button', class: rkBy === k ? 'on' : '', 'aria-pressed': String(rkBy === k), onclick: () => { f.rk = k; this.update(); } }, l);
       const rank = el('section', { class: 'panel' },
-        el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', { text: 'Fatturato e commesse per cliente' }), el('span', { class: 'hint' }, 'Sell-out ' + (qLab || anno) + ' · commesse nel CRM')),
+        el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', { text: 'Fatturato e commesse per cliente' }), el('span', { class: 'hint' }, 'Sell-out totale ' + anno + ' · commesse nel CRM')),
           el('div', { class: 'seg' }, segB('fatt', 'Per fatturato'), segB('com', 'Per commesse'))),
         el('div', { class: 'pa-rank' }, el('div', { class: 'pa-rh' }, el('span', {}, 'Cliente'), el('span', {}, 'Fatturato'), el('span', {}, 'Commesse')),
           rkData.map(x => el('div', { class: 'pa-rr2 hp-click', onclick: () => partnerForm(x.c), title: x.c.nome },
@@ -147,7 +147,7 @@
           el('td', { class: 'r num', 'data-sort': String(cs.n) }, cs.n ? el('a', { href: '#', onclick: e => { e.preventDefault(); e.stopPropagation(); hpDrill('Cliente ' + c.nome, x => x.clienteId === c.id); } }, cs.n + ' · ' + eurShort(cs.w + cs.pipe)) : '—'));
       }));
       const table = el('section', { class: 'panel stack' }, el('div', { class: 'panel-h' }, el('h3', { text: 'Review partner ' + anno }), el('span', { class: 'hint' }, 'Clic su una riga per aggiornare target e sell-out')),
-        rows.length ? el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Partner', 'Codice', 'Regione', 'Stato', 'Programma', 'Accordo', 'Target ' + anno, 'Q1', 'Q2', 'Q3', 'Q4', 'Sell-out', 'Ach % vs target', 'Gap vs target', 'Commesse CRM'].map((h, k) => el('th', { class: k >= 6 && k !== 12 ? 'r' : '' }, h)))), tb))
+        rows.length ? el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Partner', 'Codice', 'Regione', 'Stato', 'Programma', 'Accordo', 'Target ' + anno, 'Q1', 'Q2', 'Q3', 'Q4', 'Sell-out ' + anno, 'Ach % vs target', 'Gap vs target', 'Commesse CRM'].map((h, k) => el('th', { class: k >= 6 && k !== 12 ? 'r' : '' }, h)))), tb))
           : emptyBox('Nessun partner', 'Aggiungi i partner dalla lista clienti con target e sell-out per trimestre.', btn('Aggiungi partner', () => partnerForm(null), 'pri', 'plus')));
 
       // nuovi clienti
