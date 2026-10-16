@@ -27,7 +27,7 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Room"] }
   ],
-  "triggers": { "crons": ["0 6 * * *"] },
+  "triggers": { "crons": ["0 6 * * *", "*/10 * * * *"] },
   "vars": {
     "APP_URL": "https://hikpalermo.com",
     "MAIL_FROM": "HIK PALERMO <notifiche@hikpalermo.com>",

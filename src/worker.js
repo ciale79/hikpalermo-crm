@@ -2,6 +2,7 @@
 // Auth con codice via email (Resend), dati in D1, file in R2, tempo reale con Durable Object,
 // promemoria giornalieri con Cron, proxy verso Claude per l'analisi dei capitolati.
 import seed from '../seed/data.json';
+import mag1009 from '../seed/magazzino-1009.json';
 
 const SESSION_DAYS = 60;
 const OTP_MIN = 10;
@@ -456,6 +457,99 @@ async function claudeProxy(req, env) {
   return new Response(r.body, { status: r.status, headers: { 'content-type': 'application/json' } });
 }
 
+/* ---------------- immagini prodotto dal web ---------------- */
+// Cerca con Claude (web search) la pagina del prodotto, legge og:image e salva l'immagine su R2. Risultato in cache (docs col 'imgweb').
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36';
+function pageImages(html, base) {
+  const out = [];
+  const meta = /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]*>/gi;
+  let m;
+  while ((m = meta.exec(html))) { const c = /content=["']([^"']+)["']/i.exec(m[0]); if (c) out.push(c[1]); }
+  const m2 = /<link[^>]+rel=["']image_src["'][^>]+href=["']([^"']+)["']/i.exec(html); if (m2) out.push(m2[1]);
+  for (const mm of html.matchAll(/"image"\s*:\s*(?:\[\s*)?"([^"]+\.(?:jpe?g|png|webp)[^"]*)"/gi)) out.push(mm[1]);
+  return [...new Set(out.map(x => { try { return new URL(x.replace(/&amp;/g, '&'), base).href; } catch { return null; } }).filter(x => x && /^https?:/.test(x) && !/logo|favicon|placeholder|sprite/i.test(x)))];
+}
+async function grabImage(env, src, model) {
+  try {
+    const r = await fetch(src, { headers: { 'user-agent': UA, accept: 'image/avif,image/webp,image/png,image/jpeg,*/*' }, redirect: 'follow', cf: { cacheTtl: 86400 } });
+    const ct = (r.headers.get('content-type') || '').split(';')[0];
+    if (!r.ok || !/^image\/(jpe?g|png|webp|gif)$/i.test(ct)) return null;
+    const buf = await r.arrayBuffer(); if (buf.byteLength < 3000 || buf.byteLength > 6e6) return null;
+    const id = 'w' + rndHex(15);
+    await env.FILES.put(id, buf, { httpMetadata: { contentType: ct }, customMetadata: { by: 'web', name: model + '.' + ct.split('/')[1], src: src.slice(0, 500) } });
+    return id;
+  } catch { return null; }
+}
+async function productImage(req, env, u) {
+  const b = await req.json().catch(() => ({}));
+  const model = String(b.model || '').trim().slice(0, 80), desc = String(b.desc || '').slice(0, 200);
+  if (!model) return err('invalid_argument', 'Modello mancante');
+  if (!env.ANTHROPIC_API_KEY) return err('not_configured', 'Chiave Anthropic non configurata sul server.', 503);
+  return json(await findProductImage(env, model, desc, !!b.force));
+}
+const imgKey = model => model.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 120) || 'x';
+async function findProductImage(env, model, desc, force) {
+  const key = imgKey(model);
+  const cached = await getDoc(env, 'imgweb', key);
+  if (cached && !force && (cached.data.blob || now() - (cached.data.at || 0) < 7 * 864e5)) return cached.data;
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: 800,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+      messages: [{ role: 'user', content: `Trova la pagina web del prodotto Hikvision (o Hikmicro / Hiwatch / Ezviz) con codice modello "${model}"${desc && desc !== model ? ' (descrizione: ' + desc + ')' : ''}. Preferisci il sito ufficiale hikvision.com, poi siti di distributori o rivenditori che mostrano la foto del prodotto esatto. Rispondi SOLO con JSON: {"pages":["url pagina 1","url pagina 2","url pagina 3"],"images":["url diretto di un'immagine del prodotto, se lo conosci dai risultati"]}` }]
+    })
+  });
+  const out = { model, at: now(), blob: null, src: null, page: null };
+  if (!r.ok) { out.err = 'api ' + r.status; return out; }
+  const j = await r.json();
+  const text = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
+  let pages = [], images = [];
+  try { const m = /\{[\s\S]*\}/.exec(text); const o = JSON.parse(m[0]); pages = o.pages || []; images = o.images || []; } catch { }
+  for (const c of j.content || []) if (c.type === 'web_search_tool_result' && Array.isArray(c.content)) for (const x of c.content) if (x.url) pages.push(x.url);
+  pages = [...new Set(pages.filter(x => /^https?:\/\//.test(x)))].slice(0, 6);
+  const mk = key.slice(0, 10);
+  for (const src of images.filter(x => /^https?:\/\//.test(x)).slice(0, 2)) { const id = await grabImage(env, src, model); if (id) { Object.assign(out, { blob: id, src, page: null }); break; } }
+  for (const pg of out.blob ? [] : pages) {
+    try {
+      const pr = await fetch(pg, { headers: { 'user-agent': UA, accept: 'text/html' }, redirect: 'follow' });
+      if (!pr.ok) continue;
+      const html = (await pr.text()).slice(0, 800000);
+      if (mk.length >= 6 && !html.toUpperCase().replace(/[^A-Z0-9]/g, '').includes(mk)) continue; // la pagina deve citare il modello
+      for (const src of pageImages(html, pr.url || pg).slice(0, 3)) { const id = await grabImage(env, src, model); if (id) { Object.assign(out, { blob: id, src, page: pg }); break; } }
+      if (out.blob) break;
+    } catch { }
+  }
+  await env.DB.prepare('INSERT INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?) ON CONFLICT(col,id) DO UPDATE SET data=excluded.data, version=excluded.version, updated=excluded.updated').bind('imgweb', key, JSON.stringify(out), now(), now()).run();
+  return out;
+}
+// Import una tantum dell'inventario del magazzino 1009 (Sicilia e T&D): non sovrascrive righe già presenti
+async function migrateMag(env) {
+  if (await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id='mig_mag1009'").first()) return;
+  const owner = await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(normEmail(env.OWNER_EMAIL)).first();
+  const t = now();
+  const stmts = mag1009.map(d => env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('magazzino', d.id, JSON.stringify({ ...d.data, by: owner ? owner.id : d.data.by, at: t, upd: t, invAt: t }), t, t));
+  for (let i = 0; i < stmts.length; i += 80) await env.DB.batch(stmts.slice(i, i + 80));
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', 'mig_mag1009', JSON.stringify({ at: t, n: mag1009.length }), t, t).run();
+  await broadcast(env, { reload: 'magazzino' });
+}
+// In background (cron ogni 10 minuti): immagini dal web per gli articoli di magazzino senza foto né immagine a listino
+async function fillMagImages(env, limit = 4) {
+  if (!env.ANTHROPIC_API_KEY) return;
+  const { results } = await env.DB.prepare("SELECT id,data FROM docs WHERE col='magazzino' AND coalesce(json_extract(data,'$.im'),-1)<0 AND json_extract(data,'$.imgWeb') IS NULL AND coalesce(json_array_length(json_extract(data,'$.foto')),0)=0").all();
+  if (!results.length) return;
+  const byKey = new Map();
+  for (const r of results) { const d = parse(r.data); if (!d || !d.code) continue; const model = /^SAP /.test(d.code) ? (d.descSap || d.desc || d.code) : d.code; const k = imgKey(model); if (!byKey.has(k)) byKey.set(k, { model, desc: d.descSap || d.desc || '', ids: [] }); byKey.get(k).ids.push(r.id); }
+  let n = 0;
+  for (const [k, g] of byKey) {
+    const c = await getDoc(env, 'imgweb', k);
+    if (c && !c.data.blob && now() - (c.data.at || 0) < 7 * 864e5) continue; // già cercato senza risultato
+    const out = c && c.data.blob ? c.data : (n++ < limit ? await findProductImage(env, g.model, g.desc, false) : null);
+    if (out && out.blob) for (const id of g.ids) await patchDoc(env, 'magazzino', id, { imgWeb: out.blob });
+    if (n >= limit) break;
+  }
+}
+
 /* ---------------- router ---------------- */
 async function api(req, env, ctx, url, u) {
   const p = url.pathname, m = req.method;
@@ -538,6 +632,7 @@ async function api(req, env, ctx, url, u) {
     return json({ ok: true });
   }
   if (p === '/api/claude' && m === 'POST') return claudeProxy(req, env);
+  if (p === '/api/prodimg' && m === 'POST') return productImage(req, env, u);
   if (p === '/api/auth/password' && m === 'POST') return setPassword(req, env, u);
   if (p === '/api/ics-link' && m === 'GET') { const id = url.searchParams.get('id') || ''; if (!(await getDoc(env, 'eventi', id))) return err('not_found', 'Evento non trovato', 404); return json({ url: (env.APP_URL || url.origin) + '/ics/' + encodeURIComponent(id) + '.ics?k=' + await icsSig(env, id) }); }
   if (p === '/api/geocode' && m === 'GET') return json(await geocode(env, url.searchParams.get('q')));
@@ -597,6 +692,7 @@ export default {
 
   // Ogni mattina (06:00 UTC): promemoria degli eventi di domani + pulizia
   async scheduled(ev, env, ctx) {
+    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).catch(e => console.log('mig', e && e.stack || e)); await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); return; }
     const t = now();
     await env.DB.batch([env.DB.prepare('DELETE FROM otp WHERE expires<?').bind(t - 864e5), env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(t)]);
     const tomorrow = romeDay(t + 864e5);

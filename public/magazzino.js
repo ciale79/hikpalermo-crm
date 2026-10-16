@@ -23,8 +23,93 @@
   const addDays = (k, n) => { const d = new Date(k + 'T12:00:00'); d.setDate(d.getDate() + n); return dayKey(d.getTime()); };
   const fK = k => k ? fD(new Date(k + 'T12:00:00').getTime()) : '—';
   const fKs = k => k ? new Date(k + 'T12:00:00').toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-  const ST = { sede: ['In filiale', 'var(--ok)'], demo: ['In demo', 'var(--warn)'], venduto: ['Venduto / lasciato', 'var(--info)'], dismesso: ['Dismesso', 'var(--ink-3)'] };
+  const ST = { sede: ['In filiale', 'var(--ok)'], demo: ['In demo', 'var(--warn)'], venduto: ['Venduto / lasciato', 'var(--info)'], mancante: ['Mancante', 'var(--accent)'], dismesso: ['Dismesso', 'var(--ink-3)'] };
   const stChip = s => { const x = ST[s] || ST.sede; return el('span', { class: 'pill', style: '--c:' + x[1] }, x[0]); };
+  const INVF = [['pz', 'Pz a sistema'], ['qRil', 'Q.tà rilevata'], ['qManc', 'Q.tà mancante'], ['qUtile', 'Q.tà utile'], ['qNonServe', 'Q.tà che non servono']];
+  const FILTRI = [['i:manc', 'Con pezzi mancanti', x => (x.qManc || 0) > 0], ['i:util', 'Con pezzi utili', x => (x.qUtile || 0) > 0], ['i:nons', 'Con pezzi che non servono', x => (x.qNonServe || 0) > 0], ['i:td', 'Note T&D', x => /T&D/i.test(x.note || '')], ['i:noimg', 'Senza immagine', x => imOf(x) < 0 && !x.imgWeb && !(x.foto || []).length]];
+  const passSt = (x, st) => { if (!st) return true; const f = FILTRI.find(y => y[0] === st); return f ? f[2](x) : (x.stato || 'sede') === st; };
+  // immagine dal web (cercata e salvata dal server, con cache per modello)
+  async function webImg(model, desc, force) {
+    try { const r = await HIK_CF.postJ('/api/prodimg', { model, desc, force: !!force }); return r && r.blob || null; } catch (e) { return null; }
+  }
+  async function webImgAll() {
+    const todo = [...S.mag.values()].filter(x => imOf(x) < 0 && !x.imgWeb && !(x.foto || []).length && !x.noWebImg);
+    const models = [...new Map(todo.map(x => [norm(x.code), x])).values()];
+    if (!models.length) { toast('Tutti gli articoli hanno già un\'immagine.'); return; }
+    if (!await ask('Cerco sul web le immagini di ' + models.length + (models.length === 1 ? ' modello' : ' modelli') + ' non presenti nei listini. Ci vuole qualche secondo per modello: puoi continuare a lavorare, la pagina si aggiorna da sola.', 'Avvia', 'pri')) return;
+    let stop = false, ok = 0, n = 0;
+    const bar = el('i', { style: 'display:block;height:100%;width:0;background:var(--accent);border-radius:4px;transition:width .3s' });
+    const lab = el('span', { class: 'hint' }, '0 / ' + models.length);
+    const m = modal('Immagini dal web', el('div', { class: 'stack' }, el('div', { style: 'height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden' }, bar), lab, el('p', { class: 'hint' }, 'Per ogni modello cerco la pagina del prodotto (prima su hikvision.com) e ne salvo la foto. Le immagini trovate restano anche per i prossimi caricamenti.')), [el('span', { class: 'grow' }), btn('Interrompi', () => { stop = true; m.close(); })], { sticky: true });
+    const q = models.slice(); const worker = async () => {
+      while (q.length && !stop) {
+        const x = q.shift(); const b = await webImg(/^SAP /.test(x.code) ? (x.descSap || x.desc) : x.code, x.descSap || x.desc); n++;
+        if (b) { ok++; for (const y of [...S.mag.values()].filter(y => norm(y.code) === norm(x.code) && !y.imgWeb)) await patch('magazzino', y.id, { imgWeb: b }); }
+        bar.style.width = (n / models.length * 100) + '%'; lab.textContent = n + ' / ' + models.length + ' · trovate ' + ok + (x.code ? ' · ' + x.code : '');
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    if (!stop) { m.close(); toast('Immagini trovate per ' + ok + ' modelli su ' + models.length + '.'); }
+  }
+
+  /* ---------------- import inventario Excel (SAP) ---------------- */
+  function invClean(d) { return String(d || '').replace(/（/g, '(').replace(/）/g, ')').trim(); }
+  function invMatch(sap, desc) {
+    sap = String(sap || '').trim();
+    if (sap && !S.catSap) { S.catSap = new Map(); for (const it of S.cat) if (it.sap) { const k = String(it.sap).trim(); if (!S.catSap.has(k) || (S.catSap.get(k).im < 0 && it.im >= 0)) S.catSap.set(k, it); } }
+    if (sap && S.catSap.get(sap)) return S.catSap.get(sap);
+    const d = invClean(desc); const cands = [d]; let x = d;
+    for (let i = 0; i < 6; i++) { const y = x.replace(/\([^()]*\)\s*$/, '').trim(); if (y === x) break; x = y; cands.push(x); }
+    cands.push(d.replace(/\((O-STD|STD|O-NEU|NEU|Europe BV|Italy Srl)\)/gi, '').trim()); cands.push(d.split('/')[0]);
+    for (const c of cands) { const a = S.byCode && S.byCode.get(norm(c)); if (a && a.length) return a.find(y => y.im >= 0) || a[0]; }
+    return null;
+  }
+  function invCode(desc, sap) {
+    const d = invClean(desc);
+    if (/^[A-Za-z]{1,8}-[A-Za-z0-9]/.test(d)) return d.replace(/\s*\((O-STD|STD|O-NEU|NEU|Europe BV|Italy Srl|STOCK|EU)\)/gi, '').replace(/\/(EU|ITA)(\/ITA)?$/i, '').replace(/\/EU\/ITA$/i, '').trim();
+    const t = d.split(/[,，]/)[0].trim(); return /\d/.test(t) && t.length >= 4 ? t : (sap ? 'SAP ' + sap : d.slice(0, 40));
+  }
+  function invDoc(r, old, now, fname) {
+    const code0 = invCode(r.desc, r.sap);
+    const it = invMatch(r.sap, r.desc) || findCode(code0);
+    const qRil = r.qRil ?? r.pz ?? 0;
+    const d = { sap: r.sap, descSap: r.desc, divisione: r.div || '', magSap: r.mag || '', pz: r.pz, qRil: r.qRil, qManc: r.qManc, qUtile: r.qUtile, qNonServe: r.qNonServe, note: r.note || (old && old.note) || '',
+      code: it ? it.c : code0, desc: it ? (it.d || r.desc) : r.desc, im: it ? it.im : -1, L: it ? it.L : null, qty: qRil, inventario: fname, invAt: now, upd: now };
+    if (!old || old.stato !== 'demo') d.stato = qRil > 0 ? (old && ['venduto', 'dismesso'].includes(old.stato) ? old.stato : 'sede') : 'mancante';
+    if (!old) Object.assign(d, { seriale: '', ean: '', foto: [], ubicazione: 'Magazzino ' + (r.mag || ''), demoId: null, at: now, by: S.me });
+    return d;
+  }
+  const invIn = el('input', { type: 'file', accept: '.xlsx,.xls,.xlsm,.csv', hidden: true }); document.body.appendChild(invIn);
+  invIn.addEventListener('change', async () => {
+    const f = invIn.files[0]; invIn.value = ''; if (!f) return;
+    let rows;
+    try {
+      const X = await xlsxLib(); const wb = X.read(new Uint8Array(await f.arrayBuffer()), { type: 'array' });
+      const a = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null, blankrows: false });
+      const hi = a.findIndex(r => r && r.some(v => /^sap$/i.test(String(v || '').trim())));
+      if (hi < 0) throw new Error('non trovo la colonna «SAP»');
+      const H = a[hi].map(v => String(v || '').toLowerCase().replace(/\s+/g, ' ').trim());
+      const col = re => H.findIndex(h => re.test(h));
+      const C = { sap: col(/^sap$/), desc: col(/descrizione/), div: col(/divisione/), mag: col(/^magazzino/), pz: col(/^pz/), qRil: col(/rilevat/), qManc: col(/mancant/), qUtile: col(/utile/), qNonServe: col(/non servono|non serve/), note: col(/^note/) };
+      const num = v => v == null || v === '' ? null : +v || 0;
+      rows = a.slice(hi + 1).map(r => ({ sap: String(r[C.sap] ?? '').trim(), desc: String(r[C.desc] ?? '').trim(), div: C.div >= 0 ? String(r[C.div] ?? '') : '', mag: C.mag >= 0 ? String(r[C.mag] ?? '') : '', pz: num(r[C.pz]), qRil: C.qRil >= 0 ? num(r[C.qRil]) : null, qManc: C.qManc >= 0 ? num(r[C.qManc]) : null, qUtile: C.qUtile >= 0 ? num(r[C.qUtile]) : null, qNonServe: C.qNonServe >= 0 ? num(r[C.qNonServe]) : null, note: C.note >= 0 ? String(r[C.note] ?? '').trim() : '' })).filter(r => r.sap && r.desc);
+    } catch (e) { toast('File non leggibile: ' + (e.message || e), 'bad'); return; }
+    const ex = [...S.mag.values()].filter(x => x.sap).length;
+    const nm = rows.filter(r => invMatch(r.sap, r.desc)).length;
+    if (!await ask(rows.length + ' righe nel file «' + f.name + '» (' + nm + ' riconosciute nei listini).' + (ex ? ' Le righe già importate vengono aggiornate con le nuove quantità.' : '') + ' Importo?', 'Importa', 'pri')) return;
+    const now = Date.now(); let ok = 0;
+    const wait = modal('Importazione inventario', el('p', { class: 'hint', id: 'mgImpLab' }, '0 / ' + rows.length), [], { sticky: true });
+    for (const r of rows) {
+      const id = 'inv_' + r.sap.replace(/[^A-Za-z0-9_-]/g, ''); const old = S.mag.get(id);
+      const d = invDoc(r, old, now, f.name);
+      if (await (old ? patch('magazzino', id, d) : put('magazzino', id, d))) ok++;
+      if (ok % 10 === 0) { const l = document.getElementById('mgImpLab'); if (l) l.textContent = ok + ' / ' + rows.length; }
+    }
+    wait.close(); toast(ok + ' righe di inventario importate');
+    feed('magazzino', 'ha importato l\'inventario «' + f.name + '» (' + ok + ' articoli)', { k: 'magazzino' }, []);
+  });
+  window.hpInvImport = () => invIn.click();
+
   const TIPI = [['demo', 'Demo'], ['poc', 'POC'], ['visione', 'Conto visione']];
   const TIPL = Object.fromEntries(TIPI);
   const isOpen = d => d && d.stato !== 'chiusa';
@@ -135,8 +220,10 @@
     });
     return inp;
   }
+  const blobOf = it => imOf(it) >= 0 ? null : (it.imgWeb || (it.foto && it.foto[0]) || null);
   function itemThumb(it, size = 44) {
-    if (it.foto && it.foto.length && imOf(it) < 0) { const im = el('img', { src: '/_blob/' + it.foto[0], alt: '', class: 'mg-uimg', loading: 'lazy' }); im.style.width = im.style.height = size + 'px'; return im; }
+    const b = blobOf(it);
+    if (b) { const im = el('img', { src: '/_blob/' + b, alt: '', class: 'mg-uimg', loading: 'lazy' }); im.style.width = im.style.height = size + 'px'; return im; }
     return thumb(imOf(it), size);
   }
 
@@ -227,24 +314,28 @@
   /* ---------------- scheda articolo ---------------- */
   function itemForm(it) {
     const d = JSON.parse(JSON.stringify(it));
-    const code = inp('miCode', d.code || ''), sn = inp('miSn', d.seriale || '', { class: 'mono' }), ean = inp('miEan', d.ean || ''), q = inp('miQty', d.qty || 1, { type: 'number', min: 1 });
+    const code = inp('miCode', d.code || ''), sn = inp('miSn', d.seriale || '', { class: 'mono' }), ean = inp('miEan', d.ean || ''), q = inp('miQty', d.qty ?? 1, { type: 'number', min: 1 });
     const st = selectEl('miSt', Object.entries(ST).map(([k, v]) => [k, v[0]]), d.stato || 'sede', { disabled: d.stato === 'demo' });
     const ub = inp('miUb', d.ubicazione || ''), note = el('textarea', { id: 'miNote', value: d.note || '', style: 'min-height:60px' });
+    const inv = d.sap || d.pz != null ? Object.fromEntries(INVF.map(([k]) => [k, inp('mi_' + k, d[k] ?? '', { type: 'number', min: 0, step: 1 })])) : null;
     const gal = el('div', { class: 'mg-gal' });
     const pick = photoPicker(id => { d.foto = [...(d.foto || []), id]; drawGal(); });
     const drawGal = () => {
       const c = findCode(code.value.trim()) || null; const im = c ? c.im : -1;
       gal.replaceChildren(
         im >= 0 ? el('figure', {}, thumb(im, 120), el('figcaption', {}, 'Listino')) : null,
+        im < 0 && d.imgWeb ? el('figure', {}, el('a', { href: '/_blob/' + d.imgWeb, target: '_blank', rel: 'noopener' }, el('img', { src: '/_blob/' + d.imgWeb, alt: 'Immagine dal web', style: 'object-fit:contain;background:#fff' })), el('figcaption', {}, 'Dal web · ', el('button', { type: 'button', class: 'linkish', onclick: () => { d.imgWeb = null; drawGal(); } }, 'Rimuovi'))) : null,
+        im < 0 && !d.imgWeb ? el('button', { type: 'button', class: 'mg-add', onclick: async e => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Cerco sul web…'; const r = await webImg(/^SAP /.test(code.value) ? (d.descSap || d.desc) : code.value, d.descSap || d.desc, true); if (r) { d.imgWeb = r; } else toast('Nessuna immagine trovata per ' + (code.value || d.code) + '.', 'bad'); drawGal(); } }, ic('search', 22), 'Cerca immagine sul web') : null,
         ...(d.foto || []).map((f, k) => el('figure', {}, el('a', { href: '/_blob/' + f, target: '_blank', rel: 'noopener' }, el('img', { src: '/_blob/' + f, alt: 'Foto ' + (k + 1), loading: 'lazy' })), el('figcaption', {}, el('button', { type: 'button', class: 'linkish', onclick: () => { d.foto.splice(k, 1); drawGal(); } }, 'Rimuovi')))),
         el('button', { type: 'button', class: 'mg-add', onclick: () => pick.click() }, ic('cam', 22), 'Aggiungi foto'), pick);
     };
     code.addEventListener('change', drawGal); drawGal();
     const dm = demoOf(it);
-    const hist = [...S.demo.values()].filter(x => (x.items || []).some(y => y.id === it.id)).sort((a, b) => (b.consegna || '').localeCompare(a.consegna || ''));
+    const hist = [...S.demo.values()].filter(x => (x.items || []).some(y => y.id === it.id || y.parentId === it.id)).sort((a, b) => (b.consegna || '').localeCompare(a.consegna || ''));
     const body = el('div', { class: 'stack' },
       gal,
-      el('div', { class: 'fgrid' }, fld('Codice modello', code), fld('Seriale', sn), fld('EAN', ean), fld('Quantità', q), fld('Stato', st), fld('Ubicazione', ub), fld('Note', note, 'full')),
+      el('div', { class: 'fgrid' }, fld('Codice modello', code), fld('Seriale', sn), fld('EAN', ean), inv ? null : fld('Quantità', q), fld('Stato', st), fld('Ubicazione', ub), fld('Note', note, 'full')),
+      inv ? el('div', { class: 'stack', style: 'gap:6px' }, el('span', { class: 'eyebrow' }, 'Inventario' + (d.magSap ? ' · magazzino ' + d.magSap : '') + (d.divisione ? ' · divisione ' + d.divisione : '')), el('dl', { class: 'dl' }, el('dt', {}, 'Codice SAP'), el('dd', { class: 'mono' }, d.sap || '—'), el('dt', {}, 'Descrizione SAP'), el('dd', {}, d.descSap || '—')), el('div', { class: 'mg-inv' }, ...INVF.map(([k, l]) => el('label', { class: 'fld' }, el('span', {}, l), inv[k])))) : null,
       dm ? el('div', { class: 'banner' }, 'In ' + (TIPL[dm.tipo] || 'demo').toLowerCase() + ' presso ', el('b', {}, cliName(dm.clienteId) || '—'), ' dal ' + fK(dm.consegna) + (dm.rientro ? ', rientro previsto ' + fK(dm.rientro) : '') + '. ', el('a', { href: '#', onclick: e => { e.preventDefault(); m.close(); demoDetail(dm); } }, 'Apri la consegna')) : null,
       hist.length ? el('div', { class: 'stack', style: 'gap:4px' }, el('span', { class: 'eyebrow' }, 'Storico consegne'), ...hist.map(x => el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); m.close(); demoDetail(x); } }, (x.n || '') + ' · ' + (cliName(x.clienteId) || '—') + ' · ' + fK(x.consegna) + (isOpen(x) ? ' (aperta)' : ' → rientro ' + fK(x.chiusa || x.rientro))))) : null,
       el('p', { class: 'hint' }, 'Caricato da ' + nm(it.by) + ' il ' + fD(it.at) + '.'));
@@ -255,7 +346,13 @@
       btn('Salva', async () => {
         const c = findCode(code.value.trim());
         if (sn.value.trim()) { const ex = findBySn(sn.value.trim()); if (ex && ex.id !== it.id) { toast('Seriale già presente su un altro articolo (' + ex.code + ').', 'bad'); return; } }
-        const up = { code: c ? c.c : code.value.trim().toUpperCase(), desc: c ? (c.d || '') : d.desc || '', im: c ? c.im : -1, L: c ? c.L : null, seriale: sn.value.trim().toUpperCase(), ean: ean.value.trim(), qty: Math.max(1, +q.value || 1), ubicazione: ub.value.trim(), note: note.value.trim(), foto: d.foto || [], upd: Date.now() };
+        const up = { code: c ? c.c : code.value.trim().toUpperCase(), desc: c ? (c.d || '') : d.desc || '', im: c ? c.im : -1, L: c ? c.L : null, seriale: sn.value.trim().toUpperCase(), ean: ean.value.trim(), qty: Math.max(1, +q.value || 1), ubicazione: ub.value.trim(), note: note.value.trim(), foto: d.foto || [], imgWeb: d.imgWeb || null, upd: Date.now() };
+        if (inv) {
+          Object.assign(up, Object.fromEntries(INVF.map(([k]) => [k, inv[k].value === '' ? null : +inv[k].value])));
+          up.qty = up.qRil ?? up.pz ?? 0;
+          const sv = it.stato === 'demo' ? 'demo' : (up.stato || it.stato);
+          if (sv === 'sede' && !(up.qty > 0)) up.stato = 'mancante'; else if (sv === 'mancante' && up.qty > 0) up.stato = 'sede';
+        }
         if (it.stato !== 'demo') up.stato = st.value;
         if (await patch('magazzino', it.id, up)) { m.close(); toast('Articolo salvato'); }
       }, 'pri', 'check')], { wide: true });
@@ -270,6 +367,8 @@
   function demoForm(dm, preset) {
     const d = dm ? JSON.parse(JSON.stringify(dm)) : { tipo: 'demo', clienteId: '', commessaId: '', referente: '', luogo: '', consegna: today(), rientro: addDays(today(), 15), promemoria: [addDays(today(), 13)], resp: S.me, note: '', items: [], ...(preset || {}) };
     let sel = (d.items || []).map(x => typeof x === 'string' ? x : x.id).filter(id => S.mag.has(id));
+    const pcs = new Map(); // pezzi da consegnare per le righe senza seriale con più pezzi
+    const isPrev = sid => dm && (dm.items || []).some(y => y.id === sid);
     const cli = selectEl('dmCli', [['', '— Scegli il cliente —'], ...[...S.clienti.values()].sort(byName).map(c => [c.id, c.nome])], d.clienteId || '');
     const com = el('select', { id: 'dmCom' });
     const fillCom = () => { const v = com.value || d.commessaId || ''; const cs = [...S.commesse.values()].filter(c => !cli.value || c.clienteId === cli.value).sort(byName); com.replaceChildren(el('option', { value: '' }, '— Nessuna commessa —'), ...cs.map(c => el('option', { value: c.id, selected: c.id === v }, c.nome + (c.codice ? ' · ' + c.codice : '')))); };
@@ -320,7 +419,9 @@
     const drawItems = () => itBox.replaceChildren(
       el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:8px' }, el('div', { class: 'picker grow' }, srch, drop), btn('Fotocamera', () => openCam(v => addItem(v), 'Articoli da consegnare'), '', 'cam')),
       sel.length ? el('b', {}, sel.length + (sel.length === 1 ? ' articolo' : ' articoli')) : el('p', { class: 'hint' }, 'Aggiungi gli articoli da consegnare: scansiona il seriale o cercali per codice.'),
-      ...sel.map((id, k) => { const x = S.mag.get(id); if (!x) return null; return el('div', { class: 'mg-pr' }, itemThumb(x, 32), el('div', { class: 'grow', style: 'min-width:0' }, el('b', { class: 'mono' }, x.code), el('div', { class: 'hint' }, (x.seriale ? 'S/N ' + x.seriale : 'Senza seriale') + (x.qty > 1 ? ' · ×' + x.qty : '') + ' · ' + descOf(x))), el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Togli', onclick: () => { sel.splice(k, 1); drawItems(); } }, ic('x', 16))); }));
+      ...sel.map((id, k) => { const x = S.mag.get(id); if (!x) return null; return el('div', { class: 'mg-pr' }, itemThumb(x, 32), el('div', { class: 'grow', style: 'min-width:0' }, el('b', { class: 'mono' }, x.code), el('div', { class: 'hint' }, (x.seriale ? 'S/N ' + x.seriale : 'Senza seriale') + (x.qty > 1 ? ' · ' + x.qty + ' pz disponibili' : '') + ' · ' + descOf(x))),
+        !x.seriale && x.qty > 1 && !isPrev(id) ? el('label', { class: 'row', style: 'gap:6px;flex-wrap:nowrap;font-size:.8rem' }, 'Pezzi', el('input', { type: 'number', min: 1, max: x.qty, value: pcs.get(id) || 1, style: 'width:70px', oninput: e => pcs.set(id, Math.max(1, Math.min(x.qty, +e.target.value || 1))) })) : null,
+        el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Togli', onclick: () => { sel.splice(k, 1); drawItems(); } }, ic('x', 16))); }));
     drawItems();
     const body = el('div', { class: 'stack' },
       el('div', { class: 'fgrid' }, fld('Tipo', tipo), fld('Responsabile', resp), fld('Cliente *', cli, 'full'), fld('Commessa collegata', com, 'full'), fld('Ricevuto da (referente)', ref), fld('Luogo', luogo), fld('Data consegna', cons), fld('Rientro previsto', rien)),
@@ -333,13 +434,23 @@
       if (rien.value && cons.value && rien.value < cons.value) { toast('Il rientro è prima della consegna.', 'bad'); return; }
       const id = dm ? dm.id : newId('demo'); const now = Date.now();
       const prevItems = dm ? (dm.items || []) : [];
-      const items = sel.map(sid => { const x = S.mag.get(sid); const old = prevItems.find(y => y.id === sid); return old ? { ...old, code: x.code, seriale: x.seriale || '', desc: descOf(x), qty: x.qty || 1 } : { id: sid, code: x.code, seriale: x.seriale || '', desc: descOf(x), qty: x.qty || 1 }; });
+      // righe con più pezzi: consegno solo i pezzi indicati creando una riga figlia, che al rientro torna nella riga madre
+      for (let k = 0; k < sel.length; k++) {
+        const sid = sel[k], x = S.mag.get(sid); if (!x || x.seriale || isPrev(sid) || !(x.qty > 1)) continue;
+        const n = pcs.get(sid) || 1; if (n >= x.qty) continue;
+        const cid = newId('magazzino'); const c = { ...x }; delete c.id;
+        Object.assign(c, { qty: n, pz: null, qRil: n, qManc: null, qUtile: null, qNonServe: null, parentId: sid, stato: 'demo', demoId: id, at: now, by: S.me, upd: now });
+        if (!(await put('magazzino', cid, c))) return;
+        await patch('magazzino', sid, { qty: x.qty - n, qRil: (x.qRil ?? x.qty) - n, upd: now });
+        sel[k] = cid;
+      }
+      const items = sel.map(sid => { const x = S.mag.get(sid); const old = prevItems.find(y => y.id === sid); return old ? { ...old, code: x.code, seriale: x.seriale || '', desc: descOf(x), qty: x.qty || 1 } : { id: sid, parentId: x.parentId || null, sap: x.sap || '', code: x.code, seriale: x.seriale || '', desc: descOf(x), qty: x.qty || 1 }; });
       const o = { ...d, n: d.n || nextNum(), tipo: tipo.value, clienteId: cli.value, commessaId: com.value || '', referente: ref.value.trim(), luogo: luogo.value.trim(), consegna: cons.value || today(), rientro: rien.value || '', promemoria: rem.slice().sort(), resp: resp.value, note: note.value.trim(), items, stato: d.stato || 'aperta', upd: now };
       delete o.id; if (!dm) { o.at = now; o.by = S.me; }
       if (!(await put('demo', id, o))) return;
       const open = isOpen(o);
       for (const x of items) if (open && !x.rientratoAt && !x.esito) await patch('magazzino', x.id, { stato: 'demo', demoId: id, upd: now });
-      for (const x of prevItems) if (!sel.includes(x.id) && S.mag.get(x.id) && S.mag.get(x.id).demoId === id) await patch('magazzino', x.id, { stato: 'sede', demoId: null, upd: now });
+      for (const x of prevItems) if (!sel.includes(x.id) && S.mag.get(x.id) && S.mag.get(x.id).demoId === id) await backHome(x.id);
       m.close();
       if (!dm) {
         const to = [o.resp].filter(x => x && x !== S.me);
@@ -350,13 +461,20 @@
     }, 'pri', 'check')], { wide: true });
   }
 
+  // rientro in filiale: una riga figlia (parte dei pezzi di una riga di inventario) si riunisce alla riga madre
+  async function backHome(id) {
+    const x = S.mag.get(id); if (!x) return; const now = Date.now();
+    const par = x.parentId && S.mag.get(x.parentId);
+    if (par) { await patch('magazzino', par.id, { qty: (par.qty || 0) + (x.qty || 1), qRil: (par.qRil ?? par.qty ?? 0) + (x.qty || 1), stato: par.stato === 'mancante' ? 'sede' : par.stato, upd: now }); await remove('magazzino', id); }
+    else await patch('magazzino', id, { stato: 'sede', demoId: null, upd: now });
+  }
   async function returnItems(dm, ids, esito) {
     const now = Date.now(); const k = today();
     const items = (dm.items || []).map(x => ids.includes(x.id) && !x.rientratoAt && !x.esito ? (esito === 'venduto' ? { ...x, esito: 'venduto', esitoAt: k } : { ...x, rientratoAt: k }) : x);
     const allDone = items.every(x => x.rientratoAt || x.esito);
     const up = { items, upd: now }; if (allDone) { up.stato = 'chiusa'; up.chiusa = k; }
     if (!(await patch('demo', dm.id, up))) return null;
-    for (const id of ids) if (S.mag.has(id)) await patch('magazzino', id, esito === 'venduto' ? { stato: 'venduto', demoId: null, upd: now } : { stato: 'sede', demoId: null, upd: now });
+    for (const id of ids) if (S.mag.has(id)) { if (esito === 'venduto') await patch('magazzino', id, { stato: 'venduto', demoId: null, upd: now }); else await backHome(id); }
     feed('demo', (esito === 'venduto' ? 'ha lasciato al cliente ' : 'ha registrato il rientro di ') + ids.length + (ids.length === 1 ? ' articolo' : ' articoli') + ' da ' + cliName(dm.clienteId) + (allDone ? ' (consegna ' + dm.n + ' chiusa)' : ''), { k: 'demo', id: dm.id }, []);
     return { ...dm, ...up };
   }
@@ -386,7 +504,7 @@
     const m = modal((TIPL[dm.tipo] || 'Demo') + ' ' + (dm.n || '') + (c ? ' · ' + c.nome : ''), body, [
       btn('Elimina', async () => {
         if (!await ask('Eliminare la consegna ' + (dm.n || '') + '? Gli articoli ancora fuori tornano «in filiale».')) return;
-        for (const x of pend) if (S.mag.get(x.id) && S.mag.get(x.id).demoId === dm.id) await patch('magazzino', x.id, { stato: 'sede', demoId: null, upd: Date.now() });
+        for (const x of pend) if (S.mag.get(x.id) && S.mag.get(x.id).demoId === dm.id) await backHome(x.id);
         if (await remove('demo', dm.id)) m.close();
       }, 'danger', 'trash'),
       btn('Documento PDF', () => demoPdf(dm), '', 'pdf'),
@@ -489,7 +607,7 @@
     const h1 = box(doc, 14, 35, bw, 'Destinatario', [['Ragione sociale', c.nome], ['Indirizzo', [c.indirizzo, c.citta, c.prov].filter(Boolean).join(', ')], ['P. IVA', c.piva], ['Ricevuto da', dm.referente], ['Telefono', c.tel]]);
     const h2 = box(doc, 14 + bw + 6, 35, bw, 'Riferimento', [['Commessa', cm ? cm.nome + (cm.codice ? ' (' + cm.codice + ')' : '') : ''], ['Luogo', dm.luogo], ['Consegna', fKs(dm.consegna)], ['Rientro previsto', fKs(dm.rientro)], ['Referente HIK', nm(dm.resp)]]);
     const items = dm.items || [];
-    const imgs = await Promise.all(items.map(async x => { const it = S.mag.get(x.id) || x; const ci = await catImg(imOf(it)); if (ci) return ci; return it.foto && it.foto[0] ? await blobImg(it.foto[0]) : null; }));
+    const imgs = await Promise.all(items.map(async x => { const it = S.mag.get(x.id) || x; const ci = await catImg(imOf(it)); if (ci) return ci; const b = blobOf(it); return b ? await blobImg(b) : null; }));
     doc.autoTable({
       startY: 35 + Math.max(h1, h2) + 6, margin: { left: 14, right: 14 },
       head: [['#', 'Foto', 'Codice', 'Descrizione', 'Seriale', 'Q.tà']],
@@ -550,30 +668,35 @@
         tile('Rientri scaduti', String(late.length), late.length ? late.map(d => cliName(d.clienteId)).slice(0, 3).join(', ') : 'nessuno', () => { f.tab = 'demo'; f.dst = 'scadute'; this.update(); }, late.length ? 'color:var(--accent)' : ''),
         tile('Promemoria entro 7 giorni', String(soon.length), soon.length ? 'il primo ' + fKs(soon.map(nextRem).sort()[0]) : '—', () => { f.tab = 'demo'; f.dst = 'aperte'; this.update(); }));
       const seg = el('div', { class: 'seg' }, el('button', { type: 'button', class: f.tab === 'art' ? 'on' : '', onclick: () => { f.tab = 'art'; this.update(); } }, ic('box', 16), 'Articoli'), el('button', { type: 'button', class: f.tab === 'demo' ? 'on' : '', onclick: () => { f.tab = 'demo'; this.update(); } }, ic('ext', 16), 'Demo e POC', od.length ? el('span', { class: 'n' }, String(od.length)) : null));
-      const acts = el('div', { class: 'row' }, btn('Modulo vuoto PDF', blankPdf, 'ghost', 'pdf'), btn('Nuova demo / POC', () => demoForm(null), '', 'ext'), btn('Carica articoli', loadForm, 'pri', 'scan'));
+      const acts = el('div', { class: 'row' }, btn('Importa inventario', () => window.hpInvImport(), 'ghost', 'up'), btn('Modulo vuoto PDF', blankPdf, 'ghost', 'pdf'), btn('Nuova demo / POC', () => demoForm(null), '', 'ext'), btn('Carica articoli', loadForm, 'pri', 'scan'));
       let filters, body;
       if (f.tab === 'art') {
         const ql = f.q.trim().toLowerCase(); const qn = norm(f.q);
-        const rows = items.filter(x => (!f.st || (x.stato || 'sede') === f.st) && (!ql || (x.code + ' ' + (x.seriale || '') + ' ' + (x.ean || '') + ' ' + descOf(x) + ' ' + (x.ubicazione || '') + ' ' + (demoOf(x) ? cliName(demoOf(x).clienteId) : '')).toLowerCase().includes(ql) || (qn.length >= 4 && snNorm(x.seriale || '').includes(qn))))
+        const rows = items.filter(x => passSt(x, f.st) && (!ql || (x.code + ' ' + (x.seriale || '') + ' ' + (x.ean || '') + ' ' + (x.sap || '') + ' ' + (x.descSap || '') + ' ' + (x.note || '') + ' ' + descOf(x) + ' ' + (x.ubicazione || '') + ' ' + (demoOf(x) ? cliName(demoOf(x).clienteId) : '')).toLowerCase().includes(ql) || (qn.length >= 4 && snNorm(x.seriale || '').includes(qn))))
           .sort((a, b) => a.code.localeCompare(b.code) || String(a.seriale || '').localeCompare(String(b.seriale || '')));
         const vis = new Set(rows.map(x => x.id)); [...S.mgSel].forEach(id => { if (!vis.has(id) || (S.mag.get(id) || {}).stato !== 'sede') S.mgSel.delete(id); });
         const scanQ = el('input', { type: 'search', placeholder: 'Cerca o scansiona codice, seriale, cliente…', value: f.q, oninput: e => { f.q = e.target.value; this.update(); } });
         filters = el('div', { class: 'filters' }, scanQ, el('button', { type: 'button', class: 'icon-btn', title: 'Cerca con la fotocamera', 'aria-label': 'Cerca con la fotocamera', onclick: () => { let closeCam; openCam(v => { const p = parseScan(v); f.q = p.serial || (p.item && p.item.c) || p.ean || v; this.update(); const it = (p.serial && findBySn(p.serial)) || findBySn(v); if (it) { closeCam && closeCam(); itemForm(it); } return it ? 'trovato' : 'filtro applicato'; }, 'Cerca in magazzino').then(c => closeCam = c); } }, ic('cam', 18)),
-          selectEl('mgSt', [['', 'Tutti gli stati'], ...Object.entries(ST).map(([k, v]) => [k, v[0]])], f.st, { onchange: e => { f.st = e.target.value; this.update(); } }));
+          (() => { const sl = el('select', { id: 'mgSt', 'aria-label': 'Filtra per stato', onchange: e => { f.st = e.target.value; this.update(); } }, el('option', { value: '' }, 'Tutti gli stati (' + items.length + ')'),
+            el('optgroup', { label: 'Stato articolo' }, ...Object.entries(ST).map(([k, v]) => el('option', { value: k }, v[0] + ' (' + items.filter(x => (x.stato || 'sede') === k).length + ')'))),
+            el('optgroup', { label: 'Inventario' }, ...FILTRI.map(([k, l, fn]) => el('option', { value: k }, l + ' (' + items.filter(fn).length + ')')))); sl.value = f.st; return sl; })(),
+          (() => { const noImg = items.filter(FILTRI[4][2]).length; return noImg ? btn('Immagini dal web (' + new Set(items.filter(FILTRI[4][2]).map(x => norm(x.code))).size + ')', webImgAll, 'ghost', 'search') : null; })());
         const sel = [...S.mgSel];
         const bar = sel.length ? el('div', { class: 'banner row between' }, el('span', {}, sel.length + (sel.length === 1 ? ' articolo selezionato' : ' articoli selezionati')), el('div', { class: 'row' }, btn('Deseleziona', () => { S.mgSel.clear(); this.update(); }, 'sm ghost'), btn('Consegna in demo', () => demoForm(null, { items: sel }), 'sm pri', 'ext'))) : null;
         const sedeRows = rows.filter(x => (x.stato || 'sede') === 'sede');
         const ckAll = el('input', { type: 'checkbox', 'aria-label': 'Seleziona tutti in filiale', checked: sedeRows.length > 0 && sedeRows.every(x => S.mgSel.has(x.id)), onchange: e => { sedeRows.forEach(x => e.target.checked ? S.mgSel.add(x.id) : S.mgSel.delete(x.id)); this.update(); } });
         body = rows.length ? el('section', { class: 'panel stack' }, bar, el('div', { class: 'tbl-wrap' }, el('table', {},
-          el('thead', {}, el('tr', {}, el('th', { class: 'ck' }, ckAll), ...['Articolo', 'Seriale', 'Q.tà', 'Stato', 'Presso / ubicazione', 'Foto', 'Caricato'].map((h, k) => el('th', { class: k === 2 ? 'r' : '' }, h)))),
+          el('thead', {}, el('tr', {}, el('th', { class: 'ck' }, ckAll), ...['Articolo', 'SAP', 'Seriale', 'Pz', 'Rilevati', 'Mancanti', 'Utili', 'Non servono', 'Stato', 'Presso / ubicazione', 'Note', 'Caricato'].map((h, k) => el('th', { class: k >= 3 && k <= 7 ? 'r' : '' }, h)))),
           el('tbody', {}, rows.map(x => { const dm = demoOf(x); const free = (x.stato || 'sede') === 'sede';
             return el('tr', { class: 'click' + (S.mgSel.has(x.id) ? ' sel' : ''), onclick: () => itemForm(x) },
               el('td', { class: 'ck', onclick: e => e.stopPropagation() }, free ? el('input', { type: 'checkbox', 'aria-label': 'Seleziona ' + x.code, checked: S.mgSel.has(x.id), onchange: e => { e.target.checked ? S.mgSel.add(x.id) : S.mgSel.delete(x.id); this.update(); } }) : null),
               el('td', {}, el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:10px' }, itemThumb(x, 40), el('div', { class: 'cell-t' }, el('b', { class: 'mono' }, x.code), el('small', { class: 'muted', style: 'max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block' }, descOf(x))))),
-              el('td', { class: 'mono' }, x.seriale || el('span', { class: 'muted' }, '—')), el('td', { class: 'r num' }, String(x.qty || 1)),
+              el('td', { class: 'mono' }, x.sap || el('span', { class: 'muted' }, '—')),
+              el('td', { class: 'mono' }, x.seriale || el('span', { class: 'muted' }, '—')),
+              ...[x.pz ?? x.qty ?? 1, x.qRil ?? x.qty ?? 1, x.qManc, x.qUtile, x.qNonServe].map((v, k) => el('td', { class: 'r num', 'data-sort': String(v ?? -1), style: k === 2 && v > 0 ? 'color:var(--accent);font-weight:600' : '' }, v == null ? el('span', { class: 'muted' }, '—') : String(v))),
               el('td', { 'data-sort': String(Object.keys(ST).indexOf(x.stato || 'sede')) }, stChip(x.stato || 'sede'), dm && overdue(dm) ? el('div', {}, el('small', { style: 'color:var(--accent)' }, 'rientro scaduto')) : null),
               el('td', {}, dm ? el('a', { href: '#', onclick: e => { e.preventDefault(); e.stopPropagation(); demoDetail(dm); } }, cliName(dm.clienteId) || '—', el('small', { class: 'muted' }, ' · ' + (dm.n || ''))) : (x.ubicazione || el('span', { class: 'muted' }, '—'))),
-              el('td', { class: 'num' }, (x.foto || []).length ? String(x.foto.length) : '—'),
+              el('td', {}, x.note ? el('span', { class: 'pill', style: '--c:var(--info)' }, x.note) : el('span', { class: 'muted' }, '—')),
               el('td', { 'data-sort': String(x.at || 0) }, el('span', { class: 'row', style: 'gap:6px;flex-wrap:nowrap' }, av(x.by), fD(x.at))));
           }))))) : emptyBox(items.length ? 'Nessun articolo trovato' : 'Magazzino vuoto', items.length ? 'Cambia la ricerca o il filtro sullo stato.' : 'Carica gli articoli presenti in filiale scansionando modello e seriale con il cellulare o con un lettore di codici a barre.', items.length ? null : btn('Carica articoli', loadForm, 'pri', 'scan'));
       } else {

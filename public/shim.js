@@ -117,7 +117,7 @@
   function connect() {
     try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/api/ws'); } catch (e) { return later(); }
     ws.onopen = () => { const was = wsOk; wsOk = true; retry = 1000; if (was === false && C.size) resync(); clearInterval(pingT); pingT = setInterval(() => { try { ws.send('ping'); } catch { } }, 25000); };
-    ws.onmessage = ev => { if (ev.data === 'pong') return; let m; try { m = JSON.parse(ev.data); } catch { return; } if (m && m.col) apply(m.col, m.id, m.data, m.v); };
+    ws.onmessage = ev => { if (ev.data === 'pong') return; let m; try { m = JSON.parse(ev.data); } catch { return; } if (m && m.reload) { const c = C.get(m.reload); if (c && c.loaded) load(m.reload, true).catch(() => { }); return; } if (m && m.col) apply(m.col, m.id, m.data, m.v); };
     ws.onclose = () => { wsOk = false; clearInterval(pingT); later(); };
     ws.onerror = () => { try { ws.close(); } catch { } };
   }
