@@ -439,7 +439,7 @@
     doc.setFillColor(...RED); doc.rect(0, 0, W, 4, 'F');
     if (LOGO) { const h = Math.min(10, 52 / LOGO.ar); doc.addImage(LOGO.url, 'PNG', 14, 19.5 - h, h * LOGO.ar, h, 'hiklogo', 'FAST'); }
     else { doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...RED); doc.text('HIKVISION', 14, 18); }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...SOFT); doc.text('Filiale di Palermo - Viale Lazio 30/B - Palermo', 14, 23.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...SOFT); doc.text('Filiale di Palermo - Viale Lazio 30/B - Palermo', 14, 25);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5); doc.setTextColor(...INK); doc.text(title, W - 14, 15, { align: 'right' });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
     doc.text('N. ' + (n || '____________'), W - 14, 21, { align: 'right' }); doc.text('Data ' + (date || '____ / ____ / ________'), W - 14, 26, { align: 'right' });
