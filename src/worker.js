@@ -556,6 +556,7 @@ async function api(req, env, ctx, url, u) {
   if (m !== 'GET' && req.headers.get('x-hp') !== '1') return err('csrf', 'Richiesta non valida', 403);
 
   if (p === '/api/me') {
+    ctx.waitUntil(migrateMag(env).catch(e => console.log('mig', e && e.stack || e)));
     const r = await ruoli(env);
     const team = await getDoc(env, 'team', u.id);
     return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd });
