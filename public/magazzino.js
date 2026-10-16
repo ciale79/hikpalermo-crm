@@ -336,6 +336,7 @@
       gal,
       el('div', { class: 'fgrid' }, fld('Codice modello', code), fld('Seriale', sn), fld('EAN', ean), inv ? null : fld('Quantità', q), fld('Stato', st), fld('Ubicazione', ub), fld('Note', note, 'full')),
       inv ? el('div', { class: 'stack', style: 'gap:6px' }, el('span', { class: 'eyebrow' }, 'Inventario' + (d.magSap ? ' · magazzino ' + d.magSap : '') + (d.divisione ? ' · divisione ' + d.divisione : '')), el('dl', { class: 'dl' }, el('dt', {}, 'Codice SAP'), el('dd', { class: 'mono' }, d.sap || '—'), el('dt', {}, 'Descrizione SAP'), el('dd', {}, d.descSap || '—')), el('div', { class: 'mg-inv' }, ...INVF.map(([k, l]) => el('label', { class: 'fld' }, el('span', {}, l), inv[k])))) : null,
+      window.hpDlBox ? hpDlBox(it.code) : null,
       dm ? el('div', { class: 'banner' }, 'In ' + (TIPL[dm.tipo] || 'demo').toLowerCase() + ' presso ', el('b', {}, cliName(dm.clienteId) || '—'), ' dal ' + fK(dm.consegna) + (dm.rientro ? ', rientro previsto ' + fK(dm.rientro) : '') + '. ', el('a', { href: '#', onclick: e => { e.preventDefault(); m.close(); demoDetail(dm); } }, 'Apri la consegna')) : null,
       hist.length ? el('div', { class: 'stack', style: 'gap:4px' }, el('span', { class: 'eyebrow' }, 'Storico consegne'), ...hist.map(x => el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); m.close(); demoDetail(x); } }, (x.n || '') + ' · ' + (cliName(x.clienteId) || '—') + ' · ' + fK(x.consegna) + (isOpen(x) ? ' (aperta)' : ' → rientro ' + fK(x.chiusa || x.rientro))))) : null,
       el('p', { class: 'hint' }, 'Caricato da ' + nm(it.by) + ' il ' + fD(it.at) + '.'));
@@ -690,7 +691,7 @@
           el('tbody', {}, rows.map(x => { const dm = demoOf(x); const free = (x.stato || 'sede') === 'sede';
             return el('tr', { class: 'click' + (S.mgSel.has(x.id) ? ' sel' : ''), onclick: () => itemForm(x) },
               el('td', { class: 'ck', onclick: e => e.stopPropagation() }, free ? el('input', { type: 'checkbox', 'aria-label': 'Seleziona ' + x.code, checked: S.mgSel.has(x.id), onchange: e => { e.target.checked ? S.mgSel.add(x.id) : S.mgSel.delete(x.id); this.update(); } }) : null),
-              el('td', {}, el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:10px' }, itemThumb(x, 40), el('div', { class: 'cell-t' }, el('b', { class: 'mono' }, x.code), el('small', { class: 'muted', style: 'max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block' }, descOf(x))))),
+              el('td', {}, el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:10px' }, itemThumb(x, 40), el('div', { class: 'cell-t' }, el('span', { class: 'row', style: 'gap:6px' }, el('b', { class: 'mono' }, x.code), window.hpDlChip ? hpDlChip(x.code) : null), el('small', { class: 'muted', style: 'max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block' }, descOf(x))))),
               el('td', { class: 'mono' }, x.sap || el('span', { class: 'muted' }, '—')),
               el('td', { class: 'mono' }, x.seriale || el('span', { class: 'muted' }, '—')),
               ...[x.pz ?? x.qty ?? 1, x.qRil ?? x.qty ?? 1, x.qManc, x.qUtile, x.qNonServe].map((v, k) => el('td', { class: 'r num', 'data-sort': String(v ?? -1), style: k === 2 && v > 0 ? 'color:var(--accent);font-weight:600' : '' }, v == null ? el('span', { class: 'muted' }, '—') : String(v))),
