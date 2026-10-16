@@ -759,7 +759,7 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
   const mx=el('section',{class:'panel'},el('h3',{text:'Clienti per status di partnership'}),matrix());
   const pts=[...S.commesse.values()].filter(c=>c.lat!=null&&c.lng!=null).map(c=>({lat:c.lat,lng:c.lng,color:CCOL[c.stato||'opp'],title:c.nome+' · '+(CSTL[c.stato]||''),on:()=>go('commesse',c.id)}));
   const mapP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Mappa commesse'}),el('span',{class:'hint'},pts.length+' con posizione GPS')),mapSvg(pts));
-  r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),kpis,el('div',{class:'split'},feedP,evP),el('div',{class:'split'},el('div',{class:'stack'},stP,mx),mapP)].filter(Boolean));
+  r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),kpis,evP,el('div',{class:'split'},el('div',{class:'stack'},stP,mx),mapP)].filter(Boolean));
 }};
 function matrix(){const g=el('div',{class:'matrix'},el('span'),TIERS.map(t=>el('span',{class:'h'},TLAB[t])));const cl=[...S.clienti.values()];
   for(const [L,lab,key] of [['pro','Pro','statusPro'],['sol','Solution','statusSol']]){const counts=TIERS.map(t=>cl.filter(c=>c[key]===t).length);const mx=Math.max(1,...counts);g.append(el('span',{class:'eyebrow'},lab));TIERS.forEach((t,i)=>g.append(el('button',{class:'c',type:'button',style:{'--c':`var(--t-${t.toLowerCase()})`,'--a':String(Math.round(counts[i]/mx*45))},title:`${lab} ${TLAB[t]}: apri elenco`,onclick:()=>{S.fCli={...S.fCli,pro:L==='pro'?t:'',sol:L==='sol'?t:''};go('clienti');}},counts[i])));}

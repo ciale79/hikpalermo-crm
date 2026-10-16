@@ -71,6 +71,14 @@
         const first = this.root.querySelector('section.panel');
         if (first && first.nextSibling) first.parentNode.insertBefore(p, first.nextSibling); else this.root.appendChild(p);
       }
+      // Avvisi e attività: in fondo alla pagina
+      if (!this.editing && this.root) {
+        this.root.querySelector('#cfFeed')?.remove();
+        const un = unread();
+        this.root.appendChild(el('section', { class: 'panel', id: 'cfFeed' },
+          el('div', { class: 'panel-h' }, el('h3', {}, 'Avvisi e attività ', un.length ? el('span', { class: 'pill s-persa' }, un.length + ' da leggere') : null), un.length ? btn('Segna come letti', markRead, 'sm ghost') : null),
+          feedList(S.feed.slice(0, 40))));
+      }
     } catch (e) { console.error(e); }
     return r;
   };
