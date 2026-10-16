@@ -621,9 +621,42 @@ export default {
         html: mailShell('Promemoria per domani', `<table cellpadding="0" cellspacing="0">${rows}</table><p style="font-size:13px;color:#45576A;margin-top:12px">In allegato ${evs.length === 1 ? 'l\'invito' : 'gli inviti'} da aprire per aggiungere ${evs.length === 1 ? 'l\'evento' : 'gli eventi'} al calendario Outlook, se non l'hai già fatto.</p>`, ['Apri il calendario', env.APP_URL + '/'])
       });
     }
-    await env.DB.prepare('DELETE FROM reminders WHERE at<?').bind(t - 30 * 864e5).run();
+    try { await demoReminders(env, t); } catch (e) { console.log('demo', e && e.stack || e); }
+    await env.DB.prepare('DELETE FROM reminders WHERE at<?').bind(t - 90 * 864e5).run();
   }
 };
+
+// Promemoria del magazzino: prodotti in demo / POC alle date scelte e il giorno del rientro (poi ogni 7 giorni se scaduto)
+async function demoReminders(env, t) {
+  const today = romeDay(t);
+  const { results } = await env.DB.prepare("SELECT id,data FROM docs WHERE col='demo' AND coalesce(json_extract(data,'$.stato'),'aperta')<>'chiusa'").all();
+  const TIP = { demo: 'demo', poc: 'POC', visione: 'conto visione' };
+  const fk = k => k ? k.slice(8, 10) + '/' + k.slice(5, 7) + '/' + k.slice(0, 4) : '';
+  for (const r of results) {
+    const d = parse(r.data); if (!d) continue;
+    const out = (d.items || []).filter(x => !x.rientratoAt && !x.esito); if (!out.length) continue;
+    let why = null;
+    if ((d.promemoria || []).includes(today)) why = 'promemoria';
+    if (d.rientro === today) why = 'rientro';
+    else if (d.rientro && d.rientro < today) { const days = Math.round((Date.parse(today) - Date.parse(d.rientro)) / 864e5); if (days === 1 || days % 7 === 0 || (d.promemoria || []).includes(today)) why = 'scaduto'; }
+    if (!why) continue;
+    const key = 'demo:' + r.id + ':' + today;
+    if (await env.DB.prepare('SELECT 1 FROM reminders WHERE key=?').bind(key).first()) continue;
+    await env.DB.prepare('INSERT INTO reminders(key,at) VALUES(?,?)').bind(key, t).run();
+    const cli = d.clienteId ? (await getDoc(env, 'clienti', d.clienteId))?.data : null;
+    const com = d.commessaId ? (await getDoc(env, 'commesse', d.commessaId))?.data : null;
+    const cn = cli && cli.nome || 'cliente';
+    const subj = why === 'scaduto' ? 'Rientro scaduto: ' + TIP[d.tipo || 'demo'] + ' presso ' + cn : why === 'rientro' ? 'Oggi rientro previsto: ' + TIP[d.tipo || 'demo'] + ' presso ' + cn : 'Promemoria ' + TIP[d.tipo || 'demo'] + ': materiale presso ' + cn;
+    const rows = out.map(x => `<tr><td style="padding:4px 12px 4px 0;font-family:Consolas,monospace;font-weight:bold">${esc(x.code)}</td><td style="padding:4px 12px 4px 0;font-family:Consolas,monospace;color:#45576A">${esc(x.seriale || '—')}</td><td style="padding:4px 0;color:#45576A;font-size:13px">${esc((x.desc || '').slice(0, 80))}</td></tr>`).join('');
+    const info = `<p style="margin:0 0 10px"><b>${esc(cn)}</b>${com ? ' · commessa ' + esc(com.nome || '') : ''}<br><span style="color:#45576A;font-size:13px">Consegna ${esc(d.n || '')} del ${fk(d.consegna)}${d.referente ? ', ricevuto da ' + esc(d.referente) : ''}${d.rientro ? ' · rientro previsto <b style="color:' + (why === 'scaduto' ? '#C8102E' : '#1C2430') + '">' + fk(d.rientro) + '</b>' : ''}</span></p>`;
+    const html = mailShell(subj, info + `<table cellpadding="0" cellspacing="0">${rows}</table>` + (d.note ? `<p style="font-size:13px;color:#45576A;margin-top:12px">${esc(d.note)}</p>` : ''), ['Apri il magazzino', env.APP_URL + '/#magazzino']);
+    for (const pid of new Set([d.resp, d.by].filter(Boolean))) { const to = await emailOf(env, pid); if (to) await sendMail(env, { to, subject: subj, html, kind: 'demo' }); }
+    const fid = 'dm' + r.id.slice(-10) + today.replace(/-/g, '');
+    const fd = { t: 'demo', msg: subj.charAt(0).toLowerCase() + subj.slice(1) + ' (' + out.length + (out.length === 1 ? ' articolo' : ' articoli') + ')', ref: { k: 'demo', id: r.id }, to: [], by: d.resp || d.by, at: t };
+    await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('feed', fid, JSON.stringify(fd), t, t).run();
+    await broadcast(env, { col: 'feed', id: fid, v: t, data: fd, by: 'server' });
+  }
+}
 
 /* ---------------- Durable Object: tempo reale ---------------- */
 export class Room {

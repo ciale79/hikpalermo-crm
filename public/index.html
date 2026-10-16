@@ -482,6 +482,34 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .pa-rr2{padding:4px;border-radius:5px;font-size:.85rem}
 .pa-bar{display:flex;align-items:center;gap:6px}.pa-bar i{display:block;height:8px;border-radius:4px;background:var(--info);min-width:2px}
 .pa-bar.n i{background:var(--accent)}.pa-bar b{font-family:var(--font-mono);font-size:.78rem;white-space:nowrap}
+
+/* magazzino */
+.banner{border-left-color:var(--c,var(--warn))}
+.linkish{background:none;border:0;padding:0 2px;color:var(--accent);cursor:pointer;font:inherit;font-size:.8rem}
+.mg-scan{font-family:var(--font-mono);font-size:1rem;flex:1;min-width:0}
+.ov{grid-template-columns:minmax(0,1fr)}
+.mg-clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mg-cur,.mg-pr{min-width:0}
+.mg-pr .hint{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mg-cur{border:1px dashed var(--line);border-radius:var(--r);padding:12px;background:var(--surface-2)}
+.mg-pr{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface)}
+.mg-uimg{object-fit:cover;border-radius:6px;background:var(--surface-2);flex:none}
+.mg-gal{display:flex;flex-wrap:wrap;gap:10px}
+.mg-gal figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.mg-gal img{width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2)}
+.mg-gal figcaption{font-size:.75rem;color:var(--ink-3)}
+.mg-add{width:120px;height:120px;border:1.5px dashed var(--line);border-radius:8px;background:var(--surface-2);color:var(--ink-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;font:inherit;font-size:.8rem}
+.mg-add:hover{border-color:var(--accent);color:var(--accent)}
+.mg-chip{cursor:pointer;font-size:.7rem;padding:1px 7px}
+.hp-cam{position:fixed;inset:0;z-index:10000;background:#0b0f14;color:#fff;display:flex;flex-direction:column;padding:12px;gap:10px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.hp-cam-top{display:flex;align-items:center;justify-content:space-between}
+.hp-cam-v{position:relative;flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#000}
+.hp-cam-v video{width:100%;height:100%;object-fit:cover;display:block}
+.hp-cam-frame{position:absolute;left:8%;right:8%;top:30%;bottom:30%;border:2px solid rgba(255,255,255,.85);border-radius:10px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);pointer-events:none}
+.hp-cam-frame::after{content:"";position:absolute;left:4%;right:4%;top:50%;height:2px;background:#C8102E;box-shadow:0 0 8px #C8102E}
+.hp-cam-info{font-size:.85rem;opacity:.85}
+.hp-cam-list{display:flex;flex-direction:column;gap:3px;font-size:.85rem;max-height:22vh;overflow:auto}
+.hp-cam-list .hint{color:#9fb0c3}
 </style>
 </head>
 <body>
@@ -812,7 +840,7 @@ VIEWS.commesse={title:()=>S.sel?'Commessa':'Commesse',mount(){if(S.sel)return co
   S.comSel=S.comSel||new Set();const vis=new Set(rows.map(c=>c.id));[...S.comSel].forEach(id=>{if(!vis.has(id))S.comSel.delete(id);});
   const tb=el('tbody',{},rows.map(c=>{const v=comVal(c.id);const cli=S.clienti.get(c.clienteId);return el('tr',{class:'click'+(S.comSel.has(c.id)?' sel':''),onclick:()=>go('commesse',c.id)},
     el('td',{class:'ck',onclick:e=>e.stopPropagation()},el('input',{type:'checkbox','aria-label':'Seleziona '+c.nome,checked:S.comSel.has(c.id),onchange:e=>{e.target.checked?S.comSel.add(c.id):S.comSel.delete(c.id);this.update();}})),
-    el('td',{},el('div',{class:'cell-t'},el('b',{},c.nome),el('span',{class:'row',style:'gap:6px'},tipoChip(c),el('small',{class:'mono muted'},c.codice||'')))),el('td',{},cli?cli.nome:el('span',{class:'muted'},'—')),el('td',{'data-sort':String(CST.findIndex(x=>x[0]===(c.stato||'opp'))),onclick:e=>e.stopPropagation()},el('div',{class:'stack',style:'gap:3px;align-items:flex-start'},stSel(c),c.statoProgetto?el('small',{class:'muted'},c.statoProgetto):null)),el('td',{},meter(pctOf(c),'sm',c.stato==='persa')),
+    el('td',{},el('div',{class:'cell-t'},el('b',{},c.nome),el('span',{class:'row',style:'gap:6px'},tipoChip(c),el('small',{class:'mono muted'},c.codice||''),window.hpDemoChip?hpDemoChip(c.id):null))),el('td',{},cli?cli.nome:el('span',{class:'muted'},'—')),el('td',{'data-sort':String(CST.findIndex(x=>x[0]===(c.stato||'opp'))),onclick:e=>e.stopPropagation()},el('div',{class:'stack',style:'gap:3px;align-items:flex-start'},stSel(c),c.statoProgetto?el('small',{class:'muted'},c.statoProgetto):null)),el('td',{},meter(pctOf(c),'sm',c.stato==='persa')),
     el('td',{},c.resp?el('span',{class:'row',style:'gap:6px;flex-wrap:nowrap'},av(c.resp),nm(c.resp)):'—'),
     el('td',{class:'r'},el('div',{class:'cell-t',style:'align-items:flex-end'},el('b',{class:'num'},v.N?eur0(v.N):'—'),v.L?el('small',{class:'num'},'listino '+eur0(v.L)):null)),
     el('td',{class:'r num'},c.utile!=null?eur0(c.utile):'—'),el('td',{class:'num'},c.dataIns?fD(c.dataIns):(c.at?fD(c.at):'—')),el('td',{},c.lat!=null?el('a',{href:satUrl(c.lat,c.lng),target:'_blank',rel:'noopener',onclick:e=>e.stopPropagation(),title:'Vista satellitare'},ic('pin',16),' ',c.citta||'GPS'):(c.citta||'—')));}));
@@ -1510,6 +1538,7 @@ boot();
 <script src="/drill.js"></script>
 <script src="/partner.js"></script>
 <script src="/partner-import.js"></script>
+<script src="/magazzino.js"></script>
 <script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
 </body>
