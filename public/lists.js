@@ -12,7 +12,10 @@
   // testo leggibile della cella: salta avatar e icone, va a capo sui blocchi
   function lines(td) {
     if (!td) return [];
+    const selTxt = [...td.querySelectorAll('select')].map(x => (x.options[x.selectedIndex] || {}).text || '');
     const c = td.cloneNode(true);
+    c.querySelectorAll('select').forEach((x, i) => x.replaceWith(document.createTextNode((selTxt[i] || '') + '\n')));
+    c.querySelectorAll('input[type=checkbox], input[type=radio]').forEach(x => x.remove());
     c.querySelectorAll('.avatar, .ini, svg, img, [aria-hidden="true"], .hp-sa').forEach(x => x.remove());
     c.querySelectorAll('div, small, p, li, br, b, strong, .pill, .tag, .cell-t > *, .stack > *, .row > *').forEach(x => x.after(document.createTextNode('\n')));
     return (c.textContent || '').replace(/ /g, ' ').split('\n').map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
@@ -61,7 +64,7 @@
     if (!th || th.cells.length < 2) return false;
     const body = tbl.tBodies[0];
     if (!body || body.rows.length < 1) return false;
-    if (body.querySelector('input, select, textarea')) return false; // tabelle di modifica (righe offerta)
+    if (body.querySelector('textarea, input:not([type=checkbox]):not([type=radio])')) return false; // tabelle di modifica (righe offerta)
     return true;
   }
   const headers = tbl => [...tbl.tHead.rows[0].cells].map(c => (c.dataset.h || c.textContent || '').replace(/[▲▼↕]/g, '').replace(/\s+/g, ' ').trim());
