@@ -123,7 +123,7 @@
       const a = new Date(m.getFullYear(), m.getMonth(), 1).getTime(), z = new Date(m.getFullYear(), m.getMonth() + 1, 1).getTime();
       const evs = [...S.eventi.values()].filter(e => e.start >= a && e.start < z && (!this.mine || (e.part || []).includes(S.me) || e.by === S.me));
       const withPos = evs.filter(e => e.lat != null && e.lng != null);
-      const pts = withPos.map(e => ({ lat: e.lat, lng: e.lng, color: ETCOL[e.tipo] || 'var(--accent)', title: e.titolo, sub: fDT(e.start) + (e.luogo ? ' · ' + e.luogo : ''), on: () => eventDetail(e) }));
+      const pts = withPos.map(e => ({ lat: e.lat, lng: e.lng, color: (window.evColor ? evColor(e.tipo) : ETCOL[e.tipo]) || 'var(--accent)', title: e.titolo, sub: fDT(e.start) + (e.luogo ? ' · ' + e.luogo : ''), on: () => eventDetail(e) }));
       const noPos = evs.length - withPos.length;
       const panel = el('section', { class: 'panel', id: 'calMap' },
         el('div', { class: 'panel-h' }, el('h3', { text: 'Mappa appuntamenti · ' + m.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }) }),
