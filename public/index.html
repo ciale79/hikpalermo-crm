@@ -540,7 +540,14 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .hp-path{display:flex;align-items:center;gap:6px;margin:0;font-size:.9rem}
 .hp-pathead{cursor:pointer;user-select:none}
 .hp-patbody[hidden]{display:none!important}
-.hp-patchev{display:inline-block;transition:transform .15s;color:var(--ink-3);font-size:.8rem;width:10px}
+.hp-patchev{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--surface);border:1px solid var(--line);color:var(--violet);transition:transform .2s}
+.hp-pathead:hover .hp-patchev,.hp-pathead:hover .hp-patlab{border-color:var(--violet)}
+.hp-pathead:focus-visible{outline:2px solid var(--violet);outline-offset:3px;border-radius:8px}
+.hp-patlab{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--violet);font-size:.78rem;font-weight:600;white-space:nowrap}
+.hp-patlab .ar{transition:transform .2s;font-size:.8rem}
+.hp-patlab .hide,.hp-pat.open .hp-patlab .show{display:none}
+.hp-pat.open .hp-patlab .hide{display:inline}
+.hp-pat.open .hp-patlab .ar{transform:rotate(180deg)}
 .hp-pat.open .hp-patchev{transform:rotate(90deg)}
 .hp-pattot{color:var(--violet);font-size:.9rem}
 .hp-pat.open .hp-pattot{display:none}

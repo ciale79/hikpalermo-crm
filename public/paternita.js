@@ -57,11 +57,12 @@
     const rows = window.hpPatRows(anno); const tot = rows.reduce((t, p) => t + p.v, 0);
     const per = [...new Set(rows.map(p => p.periodo).filter(Boolean))];
     const ctx = opt.edit ? 'fatt' : 'dash';
-    const chev = el('span', { class: 'hp-patchev', 'aria-hidden': 'true' }, '▸');
+    const chev = el('span', { class: 'hp-patchev', 'aria-hidden': 'true' }); chev.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const lab = el('span', { class: 'hp-patlab' }, el('span', { class: 'show' }, 'Mostra progetti'), el('span', { class: 'hide' }, 'Nascondi'), el('span', { class: 'ar', 'aria-hidden': 'true' }, '▾'));
     const h = el('div', { class: 'row hp-pathead', role: 'button', tabindex: '0', 'aria-expanded': String(!!openSt[ctx]), title: 'Mostra / nascondi i progetti', style: 'gap:8px;flex-wrap:wrap;align-items:center' },
       chev, el('h4', { class: 'hp-path' }, el('span', { class: 'hp-patdot' }), 'Paternità Team Sicilia'), rows.length ? el('b', { class: 'num hp-pattot' }, eur0(tot)) : null,
-      el('span', { class: 'hint' }, rows.length ? rows.length + (rows.length === 1 ? ' progetto' : ' progetti') + (per.length ? ' · ' + per.join(', ') + (anno ? ' ' + anno : '') : '') + ' · fatturati fuori area, riconosciuti alla Sicilia' : 'Nessun progetto per il ' + (anno || 'periodo')),
-      el('span', { class: 'grow' }), opt.edit ? btn('Aggiungi progetto', e => { e.stopPropagation(); patForm({ anno: anno || new Date().getFullYear(), periodo: '', area: 'SICILIA' }); }, 'sm ghost', 'plus') : null);
+      el('span', { class: 'hint' }, rows.length ? rows.length + (rows.length === 1 ? ' progetto' : ' progetti') + (per.length ? ' · ' + per.join(', ') + (anno ? ' ' + anno : '') : '') + (opt.edit ? ' · fatturati fuori area, riconosciuti alla Sicilia' : '') : 'Nessun progetto per il ' + (anno || 'periodo')),
+      el('span', { class: 'grow' }), rows.length ? lab : null, opt.edit ? btn('Aggiungi progetto', e => { e.stopPropagation(); patForm({ anno: anno || new Date().getFullYear(), periodo: '', area: 'SICILIA' }); }, 'sm ghost', 'plus') : null);
     if (!rows.length) return wrap(ctx, h);
     const link = p => p.com ? el('span', { class: 'pill', style: '--c:var(--info)', title: 'Apri la commessa «' + p.com.nome + '»' }, ic('brief', 12), ' Commessa') : null;
     if (!opt.edit) {
