@@ -101,7 +101,7 @@ function compute(wb, name, kamName) {
   }
 
   // ordini aperti (esclusi EZVIZ e Rebate)
-  const oo = { italia: 0, sicilia: 0, siCanali: {}, siClienti: {} };
+  const oo = { italia: 0, sicilia: 0, siCanali: {}, siClienti: {} }; const ooKam = {}; const kamAreas = new Set(Object.values(kamCli).map(c => c.ar));
   if (O) {
     const orows = XLSX.utils.sheet_to_json(O, { header: 1, raw: true, defval: null, blankrows: false });
     const OH = orows[0].map(norm); const oc = n => OH.indexOf(norm(n));
@@ -110,7 +110,9 @@ function compute(wb, name, kamName) {
       const r = orows[i]; const a = +r[J.amt] || 0; if (!a) continue;
       const ch = String(r[J.ch] || '').trim().toUpperCase(); if (ch === 'EZVIZ' || ch === 'REBATE') continue;
       oo.italia += a;
-      if (String(r[J.area] || '').trim().toUpperCase() === 'SICILIA') { oo.sicilia += a; add(oo.siCanali, ch, a); add(oo.siClienti, String(r[J.cust] || '—').trim(), a); }
+      const oar = String(r[J.area] || '').trim().toUpperCase();
+      if (kamAreas.has(oar)) { const cn = String(r[J.cust] || '—').trim(); add(ooKam, oar + '|' + cn, a); }
+      if (oar === 'SICILIA') { oo.sicilia += a; add(oo.siCanali, ch, a); add(oo.siClienti, String(r[J.cust] || '—').trim(), a); }
     }
   }
 
@@ -127,6 +129,7 @@ function compute(wb, name, kamName) {
     regioni: pairs(regioni), kam: { nome: kamName || '', aree: pairs(kam) }, kamClienti: Object.values(kamCli).filter(c => c.a || c.b).map(c => [c.n, c.ar, c.t, r2(c.a), r2(c.b), r2(c.p), r2(c.s)]).sort((x, y) => y[3] - x[3]), clienti: cl, nClienti: cl.length,
     macro: pairs(macro), canali: pairs(canali), siQ: mapR(T.siCh), tipiCliente: top(tipi, 20),
     famPro: top(famPro, 8), famSol: top(famSol, 8),
+    ooKam: Object.entries(ooKam).map(([k, v]) => [k.split('|').slice(1).join('|'), k.split('|')[0], r2(v)]).sort((x, y) => y[2] - x[2]),
     oo: { italia: r2(oo.italia), sicilia: r2(oo.sicilia), siCanali: mapR(oo.siCanali), siClienti: top(oo.siClienti, 50) }
   };
   const sales = {
