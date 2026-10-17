@@ -34,6 +34,15 @@
     const a = window.hpDl(code); if (!a.length) return null;
     return el('button', { type: 'button', class: 'tag hp-dltag', title: 'Datasheet e documentazione in italiano: ' + a.map(x => x.l).join(', '), onclick: e => { e.stopPropagation(); dlModal(code); } }, el('span', { class: 'hp-flag-it', role: 'img', 'aria-label': 'Documentazione in italiano', title: 'Documentazione in italiano' }), 'Datasheet e altro');
   };
+  // pagina ufficiale su hikvision.com (inglese): manuali, firmware, documentazione globale
+  const UK = '<svg viewBox="0 0 60 30" width="15" height="10" aria-hidden="true"><clipPath id="hpuk"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#hpuk)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg>';
+  const isModel = c => /^[A-Za-z]{1,8}-[A-Za-z0-9]/.test(String(c || '').trim());
+  window.hpGlobalChip = function (code, cls) {
+    if (!isModel(code)) return null;
+    const a = el('a', { class: cls || 'tag hp-gltag', href: '/go/hik?code=' + encodeURIComponent(code), target: '_blank', rel: 'noopener', title: 'Manuali, firmware e documentazione ufficiale su hikvision.com (in inglese)', onclick: e => e.stopPropagation() });
+    const f = el('span', { class: 'hp-flag-uk', role: 'img', 'aria-label': 'Documentazione in inglese' }); f.innerHTML = UK;
+    a.append(f, 'Documenti Global'); return a;
+  };
   window.hpDlBox = function (code) {
     const a = window.hpDl(code); if (!a.length) return null;
     return el('section', { class: 'panel stack', style: 'background:var(--surface-2)' }, el('h4', { class: 'row', style: 'gap:6px' }, el('span', { class: 'hp-flag-it', role: 'img', 'aria-label': 'Documentazione in italiano' }), 'Datasheet e altro'),

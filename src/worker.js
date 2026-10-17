@@ -498,6 +498,37 @@ async function productImage(req, env, u) {
   return json(await findProductImage(env, model, desc, !!b.force));
 }
 const imgKey = model => model.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 120) || 'x';
+// Pagina prodotto ufficiale su hikvision.com/en (manuali, firmware, documenti): cercata con Claude e messa in cache
+const hikModel = code => String(code || '').replace(/\([^()]*\)/g, '').replace(/\s+/g, '').trim().toUpperCase();
+async function hikPage(env, code, force) {
+  const model = hikModel(code); if (!model) return { url: null };
+  const key = 'hp_' + model.replace(/[^A-Z0-9]/g, '').slice(0, 120);
+  const fallback = 'https://www.hikvision.com/en/search/?keyword=' + encodeURIComponent(model.toLowerCase());
+  const cached = await getDoc(env, 'hikpage', key);
+  if (cached && !force && (cached.data.url || now() - (cached.data.at || 0) < 7 * 864e5)) return { ...cached.data, url: cached.data.url || fallback, found: !!cached.data.url };
+  if (!env.ANTHROPIC_API_KEY) return { url: fallback, found: false };
+  let url = null;
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: 600, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3, allowed_domains: ['hikvision.com'] }],
+        messages: [{ role: 'user', content: `Trova sul sito ufficiale hikvision.com (versione inglese, percorso /en/products/) la pagina del prodotto con modello "${model}". Rispondi SOLO con JSON {"url":"https://www.hikvision.com/en/products/..."} oppure {"url":null} se non la trovi. Non inventare indirizzi.` }] })
+    });
+    if (r.ok) {
+      const j = await r.json(); const urls = [];
+      const t = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(' ');
+      try { const m = /\{[\s\S]*\}/.exec(t); const o = JSON.parse(m[0]); if (o.url) urls.push(o.url); } catch { }
+      for (const c of j.content || []) if (c.type === 'web_search_tool_result' && Array.isArray(c.content)) for (const x of c.content) if (x.url) urls.push(x.url);
+      const slug = model.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      url = urls.map(u => String(u).split('#')[0]).find(u => /^https:\/\/www\.hikvision\.com\/[a-z-]+\/products\//i.test(u) && u.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(slug)) || null;
+      if (url) { url = url.replace(/^(https:\/\/www\.hikvision\.com\/)[a-z]{2}(-[a-z]{2})?\//i, '$1en/').split('?')[0]; if (!url.endsWith('/')) url += '/'; url += '?subName=' + encodeURIComponent(model); }
+    }
+  } catch { }
+  const out = { model, url, at: now() };
+  await env.DB.prepare('INSERT INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?) ON CONFLICT(col,id) DO UPDATE SET data=excluded.data, version=excluded.version, updated=excluded.updated').bind('hikpage', key, JSON.stringify(out), now(), now()).run();
+  return { ...out, url: url || fallback, found: !!url };
+}
+const goHikHtml = code => `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documenti Global · ${esc(hikModel(code))}</title><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f3f4f6;color:#1c2430}div{text-align:center}b{font-family:monospace}p{color:#6e7a8a}</style></head><body><div><p>Cerco la pagina ufficiale Hikvision di</p><b>${esc(hikModel(code))}</b><p id="s">…</p></div><script>fetch('/api/hikpage?code='+encodeURIComponent(${JSON.stringify(String(code || ''))}),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{location.replace(j.url)}).catch(()=>{document.getElementById('s').textContent='Ricerca non riuscita.'})</script></body></html>`;
 async function findProductImage(env, model, desc, force) {
   const key = imgKey(model);
   const cached = await getDoc(env, 'imgweb', key);
@@ -655,6 +686,7 @@ async function api(req, env, ctx, url, u) {
   }
   if (p === '/api/claude' && m === 'POST') return claudeProxy(req, env);
   if (p === '/api/prodimg' && m === 'POST') return productImage(req, env, u);
+  if (p === '/api/hikpage' && m === 'GET') return json(await hikPage(env, url.searchParams.get('code'), url.searchParams.get('force') === '1'));
   if (p === '/api/auth/password' && m === 'POST') return setPassword(req, env, u);
   if (p === '/api/ics-link' && m === 'GET') { const id = url.searchParams.get('id') || ''; if (!(await getDoc(env, 'eventi', id))) return err('not_found', 'Evento non trovato', 404); return json({ url: (env.APP_URL || url.origin) + '/ics/' + encodeURIComponent(id) + '.ics?k=' + await icsSig(env, id) }); }
   if (p === '/api/geocode' && m === 'GET') return json(await geocode(env, url.searchParams.get('q')));
@@ -694,6 +726,7 @@ export default {
         if (req.method === 'GET' && (p === '/' || p.endsWith('.html') || (req.headers.get('accept') || '').includes('text/html'))) return Response.redirect(url.origin + '/login', 302);
         return new Response('Accesso richiesto', { status: 401 });
       }
+      if (p === '/go/hik') return new Response(goHikHtml(url.searchParams.get('code')), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
       if (p.startsWith('/_blob/')) {
         const id = p.slice(7);
         const o = await env.FILES.get(id);
