@@ -43,6 +43,18 @@
     const f = el('span', { class: 'hp-flag-uk', role: 'img', 'aria-label': 'Documentazione in inglese' }); f.innerHTML = UK;
     a.append(f, 'Documenti Global'); return a;
   };
+  // AcuSeek: dal listino (descrizione) o dalla pagina ufficiale trovata dal server
+  S.hikpage = new Map();
+  claude.use('db').then(db => { if (db) db.collection('hikpage').onSnapshot(sn => { const m = new Map(); sn.docs.forEach(d => { const x = d.data(); if (x && x.model) m.set(nrm(x.model), x); }); S.hikpage = m; if (['art'].includes(S.view) && VIEWS[S.view]) VIEWS[S.view].update(); }, () => { }); });
+  window.hpAcuSeek = function (it) {
+    if (!it) return false; const c = typeof it === 'string' ? (findCode(it) || { c: it }) : it;
+    if (c.hay ? /acu\s*seek/i.test(c.hay + ' ' + (c.d || '')) : /acu\s*seek/i.test(c.d || '')) return true;
+    const h = S.hikpage.get(base(c.c)); return !!(h && h.acuseek);
+  };
+  window.hpAcuSeekBadge = function (it, big) {
+    if (!window.hpAcuSeek(it)) return null;
+    return el('img', { src: '/acuseek.png', alt: 'AcuSeek', title: 'Supporta AcuSeek (ricerca intelligente in linguaggio naturale)', class: 'hp-acuseek' + (big ? ' big' : '') });
+  };
   window.hpDlBox = function (code) {
     const a = window.hpDl(code); if (!a.length) return null;
     return el('section', { class: 'panel stack', style: 'background:var(--surface-2)' }, el('h4', { class: 'row', style: 'gap:6px' }, el('span', { class: 'hp-flag-it', role: 'img', 'aria-label': 'Documentazione in italiano' }), 'Datasheet e altro'),

@@ -501,32 +501,57 @@ async function productImage(req, env, u) {
 const imgKey = model => model.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 120) || 'x';
 // Pagina prodotto ufficiale su hikvision.com/en (manuali, firmware, documenti): cercata con Claude e messa in cache
 const hikModel = code => String(code || '').replace(/\([^()]*\)/g, '').replace(/\s+/g, '').trim().toUpperCase();
+// controlla che la pagina esista (niente 404) e se cita AcuSeek
+async function pageCheck(u, model) {
+  try {
+    const r = await fetch(u, { headers: { 'user-agent': UA, accept: 'text/html', 'accept-language': 'en,it;q=0.8' }, redirect: 'follow' });
+    if (r.status === 404 || r.status === 410) return { ok: false };
+    if (!r.ok) return { ok: true, unverified: true };         // sito che blocca i bot: non lo scarto
+    const html = (await r.text()).slice(0, 900000); const up = html.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const has = up.includes(model.replace(/[^A-Z0-9]/g, ''));
+    if (!has && /not\s*found|404|pagina non trovata|page doesn.t exist/i.test(html.slice(0, 20000))) return { ok: false };
+    return { ok: true, acuseek: /acu\s*seek/i.test(html), final: r.url };
+  } catch { return { ok: true, unverified: true }; }
+}
+async function askLinks(env, prompt, domains) {
+  const urls = [];
+  try {
+    const tool = { type: 'web_search_20250305', name: 'web_search', max_uses: 4 }; if (domains) tool.allowed_domains = domains;
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: 700, tools: [tool], messages: [{ role: 'user', content: prompt }] }) });
+    if (!r.ok) return urls;
+    const j = await r.json();
+    const t = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(' ');
+    try { const m = /\{[\s\S]*\}/.exec(t); const o = JSON.parse(m[0]); for (const u of [].concat(o.urls || [], o.url || [])) if (u) urls.push(String(u)); } catch { }
+    for (const c of j.content || []) if (c.type === 'web_search_tool_result' && Array.isArray(c.content)) for (const x of c.content) if (x.url) urls.push(x.url);
+  } catch { }
+  return urls;
+}
 async function hikPage(env, code, force) {
   const model = hikModel(code); if (!model) return { url: null };
   const key = 'hp_' + model.replace(/[^A-Z0-9]/g, '').slice(0, 120);
   const fallback = 'https://www.hikvision.com/en/search/?keyword=' + encodeURIComponent(model.toLowerCase());
   const cached = await getDoc(env, 'hikpage', key);
-  if (cached && !force && (cached.data.url || now() - (cached.data.at || 0) < 7 * 864e5)) return { ...cached.data, url: cached.data.url || fallback, found: !!cached.data.url };
+  if (cached && !force) {
+    if (cached.data.url) { const c = await pageCheck(cached.data.url, model); if (c.ok) return { ...cached.data, found: true }; }   // la pagina salvata è sparita: cerco di nuovo
+    else if (now() - (cached.data.at || 0) < 7 * 864e5) return { ...cached.data, url: fallback, found: false };
+  }
   if (!env.ANTHROPIC_API_KEY) return { url: fallback, found: false };
-  let url = null;
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: 600, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3, allowed_domains: ['hikvision.com'] }],
-        messages: [{ role: 'user', content: `Trova sul sito ufficiale hikvision.com (versione inglese, percorso /en/products/) la pagina del prodotto con modello "${model}". Rispondi SOLO con JSON {"url":"https://www.hikvision.com/en/products/..."} oppure {"url":null} se non la trovi. Non inventare indirizzi.` }] })
-    });
-    if (r.ok) {
-      const j = await r.json(); const urls = [];
-      const t = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(' ');
-      try { const m = /\{[\s\S]*\}/.exec(t); const o = JSON.parse(m[0]); if (o.url) urls.push(o.url); } catch { }
-      for (const c of j.content || []) if (c.type === 'web_search_tool_result' && Array.isArray(c.content)) for (const x of c.content) if (x.url) urls.push(x.url);
-      const slug = model.toLowerCase().replace(/[^a-z0-9]+/g, '');
-      url = urls.map(u => String(u).split('#')[0]).find(u => /^https:\/\/www\.hikvision\.com\/[a-z-]+\/products\//i.test(u) && u.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(slug)) || null;
-      if (url) { url = url.replace(/^(https:\/\/www\.hikvision\.com\/)[a-z]{2}(-[a-z]{2})?\//i, '$1en/').split('?')[0]; if (!url.endsWith('/')) url += '/'; url += '?subName=' + encodeURIComponent(model); }
-    }
-  } catch { }
-  const out = { model, url, at: now() };
+  const slug = model.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const pick = list => [...new Set(list.map(u => String(u).split('#')[0]))].filter(u => /^https?:\/\//.test(u) && u.toLowerCase().replace(/[^a-z0-9]+/g, '').includes(slug));
+  const hikProd = u => /^https:\/\/www\.hikvision\.com\/[a-z-]+\/products\//i.test(u);
+  const withSub = u => { if (!hikProd(u)) return u; let b = u.split('?')[0]; if (!b.endsWith('/')) b += '/'; return b + '?subName=' + encodeURIComponent(model); };
+  const order = list => { const out = []; for (const u of list) { if (hikProd(u)) { const en = u.replace(/^(https:\/\/www\.hikvision\.com\/)[a-z]{2}(-[a-z]{2})?\//i, '$1en/'); out.push(en, u); } else out.push(u); }
+    const rank = u => hikProd(u) ? (/\/en\//.test(u) ? 0 : 1) : /hikvision\.com/i.test(u) ? 2 : 3; return [...new Set(out)].sort((a, b) => rank(a) - rank(b)); };
+  let url = null, info = {}, tried = [];
+  const tryList = async list => { for (const u of order(pick(list)).slice(0, 6)) { tried.push(u); const c = await pageCheck(u.split('?')[0], model); if (c.ok) { url = withSub(u); info = c; return true; } } return false; };
+  // 1) sito ufficiale hikvision.com (tutte le versioni nazionali e i sottodomini)
+  await tryList(await askLinks(env, `Trova la pagina ufficiale del prodotto Hikvision con modello "${model}" sui siti hikvision.com (preferisci la versione inglese /en/products/, poi le versioni nazionali come /it/, /uk/, /europe/, us.hikvision.com). Rispondi SOLO con JSON {"urls":["...","..."]} con fino a 4 indirizzi di pagine prodotto reali, dal più probabile. Non inventare indirizzi.`, ['hikvision.com']));
+  // 2) altrimenti altri siti ufficiali Hikvision o distributori con la scheda del prodotto
+  if (!url) await tryList(await askLinks(env, `La pagina del modello Hikvision "${model}" su hikvision.com non esiste o non si trova. Cerca un'alternativa con documentazione del prodotto (datasheet, manuali): altri siti ufficiali Hikvision (es. siti nazionali, hikvisioneurope, portali partner) e poi distributori o rivenditori autorizzati. Rispondi SOLO con JSON {"urls":["...","..."]} con fino a 4 indirizzi reali, dal più affidabile.`, null));
+  const out = { model, url, acuseek: !!info.acuseek, verified: url ? !info.unverified : false, tried: tried.slice(0, 12), at: now() };
   await env.DB.prepare('INSERT INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?) ON CONFLICT(col,id) DO UPDATE SET data=excluded.data, version=excluded.version, updated=excluded.updated').bind('hikpage', key, JSON.stringify(out), now(), now()).run();
+  await broadcast(env, { col: 'hikpage', id: key, v: now(), data: out, by: 'server' });
   return { ...out, url: url || fallback, found: !!url };
 }
 const goHikHtml = code => `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documenti Global · ${esc(hikModel(code))}</title><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f3f4f6;color:#1c2430}.box{text-align:center;max-width:420px;padding:16px}b{font-family:monospace;font-size:1.1rem}p{color:#6e7a8a}.sp{width:34px;height:34px;margin:18px auto 10px;border:3px solid #dfe3e8;border-top-color:#C8102E;border-radius:50%;animation:r .8s linear infinite}.bar{height:4px;background:#e4e7eb;border-radius:4px;overflow:hidden;margin:6px auto 0;width:220px}.bar i{display:block;height:100%;width:40%;background:#C8102E;border-radius:4px;animation:m 1.4s ease-in-out infinite}.fede{margin-top:18px;font-style:italic;color:#1c2430;font-weight:600}@keyframes r{to{transform:rotate(360deg)}}@keyframes m{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}@media (prefers-reduced-motion:reduce){.sp,.bar i{animation:none}}</style></head><body><div class="box" role="status" aria-live="polite"><p>Cerco la pagina ufficiale Hikvision di</p><b>${esc(hikModel(code))}</b><div class="sp" aria-hidden="true"></div><div class="bar" aria-hidden="true"><i></i></div><p id="s">Ricerca in corso…</p><p class="fede">Abbi fede... È finita la pacchia!</p></div><script>fetch('/api/hikpage?code='+encodeURIComponent(${JSON.stringify(String(code || ''))}),{credentials:'same-origin'}).then(r=>r.json()).then(j=>{location.replace(j.url)}).catch(()=>{document.getElementById('s').textContent='Ricerca non riuscita.'})</script></body></html>`;
