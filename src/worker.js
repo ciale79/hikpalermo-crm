@@ -603,7 +603,19 @@ async function migrateMag(env) {
   await broadcast(env, { reload: 'magazzino' });
 }
 // Import una tantum di documenti preparati (es. schede demo dalle bolle): non sovrascrive documenti esistenti
-async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat]) await migrateOne(env, x); }
+async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat]) await migrateOne(env, x); await migrateStato(env); }
+// «Stato progetto» (dall'importazione) confluisce in «Stato», con priorità al valore importato; l'originale resta in statoImport
+async function migrateStato(env) {
+  const key = 'mig_stato_merge';
+  if (await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id=?").bind(key).first()) return;
+  const t = now();
+  const r = await env.DB.prepare(`UPDATE docs SET data=json_set(data,
+      '$.stato', CASE json_extract(data,'$.statoProgetto') WHEN 'In preparazione' THEN 'prog' WHEN 'Progetto inviato' THEN 'off' WHEN 'Confermato' THEN 'conf' WHEN 'Il Cliente ha ordinato' THEN 'acq' WHEN 'Revocato' THEN 'persa' WHEN 'DEMO / POC' THEN 'demo' ELSE json_extract(data,'$.stato') END,
+      '$.statoImport', json_extract(data,'$.statoProgetto'), '$.statoProgetto', NULL), version=?, updated=?
+    WHERE col='commesse' AND coalesce(json_extract(data,'$.statoProgetto'),'')<>''`).bind(t, t).run();
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', key, JSON.stringify({ at: t, n: (r.meta && r.meta.changes) || 0 }), t, t).run();
+  await broadcast(env, { reload: 'commesse' });
+}
 async function migrateOne(env, extraImport) {
   const key = 'mig_' + String(extraImport.key || '').replace(/[^A-Za-z0-9_]/g, '');
   if (key === 'mig_' || await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id=?").bind(key).first()) return;

@@ -128,15 +128,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 .hp-capnew:hover{border-color:var(--accent);color:var(--accent)}
 .hp-capn{font-family:var(--font-display);font-stretch:85%;font-size:1.15rem;font-weight:700;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .hp-pill-d{display:flex;align-items:baseline;gap:8px}
-.hp-pill-d b{font-family:var(--font-display);font-stretch:85%;font-size:1.45rem;line-height:1.1;text-transform:capitalize}
-.hp-pill-d small{color:var(--ink-3);font-size:.78rem;text-transform:capitalize}
+.hp-pill-d b{font-family:var(--font-display);font-stretch:85%;font-size:2.1rem;font-weight:800;line-height:1;text-transform:capitalize;letter-spacing:-.01em}
+.hp-pill-d small{color:var(--ink-3);font-size:.85rem;font-weight:600;text-transform:capitalize}
 .hp-pill-b{display:flex;gap:10px;align-items:center;min-width:0;margin-top:2px}
 .hp-pill-t{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
 .hp-pill-t>.s{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hp-pill-c{font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hp-pill-x{font-size:.76rem;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}
 .hp-tg-g svg{width:120px;height:auto;max-width:100%}
-@media (max-width:600px){.hp-tg-row{gap:6px;flex-wrap:wrap;align-items:center}.hp-tg-g svg{width:88px}.hp-tg-num{font-size:1.45rem}.hp-pill-d{flex-wrap:wrap;gap:0 6px}.hp-pill-d b{font-size:1.2rem}.hp-pill .thumb{display:none}.hp-capn{font-size:1rem}}
+@media (max-width:600px){.hp-tg-row{gap:6px;flex-wrap:wrap;align-items:center}.hp-tg-g svg{width:88px}.hp-tg-num{font-size:1.45rem}.hp-pill-d{flex-wrap:wrap;gap:0 6px}.hp-pill-d b{font-size:1.6rem}.hp-pill .thumb{display:none}.hp-capn{font-size:1rem}}
 .hp-pev{margin-top:16px;padding-top:12px;border-top:1px solid var(--line-2)}
 .hp-pevc{font-size:.8rem;font-weight:600;flex-wrap:wrap}
 .hp-pevc a{color:var(--ink)}
@@ -193,7 +193,7 @@ th.r,td.r{text-align:right}
 .t-explorer{--c:var(--t-explorer)}.t-silver{--c:var(--t-silver)}.t-gold{--c:var(--t-gold)}.t-platinum{--c:var(--t-platinum)}.t-diamond{--c:var(--t-diamond)}.t-none{--c:var(--ink-3)}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:500;padding:2px 9px;border-radius:20px;color:var(--c,var(--ink-2));background:color-mix(in srgb,var(--c,var(--ink-3)) 13%,transparent);white-space:nowrap}
 .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c,var(--ink-3))}
-.s-opp{--c:var(--info)}.s-sop{--c:var(--violet)}.s-prog{--c:var(--violet)}.s-off{--c:var(--warn)}.s-tratt{--c:var(--warn)}.s-acq{--c:var(--ok)}.s-exec{--c:var(--t-platinum)}.s-chiusa{--c:var(--ink-3)}.s-persa{--c:var(--bad)}
+.s-opp{--c:var(--info)}.s-sop{--c:var(--violet)}.s-prog{--c:var(--violet)}.s-off{--c:var(--warn)}.s-tratt{--c:var(--warn)}.s-acq{--c:var(--ok)}.s-demo{--c:var(--t-gold)}.s-conf{--c:var(--ok)}.s-exec{--c:var(--t-platinum)}.s-chiusa{--c:var(--ink-3)}.s-persa{--c:var(--bad)}
 .o-Bozza{--c:var(--ink-3)}.o-Inviata{--c:var(--warn)}.o-Accettata{--c:var(--ok)}.o-Rifiutata{--c:var(--bad)}.o-Scaduta{--c:var(--ink-3)}
 .c-piena{--c:var(--ok)}.c-parziale{--c:var(--warn)}.c-da-verificare{--c:var(--info)}
 .e-riunione{--c:var(--t-platinum)}.e-call{--c:var(--info)}.e-visita{--c:var(--ok)}.e-appuntamento{--c:var(--violet)}.e-sopralluogo{--c:var(--warn)}
@@ -513,7 +513,7 @@ th.r .hp-sb{flex-direction:row-reverse}
 .btn.hp-del{background:var(--accent);border-color:var(--accent);color:#fff}.btn.hp-del:hover{filter:brightness(1.1)}
 
 /* stato commessa modificabile e selezione multipla */
-.stsel{font:inherit;font-size:.8rem;font-weight:600;padding:3px 24px 3px 10px;border-radius:20px;border:1px solid transparent;cursor:pointer;color:var(--c,var(--ink-2));background-color:color-mix(in srgb,var(--c,var(--ink-3)) 13%,transparent);appearance:auto;max-width:170px}
+.stsel{font:inherit;font-size:.8rem;font-weight:600;padding:3px 24px 3px 10px;border-radius:20px;border:1px solid transparent;cursor:pointer;color:var(--c,var(--ink-2));background-color:color-mix(in srgb,var(--c,var(--ink-3)) 13%,transparent);appearance:auto;max-width:200px;min-width:178px}
 .stsel:hover{border-color:color-mix(in srgb,var(--c,var(--ink-3)) 45%,transparent)}
 .stsel option{color:var(--ink);background:var(--surface)}
 th.ck,td.ck{width:34px;text-align:center;padding-left:10px;padding-right:4px}
@@ -691,7 +691,7 @@ const TIERS=['EXPLORER','SILVER','GOLD','PLATINUM','DIAMOND'];
 const TLAB={EXPLORER:'Explorer',SILVER:'Silver',GOLD:'Gold',PLATINUM:'Platinum',DIAMOND:'Diamond'};
 const LIST={pro:'Listino Pro',sol:'Listino Solution'};
 const SRC=[{L:'pro',tag:'PRO',name:'ProExpert'},{L:'pro',tag:'STAFFE',name:'Staffe'},{L:'sol',tag:'SOL·D',name:'Solution Dealer'},{L:'sol',tag:'SOL·P',name:'Solution Project'}];
-const CST=[['opp','Opportunità'],['sop','Sopralluogo'],['prog','Progettazione'],['off','Offerta inviata'],['tratt','Trattativa'],['acq','Acquisita'],['exec','In esecuzione'],['chiusa','Chiusa'],['persa','Persa']];
+const CST=[['opp','Opportunità'],['sop','Sopralluogo'],['prog','In preparazione'],['demo','DEMO / POC'],['off','Progetto inviato'],['tratt','Trattativa'],['conf','Confermato'],['acq','Il Cliente ha ordinato'],['exec','In esecuzione'],['chiusa','Chiusa'],['persa','Revocato']];
 const CSTL=Object.fromEntries(CST);
 const CLOSED=new Set(['chiusa','persa']);
 const OST=['Bozza','Inviata','Accettata','Rifiutata','Scaduta'];
@@ -702,7 +702,7 @@ const DEF_CAT=['Installatore','System Integrator','Distributore','Progettista','
 const ROT={A:'Alta rotazione',B:'Bassa rotazione',P:'A progetto'};
 const TCOM=[['normale','Commessa normale'],['gara','Gara d\'appalto'],['mepa','MePA'],['affidamento','Affidamento diretto']];
 const TCOML=Object.fromEntries(TCOM);
-const AUTO={opp:10,sop:25,prog:40,off:55,tratt:75,acq:100,exec:100,chiusa:100,persa:0};
+const AUTO={opp:10,sop:25,prog:40,demo:50,off:55,tratt:75,conf:90,acq:100,exec:100,chiusa:100,persa:0};
 const PH=[['opp','Opportunità'],['sop','Sopralluogo'],['prog','Progetto'],['off','Offerta'],['tratt','Trattativa'],['acq','Acquisita']];
 function pctOf(c){if(!c||c.stato==='persa')return 0;if(c.avanzMan&&c.avanz!=null)return +c.avanz;return AUTO[c.stato||'opp']??10;}
 function tipoChip(c){const k=c.tipoCom||'normale';return el('span',{class:'tag tc-'+k,title:TCOML[k]},k==='normale'?'NORMALE':k==='gara'?'GARA':k==='mepa'?'MEPA':'AFF. DIRETTO');}
@@ -827,7 +827,7 @@ function offTot(righe){let L=0,N=0;const by={pro:{L:0,N:0},sol:{L:0,N:0},altro:{
 function offersOf(cid){return [...S.offerte.values()].filter(o=>o.commessaId===cid).sort((a,b)=>(b.upd||b.at||0)-(a.upd||a.at||0));}
 function mainOffer(cid){const os=offersOf(cid);return os.find(o=>o.stato==='Accettata')||os.find(o=>o.stato!=='Rifiutata'&&o.stato!=='Scaduta')||os[0]||null;}
 function comVal(cid){const o=mainOffer(cid);if(o)return {L:o.totL||0,N:o.totN||0};const c=S.commesse.get(cid);const v=c&&+c.valore||0;return {L:v,N:v};}
-const STP=['In preparazione','Progetto inviato','Confermato','Il Cliente ha ordinato','Revocato'];const STPMAP={'In preparazione':'prog','Progetto inviato':'off','Confermato':'acq','Il Cliente ha ordinato':'acq','Revocato':'persa'};
+const STP=['In preparazione','Progetto inviato','Confermato','Il Cliente ha ordinato','Revocato'];const STPMAP={'In preparazione':'prog','Progetto inviato':'off','Confermato':'conf','Il Cliente ha ordinato':'acq','Revocato':'persa'};
 
 /* ============ navigazione ============ */
 const NAV=[['dash','Cruscotto','home'],['fatt','Fatturato','chart'],['commesse','Commesse','brief'],['clienti','Clienti','users'],['cal','Calendario','cal'],['art','Articoli','box'],['naming','Naming rule','code'],['cap','Capitolato','spark'],['set','Gruppo e impostazioni','gear']];
@@ -894,7 +894,7 @@ function mapSvg(points,opts={}){
   for(const p of points){const gg=sv('g',{class:'pt',onclick:()=>p.on&&p.on(),tabindex:p.on?0:null});gg.append(sv('title',{},p.title||''),sv('circle',{cx:X(p.lng),cy:Y(p.lat),r:p.big?10:8,fill:p.color||'var(--accent)'}));if(p.label)gg.append(sv('text',{x:X(p.lng)+10,y:Y(p.lat)+4},p.label));g.append(gg);}
   return g;
 }
-const CCOL={opp:'var(--info)',sop:'var(--violet)',prog:'var(--violet)',off:'var(--warn)',tratt:'var(--warn)',acq:'var(--ok)',exec:'var(--t-platinum)',chiusa:'var(--ink-3)',persa:'var(--bad)'};
+const CCOL={opp:'var(--info)',sop:'var(--violet)',prog:'var(--violet)',demo:'var(--t-gold)',conf:'var(--ok)',off:'var(--warn)',tratt:'var(--warn)',acq:'var(--ok)',exec:'var(--t-platinum)',chiusa:'var(--ink-3)',persa:'var(--bad)'};
 const satUrl=(la,lo)=>`https://www.google.com/maps/@?api=1&map_action=map&center=${la},${lo}&zoom=19&basemap=satellite`;
 const pinUrl=(la,lo)=>`https://www.google.com/maps/search/?api=1&query=${la},${lo}`;
 const navUrl=(la,lo)=>`https://www.google.com/maps/dir/?api=1&destination=${la},${lo}`;
@@ -910,10 +910,10 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
   const inv=[...S.offerte.values()].filter(o=>o.stato==='Inviata');const invN=inv.reduce((a,o)=>a+(o.totN||0),0);
   const up7=upcoming(7);const mine=up7.filter(e=>(e.part||[]).includes(S.me)||e.by===S.me);
   const kpis=el('div',{class:'kpis'},
-    (window.hpCapTile&&hpCapTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Commesse attive'),el('span',{class:'v'},att.length),el('span',{class:'s'},S.commesse.size+' in totale')),
+    (window.hpPillTile&&hpPillTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Appuntamenti 7 giorni'),el('span',{class:'v'},up7.length),el('span',{class:'s'},mine.length+' ti riguardano')),
     (window.hpTargetTile&&hpTargetTile('it'))||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Pipeline · valore netto'),el('span',{class:'v'},eur0(pN)),el('span',{class:'s'},'A listino '+eur0(pL))),
     (window.hpTargetTile&&hpTargetTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Offerte in attesa'),el('span',{class:'v'},inv.length),el('span',{class:'s'},'Netto '+eur0(invN))),
-    (window.hpPillTile&&hpPillTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Appuntamenti 7 giorni'),el('span',{class:'v'},up7.length),el('span',{class:'s'},mine.length+' ti riguardano')));
+    (window.hpCapTile&&hpCapTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Commesse attive'),el('span',{class:'v'},att.length),el('span',{class:'s'},S.commesse.size+' in totale')));
   const un=unread();
   const feedP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{},'Avvisi e attività ',un.length?el('span',{class:'pill s-persa'},un.length+' da leggere'):null),un.length?btn('Segna come letti',markRead,'sm ghost'):null),feedList(S.feed.slice(0,12)));
   const evP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Prossimi appuntamenti'}),btn('Nuovo evento',()=>eventForm({}),'sm','plus')),up7.length?el('div',{},up7.slice(0,8).map(evLi)):emptyBox('Nessun appuntamento nei prossimi 7 giorni','Aggiungi una riunione, una call Teams o una visita: i colleghi ricevono subito l\'avviso.'));
@@ -967,15 +967,14 @@ VIEWS.commesse={title:()=>S.sel?'Commessa':'Commesse',mount(){if(S.sel)return co
   this.cliSel=el('select',{id:'fcCli',onchange:e=>{f.cli=e.target.value;this.update();}});
   this.respSel=el('select',{id:'fcResp',onchange:e=>{f.resp=e.target.value;this.update();}});
   const tp=selectEl('fcTipo',[['','Tutti i tipi'],...TCOM],f.tipo,{onchange:e=>{f.tipo=e.target.value;this.update();}});
-  const sp=selectEl('fcStp',[['','Ogni stato progetto'],...STP.map(x=>[x,x])],f.stp,{onchange:e=>{f.stp=e.target.value;this.update();}});
   const seg=el('div',{class:'seg'},el('button',{type:'button',class:f.mode==='list'?'on':'',onclick:()=>{f.mode='list';go('commesse');}},ic('list',16),'Elenco'),el('button',{type:'button',class:f.mode==='map'?'on':'',onclick:()=>{f.mode='map';go('commesse');}},ic('map',16),'Mappa'));
   this.body=el('div',{class:'stack'});
-  r.append(el('div',{class:'row between'},el('div',{class:'filters'},q,st,sp,tp,this.cliSel,this.respSel),el('div',{class:'row'},seg,btn('Carica PDF HikOffer',()=>window.hpOfferPdf&&hpOfferPdf(),'','up'),btn('Nuova commessa',()=>commessaForm({}),'pri','plus'))),this.body);this.update();},
+  r.append(el('div',{class:'row between'},el('div',{class:'filters'},q,st,tp,this.cliSel,this.respSel),el('div',{class:'row'},seg,btn('Carica PDF HikOffer',()=>window.hpOfferPdf&&hpOfferPdf(),'','up'),btn('Nuova commessa',()=>commessaForm({}),'pri','plus'))),this.body);this.update();},
  update(){if(S.sel)return comDetail.update();const f=S.fCom;
   fillSel(this.cliSel,[['','Tutti i clienti'],...[...S.clienti.values()].sort(byName).map(c=>[c.id,c.nome])],f.cli);
   fillSel(this.respSel,[['','Tutti i responsabili'],...[...S.team.keys()].map(id=>[id,nm(id)])],f.resp);
   const ql=f.q.toLowerCase();
-  const rows=[...S.commesse.values()].filter(c=>(!f.drill||f.drill.ids.has(c.id))&&(!f.st||(f.st==='attive'?!CLOSED.has(c.stato):c.stato===f.st))&&(!f.cli||c.clienteId===f.cli)&&(!f.resp||c.resp===f.resp)&&(!f.tipo||(c.tipoCom||'normale')===f.tipo)&&(!f.stp||c.statoProgetto===f.stp)&&(!ql||(c.nome+' '+(c.titolo||'')+' '+(c.codice||'')+' '+(c.citta||'')+' '+(S.clienti.get(c.clienteId)?.nome||'')).toLowerCase().includes(ql))).sort((a,b)=>(b.upd||b.at||0)-(a.upd||a.at||0));
+  const rows=[...S.commesse.values()].filter(c=>(!f.drill||f.drill.ids.has(c.id))&&(!f.st||(f.st==='attive'?!CLOSED.has(c.stato):c.stato===f.st))&&(!f.cli||c.clienteId===f.cli)&&(!f.resp||c.resp===f.resp)&&(!f.tipo||(c.tipoCom||'normale')===f.tipo)&&(!ql||(c.nome+' '+(c.titolo||'')+' '+(c.codice||'')+' '+(c.citta||'')+' '+(S.clienti.get(c.clienteId)?.nome||'')).toLowerCase().includes(ql))).sort((a,b)=>(b.upd||b.at||0)-(a.upd||a.at||0));
   const gate=[dbGate(),loading()].filter(Boolean);
   if(!rows.length){this.body.replaceChildren(...gate,S.commesse.size?emptyBox('Nessuna commessa con questi filtri','Cambia i filtri o cerca un altro termine.'):emptyBox('Nessuna commessa','Crea la prima commessa: collega il cliente, inserisci la posizione e prepara le offerte dai listini.',btn('Nuova commessa',()=>commessaForm({}),'pri','plus')));return;}
   if(f.mode==='map'){const pts=rows.filter(c=>c.lat!=null).map(c=>({lat:c.lat,lng:c.lng,color:CCOL[c.stato||'opp'],title:c.nome,label:c.nome.length>22?c.nome.slice(0,21)+'…':c.nome,on:()=>go('commesse',c.id)}));const miss=rows.filter(c=>c.lat==null);
@@ -983,7 +982,7 @@ VIEWS.commesse={title:()=>S.sel?'Commessa':'Commesse',mount(){if(S.sel)return co
   S.comSel=S.comSel||new Set();const vis=new Set(rows.map(c=>c.id));[...S.comSel].forEach(id=>{if(!vis.has(id))S.comSel.delete(id);});
   const tb=el('tbody',{},rows.map(c=>{const v=comVal(c.id);const cli=S.clienti.get(c.clienteId);return el('tr',{class:'click'+(S.comSel.has(c.id)?' sel':''),onclick:()=>go('commesse',c.id)},
     el('td',{class:'ck',onclick:e=>e.stopPropagation()},el('input',{type:'checkbox','aria-label':'Seleziona '+c.nome,checked:S.comSel.has(c.id),onchange:e=>{e.target.checked?S.comSel.add(c.id):S.comSel.delete(c.id);this.update();}})),
-    el('td',{},el('div',{class:'cell-t'},el('b',{},c.nome),el('span',{class:'row',style:'gap:6px'},tipoChip(c),el('small',{class:'mono muted'},c.codice||''),window.hpDemoChip?hpDemoChip(c.id):null))),el('td',{},cli?cli.nome:el('span',{class:'muted'},'—')),el('td',{'data-sort':String(CST.findIndex(x=>x[0]===(c.stato||'opp'))),onclick:e=>e.stopPropagation()},el('div',{class:'stack',style:'gap:3px;align-items:flex-start'},stSel(c),c.statoProgetto?el('small',{class:'muted'},c.statoProgetto):null)),el('td',{},meter(pctOf(c),'sm',c.stato==='persa')),
+    el('td',{},el('div',{class:'cell-t'},el('b',{},c.nome),el('span',{class:'row',style:'gap:6px'},tipoChip(c),el('small',{class:'mono muted'},c.codice||''),window.hpDemoChip?hpDemoChip(c.id):null))),el('td',{},cli?cli.nome:el('span',{class:'muted'},'—')),el('td',{'data-sort':String(CST.findIndex(x=>x[0]===(c.stato||'opp'))),onclick:e=>e.stopPropagation()},el('div',{class:'stack',style:'gap:3px;align-items:flex-start'},stSel(c))),el('td',{},meter(pctOf(c),'sm',c.stato==='persa')),
     el('td',{},c.resp?el('span',{class:'row',style:'gap:6px;flex-wrap:nowrap'},av(c.resp),nm(c.resp)):'—'),
     el('td',{class:'r'},el('div',{class:'cell-t',style:'align-items:flex-end'},el('b',{class:'num'},v.N?eur0(v.N):'—'),v.L?el('small',{class:'num'},'listino '+eur0(v.L)):null)),
     el('td',{class:'r num'},c.utile!=null?eur0(c.utile):'—'),el('td',{class:'num'},c.dataIns?fD(c.dataIns):(c.at?fD(c.at):'—')),el('td',{},c.lat!=null?el('a',{href:satUrl(c.lat,c.lng),target:'_blank',rel:'noopener',onclick:e=>e.stopPropagation(),title:'Vista satellitare'},ic('pin',16),' ',c.citta||'GPS'):(c.citta||'—')));}));
@@ -1010,7 +1009,7 @@ const comDetail={mount(){this.root=$('#view');this.tab=S.tab||'info';this.update
   const tabs=el('div',{class:'tabs',role:'tablist'},T.map(([k,l,n])=>el('button',{type:'button',class:this.tab===k?'on':'',onclick:()=>{this.tab=k;this.update();}},l,n!=null?el('span',{class:'n'},n):null)));
   let body;
   if(this.tab==='info'){
-    const dl=el('dl',{class:'dl'},[['Cliente',cli?cli.nome:'—'],['Stato',CSTL[c.stato]||'—'],['Stato progetto',c.statoProgetto||'—'],['Titolo',c.titolo||c.nome],['Valore commessa',c.valore!=null?eur(c.valore):'—'],['Utile',c.utile!=null?eur(c.utile):'—'],['Data inserimento',fD(c.dataIns||c.at)],['N. preventivo',c.nPrev||'—'],['Tipo',TCOML[c.tipoCom||'normale']],['CIG / rif. gara',c.rifGara||'—'],['Apertura',fD(c.apertura)],['Scadenza',fD(c.scadenza)],['Probabilità',c.prob!=null&&c.prob!==''?c.prob+'%':'—'],['Indirizzo',[c.indirizzo,c.citta].filter(Boolean).join(', ')||'—'],['Note',c.note||'—'],['Creata da',nm(c.by)+(c.at?' · '+fD(c.at):'')]].map(([a,b])=>[el('dt',{},a),el('dd',{style:a==='Note'||a==='Titolo'?'white-space:pre-wrap':''},b)]));
+    const dl=el('dl',{class:'dl'},[['Cliente',cli?cli.nome:'—'],['Stato',CSTL[c.stato]||'—'],['Titolo',c.titolo||c.nome],['Valore commessa',c.valore!=null?eur(c.valore):'—'],['Utile',c.utile!=null?eur(c.utile):'—'],['Data inserimento',fD(c.dataIns||c.at)],['N. preventivo',c.nPrev||'—'],['Tipo',TCOML[c.tipoCom||'normale']],['CIG / rif. gara',c.rifGara||'—'],['Apertura',fD(c.apertura)],['Scadenza',fD(c.scadenza)],['Probabilità',c.prob!=null&&c.prob!==''?c.prob+'%':'—'],['Indirizzo',[c.indirizzo,c.citta].filter(Boolean).join(', ')||'—'],['Note',c.note||'—'],['Creata da',nm(c.by)+(c.at?' · '+fD(c.at):'')]].map(([a,b])=>[el('dt',{},a),el('dd',{style:a==='Note'||a==='Titolo'?'white-space:pre-wrap':''},b)]));
     const pos=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Posizione'}),c.lat!=null?el('span',{class:'mono soft'},c.lat.toFixed(6)+', '+c.lng.toFixed(6)):null));
     if(c.lat!=null){pos.append(mapSvg([{lat:c.lat,lng:c.lng,big:true,color:CCOL[c.stato||'opp'],label:c.citta||c.nome,title:c.nome}]),el('div',{class:'linkrow',style:'margin-top:12px'},linkBtn('Vista satellitare',satUrl(c.lat,c.lng),'pri','sat'),linkBtn('Segnaposto',pinUrl(c.lat,c.lng),'','pin'),linkBtn('Naviga',navUrl(c.lat,c.lng),'','nav'),btn('Copia coordinate',()=>copy(c.lat+', '+c.lng),'','copy')));}
     else pos.append(emptyBox('Posizione non impostata','Incolla le coordinate o un link di Google Maps nella scheda della commessa.',btn('Imposta posizione',()=>commessaForm(c),'sm','pin')));
@@ -1047,21 +1046,20 @@ function fileCard(c,f){const url='/_blob/'+f.id;const isImg=/^image\//.test(f.ty
 function commessaForm(c,onCreated){const isNew=!c.id;const d={...c};const year=new Date().getFullYear();
   if(isNew){const n=[...S.commesse.values()].filter(x=>(x.codice||'').startsWith('C-'+year)).length+1;d.codice='C-'+year+'-'+String(n).padStart(3,'0');d.stato=d.stato||'opp';d.resp=d.resp||S.me;d.apertura=dayKey(Date.now());}
   const cliOpts=[['','— Seleziona cliente —'],...[...S.clienti.values()].sort(byName).map(x=>[x.id,x.nome])];
-  const f={nome:inp('cNome',d.nome,{required:true,placeholder:'Es. Videosorveglianza magazzino Nord'}),codice:inp('cCod',d.codice),cli:selectEl('cCli',cliOpts,d.clienteId),stato:selectEl('cSt',CST,d.stato),tipo:selectEl('cTipo',TCOM,d.tipoCom||'normale'),rif:inp('cRif',d.rifGara,{placeholder:'CIG, n. gara o RdO MePA'}),tit:el('textarea',{id:'cTit',value:d.titolo||'',placeholder:'Descrizione completa del progetto',style:'min-height:56px'}),val:inp('cVal',d.valore,{type:'number',min:0,step:.01}),ut:inp('cUt',d.utile,{type:'number',step:.01}),stp:selectEl('cStp',[['','—'],...STP.map(x=>[x,x])],d.statoProgetto||''),dins:inp('cDins',d.dataIns||(isNew?dayKey(Date.now()):(d.at?dayKey(d.at):'')),{type:'date'}),resp:selectEl('cResp',[['','—'],...[...new Set([...S.team.keys(),...(d.resp?[d.resp]:[])])].map(id=>[id,nm(id)])],d.resp),ap:inp('cAp',d.apertura,{type:'date'}),sc:inp('cSc',d.scadenza,{type:'date'}),prob:inp('cPr',d.prob,{type:'number',min:0,max:100,step:5}),ind:inp('cInd',d.indirizzo,{placeholder:'Via e numero civico'}),citta:inp('cCit',d.citta),gps:inp('cGps',d.lat!=null?d.lat+', '+d.lng:'',{placeholder:'45.4642, 9.1900 oppure link di Google Maps'}),note:el('textarea',{id:'cNote',value:d.note||''})};
+  const f={nome:inp('cNome',d.nome,{required:true,placeholder:'Es. Videosorveglianza magazzino Nord'}),codice:inp('cCod',d.codice),cli:selectEl('cCli',cliOpts,d.clienteId),stato:selectEl('cSt',CST,d.stato),tipo:selectEl('cTipo',TCOM,d.tipoCom||'normale'),rif:inp('cRif',d.rifGara,{placeholder:'CIG, n. gara o RdO MePA'}),tit:el('textarea',{id:'cTit',value:d.titolo||'',placeholder:'Descrizione completa del progetto',style:'min-height:56px'}),val:inp('cVal',d.valore,{type:'number',min:0,step:.01}),ut:inp('cUt',d.utile,{type:'number',step:.01}),dins:inp('cDins',d.dataIns||(isNew?dayKey(Date.now()):(d.at?dayKey(d.at):'')),{type:'date'}),resp:selectEl('cResp',[['','—'],...[...new Set([...S.team.keys(),...(d.resp?[d.resp]:[])])].map(id=>[id,nm(id)])],d.resp),ap:inp('cAp',d.apertura,{type:'date'}),sc:inp('cSc',d.scadenza,{type:'date'}),prob:inp('cPr',d.prob,{type:'number',min:0,max:100,step:5}),ind:inp('cInd',d.indirizzo,{placeholder:'Via e numero civico'}),citta:inp('cCit',d.citta),gps:inp('cGps',d.lat!=null?d.lat+', '+d.lng:'',{placeholder:'45.4642, 9.1900 oppure link di Google Maps'}),note:el('textarea',{id:'cNote',value:d.note||''})};
   const gpsMsg=el('span',{class:'hint'});const findL=el('a',{href:'#',target:'_blank',rel:'noopener',class:'hint'},'Trova l\'indirizzo su Google Maps');
   const updFind=()=>{const a=[f.ind.value,f.citta.value].filter(Boolean).join(', ');findL.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a||'Italia');};updFind();f.ind.addEventListener('input',updFind);f.citta.addEventListener('input',updFind);
   f.gps.addEventListener('input',()=>{const p=parseCoords(f.gps.value);gpsMsg.textContent=f.gps.value?(p?'Posizione letta: '+p.lat.toFixed(6)+', '+p.lng.toFixed(6):'Coordinate non riconosciute'):'';});
-  f.stp.addEventListener('change',()=>{const m=STPMAP[f.stp.value];if(m){f.stato.value=m;f.stato.dispatchEvent(new Event('change'));}});
   const rifW=fld('CIG / n. gara / RdO MePA',f.rif);const drawRif=()=>{rifW.hidden=f.tipo.value==='normale';};f.tipo.addEventListener('change',drawRif);drawRif();
   const avMan=el('input',{type:'checkbox',id:'cAvM',checked:!!d.avanzMan});const avR=el('input',{type:'range',id:'cAv',min:0,max:100,step:5,value:pctOf(d),style:'flex:1;min-width:0','aria-label':'Percentuale di avanzamento'});const avM=el('div');
   const drawAv=()=>{const lost=f.stato.value==='persa';if(!avMan.checked)avR.value=AUTO[f.stato.value]??10;avR.disabled=!avMan.checked||lost;avM.replaceChildren(meter(lost?0:+avR.value,'lg',lost));};
   avR.addEventListener('input',drawAv);avMan.addEventListener('change',drawAv);f.stato.addEventListener('change',drawAv);drawAv();
-  const avBox=el('div',{class:'fld full'},el('span',{},'Stato di avanzamento'),avM,el('div',{class:'row',style:'flex-wrap:nowrap'},el('label',{class:'row',style:'gap:6px;white-space:nowrap'},avMan,'Imposta a mano'),avR),el('span',{class:'hint'},'In automatico segue lo stato: Opportunità 10% · Sopralluogo 25% · Progettazione 40% · Offerta 55% · Trattativa 75% · Acquisita 100%.'));
-  const body=el('div',{class:'fgrid'},fld('Nome commessa *',f.nome,'full'),fld('Titolo',f.tit,'full'),fld('Valore commessa €',f.val),fld('Utile €',f.ut),fld('Stato progetto',f.stp),fld('Data inserimento',f.dins),fld('Codice',f.codice),fld('Cliente',el('div',{class:'row',style:'flex-wrap:nowrap'},f.cli,btn('',()=>clienteForm({},nc=>{fillSel(f.cli,[['','— Seleziona cliente —'],...[...S.clienti.values(),nc].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i).sort(byName).map(x=>[x.id,x.nome])],nc.id);}),'sm','plus'))),fld('Stato',f.stato),fld('Tipo di commessa',f.tipo),rifW,fld('Responsabile',f.resp),fld('Data apertura',f.ap),fld('Scadenza / consegna',f.sc),fld('Probabilità di chiusura %',f.prob),avBox,fld('Indirizzo cantiere',f.ind),fld('Città',f.citta),
+  const avBox=el('div',{class:'fld full'},el('span',{},'Stato di avanzamento'),avM,el('div',{class:'row',style:'flex-wrap:nowrap'},el('label',{class:'row',style:'gap:6px;white-space:nowrap'},avMan,'Imposta a mano'),avR),el('span',{class:'hint'},'In automatico segue lo stato: '+CST.filter(([k])=>k!=='persa'&&k!=='chiusa'&&k!=='exec').map(([k,l])=>l+' '+AUTO[k]+'%').join(' · ')+'.'));
+  const body=el('div',{class:'fgrid'},fld('Nome commessa *',f.nome,'full'),fld('Titolo',f.tit,'full'),fld('Valore commessa €',f.val),fld('Utile €',f.ut),fld('Data inserimento',f.dins),fld('Codice',f.codice),fld('Cliente',el('div',{class:'row',style:'flex-wrap:nowrap'},f.cli,btn('',()=>clienteForm({},nc=>{fillSel(f.cli,[['','— Seleziona cliente —'],...[...S.clienti.values(),nc].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i).sort(byName).map(x=>[x.id,x.nome])],nc.id);}),'sm','plus'))),fld('Stato',f.stato),fld('Tipo di commessa',f.tipo),rifW,fld('Responsabile',f.resp),fld('Data apertura',f.ap),fld('Scadenza / consegna',f.sc),fld('Probabilità di chiusura %',f.prob),avBox,fld('Indirizzo cantiere',f.ind),fld('Città',f.citta),
     el('div',{class:'fld full'},el('span',{},'Posizione GPS'),f.gps,el('div',{class:'row'},gpsMsg,findL,window.hpGeoBtn?hpGeoBtn(f):null),el('span',{class:'hint'},'Usa «Trova dall\'indirizzo», oppure su Google Maps tieni premuto sul punto esatto e incolla qui coordinate o link. Se lasci vuoto, la posizione si ricava dall\'indirizzo al salvataggio.')),fld('Note',f.note,'full'));
   const m=modal(isNew?'Nuova commessa':'Modifica commessa',body,[!isNew?btn('Elimina',async()=>{if(!await ask('Eliminare la commessa «'+c.nome+'»? Le offerte collegate restano nell\'archivio.'))return;if(await remove('commesse',c.id)){m.close();go('commesse');}},'danger','trash'):null,el('span',{class:'grow'}),btn('Annulla',()=>m.close()),btn(isNew?'Crea commessa':'Salva',save,'pri')].filter(Boolean),{wide:true});
   async function save(){const nome=f.nome.value.trim();if(!nome){f.nome.focus();toast('Inserisci il nome della commessa.','bad');return;}const p=parseCoords(f.gps.value);if(f.gps.value.trim()&&!p){toast('Coordinate non riconosciute: usa il formato 45.4642, 9.1900.','bad');return;}
-    const id=c.id||newId('commesse');const o={...c,nome,codice:f.codice.value.trim(),clienteId:f.cli.value||null,stato:f.stato.value,chiusaAt:(WON.has(f.stato.value)||f.stato.value==='persa')?((c.chiusaAt&&(WON.has(c.stato)||c.stato==='persa'))?c.chiusaAt:Date.now()):null,titolo:f.tit.value.trim(),valore:f.val.value===''?null:+f.val.value,utile:f.ut.value===''?null:+f.ut.value,statoProgetto:f.stp.value||null,dataIns:f.dins.value||null,tipoCom:f.tipo.value,rifGara:f.tipo.value==='normale'?'':f.rif.value.trim(),avanzMan:avMan.checked,avanz:avMan.checked?+avR.value:null,resp:f.resp.value||null,apertura:f.ap.value||null,scadenza:f.sc.value||null,prob:f.prob.value===''?null:+f.prob.value,indirizzo:f.ind.value.trim(),citta:f.citta.value.trim(),lat:p?p.lat:null,lng:p?p.lng:null,note:f.note.value,upd:Date.now()};delete o.id;if(isNew){o.by=S.me;o.at=Date.now();}
+    const id=c.id||newId('commesse');const o={...c,nome,codice:f.codice.value.trim(),clienteId:f.cli.value||null,stato:f.stato.value,chiusaAt:(WON.has(f.stato.value)||f.stato.value==='persa')?((c.chiusaAt&&(WON.has(c.stato)||c.stato==='persa'))?c.chiusaAt:Date.now()):null,titolo:f.tit.value.trim(),valore:f.val.value===''?null:+f.val.value,utile:f.ut.value===''?null:+f.ut.value,statoProgetto:null,dataIns:f.dins.value||null,tipoCom:f.tipo.value,rifGara:f.tipo.value==='normale'?'':f.rif.value.trim(),avanzMan:avMan.checked,avanz:avMan.checked?+avR.value:null,resp:f.resp.value||null,apertura:f.ap.value||null,scadenza:f.sc.value||null,prob:f.prob.value===''?null:+f.prob.value,indirizzo:f.ind.value.trim(),citta:f.citta.value.trim(),lat:p?p.lat:null,lng:p?p.lng:null,note:f.note.value,upd:Date.now()};delete o.id;if(isNew){o.by=S.me;o.at=Date.now();}
     if(await put('commesse',id,o)){m.close();if(isNew){feed('commessa','ha creato la commessa «'+nome+'»',{k:'commessa',id},o.resp&&o.resp!==S.me?[o.resp]:[]);if(onCreated)onCreated({id,...o});else go('commesse',id);}else if(c.stato!==o.stato)feed('commessa','ha portato «'+nome+'» in stato '+CSTL[o.stato],{k:'commessa',id});}}
 }
 
@@ -1578,7 +1576,7 @@ function pwdModal(){const has=pwdActive();const cur=inp('pwCur','',{type:'passwo
 function pwdRow(){const on=pwdActive();return el('div',{class:'row between',style:'border-top:1px solid var(--line-2);padding-top:10px'},el('div',{class:'row'},ic('lock',16),el('b',{},'Password'),el('span',{class:'pill '+(on?'s-acq':'s-chiusa')},on?'Attiva':'Non impostata')),btn(on?'Cambia password':'Imposta password',pwdModal,'sm','key'));}
 
 /* ---------- Mini cruscotto laterale ---------- */
-const WON=new Set(['acq','exec','chiusa']);
+const WON=new Set(['conf','acq','exec','chiusa']);
 function qOf(ts){if(!ts)return null;const d=new Date(ts);if(isNaN(d))return null;return {y:d.getFullYear(),q:Math.floor(d.getMonth()/3)+1};}
 function qStats(y,q){let a=0,c=0,p=0;for(const x of S.commesse.values()){const st=x.stato||'opp';const closed=WON.has(st)||st==='persa';const k=qOf(closed?(x.chiusaAt||x.upd||x.at):(x.apertura||x.at));if(!k||k.y!==y||(q&&k.q!==q))continue;if(st==='persa')p++;else if(WON.has(st))c++;else a++;}return {a,c,p};}
 function lcd(lab,v,h,tip){return el('div',{class:'lcd',style:{'--h':String(h)},title:tip},el('b',{},String(v).padStart(2,'0')),el('span',{},lab));}

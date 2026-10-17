@@ -18,7 +18,7 @@
   const accChip = a => a ? el('span', { class: 'pill', style: '--c:' + (ACC[a] || 'var(--ink-3)') }, a.charAt(0) + a.slice(1).toLowerCase()) : el('span', { class: 'muted' }, '—');
   window.hpAccChip = accChip;
   const euro = v => v == null ? '—' : eur0(v);
-  const won = new Set(['acq', 'exec', 'chiusa']);
+  const won = new Set(['conf', 'acq', 'exec', 'chiusa']);
   function comStats(cid) {
     let n = 0, w = 0, pipe = 0;
     for (const c of S.commesse.values()) { if (c.clienteId !== cid) continue; n++; const v = comVal(c.id).N || c.valore || 0; if (won.has(c.stato)) w += v; else if (c.stato !== 'persa') pipe += v; }
