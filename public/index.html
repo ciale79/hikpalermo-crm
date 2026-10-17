@@ -115,6 +115,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .hp-fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .hp-fgrid>.full{grid-column:1/-1}
 .hp-fgrid.dash{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+.hp-fitem[data-k=map] svg{max-height:520px;width:100%}
 .hp-pev{margin-top:16px;padding-top:12px;border-top:1px solid var(--line-2)}
 .hp-pevc{font-size:.8rem;font-weight:600;flex-wrap:wrap}
 .hp-pevc a{color:var(--ink)}
@@ -911,8 +912,8 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
   const pts=[...S.commesse.values()].filter(c=>c.lat!=null&&c.lng!=null).map(c=>({lat:c.lat,lng:c.lng,color:CCOL[c.stato||'opp'],title:c.nome+' · '+(CSTL[c.stato]||''),on:()=>go('commesse',c.id)}));
   const ppts=window.hpPartnerPts?hpPartnerPts():[];if(window.hpPartnerGeo)setTimeout(hpPartnerGeo,1500);
   const mapP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Mappa commesse e partner'}),el('span',{class:'hint'},pts.length+' commesse · '+ppts.length+' partner')),mapSvg(pts.concat(ppts)),el('div',{class:'row hp-mlg',style:'margin-top:8px;gap:10px;font-size:.78rem'},el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot',style:{background:'var(--accent)'}}),'Commesse (colore per stato)'),el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot star',style:{background:window.hpPartnerColor||'#D4A017'}}),'Partner'),el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot',style:{background:'#C8102E',borderRadius:'3px'}}),'Sede Hikvision')));
-  const dB=[{k:'kpi',node:kpis,full:true,label:'Indicatori'},{k:'cli',node:stP,label:'Clienti per fatturato'},{k:'mx',node:mx,label:'Clienti per status di partnership'},{k:'map',node:mapP,label:'Mappa commesse e partner'},{k:'ev',node:evP,label:'Prossimi appuntamenti'}];
-  r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),window.hpDragGrid?hpDragGrid('dashOrd2',dB,{cls:'dash',rerender:()=>this.update()}):el('div',{class:'stack'},...dB.map(b=>b.node))].filter(Boolean));
+  const dB=[{k:'kpi',node:kpis,full:true,label:'Indicatori'},{k:'cli',node:stP,label:'Clienti per fatturato'},{k:'side',node:el('div',{class:'stack'},mx,evP),label:'Status di partnership e prossimi appuntamenti'},{k:'map',node:mapP,full:true,label:'Mappa commesse e partner'}];
+  r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),window.hpDragGrid?hpDragGrid('dashOrd3',dB,{cls:'dash',rerender:()=>this.update()}):el('div',{class:'stack'},...dB.map(b=>b.node))].filter(Boolean));
 }};
 function matrix(){const g=el('div',{class:'matrix'},el('span'),TIERS.map(t=>el('span',{class:'h'},TLAB[t])));const cl=[...S.clienti.values()];
   for(const [L,lab,key] of [['pro','Pro','statusPro'],['sol','Solution','statusSol']]){const counts=TIERS.map(t=>cl.filter(c=>c[key]===t).length);const mx=Math.max(1,...counts);g.append(el('span',{class:'eyebrow'},lab));TIERS.forEach((t,i)=>g.append(el('button',{class:'c',type:'button',style:{'--c':`var(--t-${t.toLowerCase()})`,'--a':String(Math.round(counts[i]/mx*45))},title:`${lab} ${TLAB[t]}: apri elenco`,onclick:()=>{S.fCli={...S.fCli,pro:L==='pro'?t:'',sol:L==='sol'?t:''};go('clienti');}},counts[i])));}
