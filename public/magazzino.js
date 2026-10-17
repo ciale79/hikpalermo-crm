@@ -224,7 +224,7 @@
   function itemThumb(it, size = 44) {
     const b = blobOf(it);
     if (b) { const im = el('img', { src: '/_blob/' + b, alt: '', class: 'mg-uimg', loading: 'lazy' }); im.style.width = im.style.height = size + 'px'; return im; }
-    return thumb(imOf(it), size);
+    return window.artThumbC ? artThumbC(it.code, imOf(it), size) : thumb(imOf(it), size);
   }
 
   /* ---------------- ricerca a listino ---------------- */
