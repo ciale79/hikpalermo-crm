@@ -35,7 +35,7 @@
 
   function confirmSave(res, fname) {
     const { sales, fatturato } = res;
-    const cur = S.sales || {};
+    const cur = S.salesRaw || S.sales || {};
     const diff = (a, b) => b == null ? '' : ' (' + (a - b >= 0 ? '+' : '') + eurShort(a - b) + ' rispetto ai dati attuali)';
     const older = cur.data && sales.data < cur.data;
     const yearChange = cur.anno && sales.anno !== cur.anno;

@@ -8,6 +8,7 @@ import extraLinks from '../seed/import-links.json';
 import extraKam from '../seed/import-kam.json';
 import extraOo from '../seed/import-oo.json';
 import extraPat from '../seed/import-pat.json';
+import extraItx from '../seed/import-itx.json';
 
 const SESSION_DAYS = 60;
 const OTP_MIN = 10;
@@ -603,7 +604,7 @@ async function migrateMag(env) {
   await broadcast(env, { reload: 'magazzino' });
 }
 // Import una tantum di documenti preparati (es. schede demo dalle bolle): non sovrascrive documenti esistenti
-async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat]) await migrateOne(env, x); await migrateStato(env); }
+async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat, extraItx]) await migrateOne(env, x); await migrateStato(env); }
 // «Stato progetto» (dall'importazione) confluisce in «Stato», con priorità al valore importato; l'originale resta in statoImport
 async function migrateStato(env) {
   const key = 'mig_stato_merge';
@@ -620,6 +621,7 @@ async function migrateOne(env, extraImport) {
   const key = 'mig_' + String(extraImport.key || '').replace(/[^A-Za-z0-9_]/g, '');
   if (key === 'mig_' || await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id=?").bind(key).first()) return;
   const t = now();
+  for (const d of extraImport.docs) if (d.merge) await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind(d.col, d.id, '{}', t, t).run();
   const stmts = extraImport.docs.map(d => d.merge ? env.DB.prepare('UPDATE docs SET data=json_patch(data, ?), version=?, updated=? WHERE col=? AND id=? AND json_extract(data, ?) IS NULL').bind(JSON.stringify(d.merge), t, t, d.col, d.id, '$.' + Object.keys(d.merge)[0]) : env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind(d.col, d.id, JSON.stringify(d.data), t, t));
   for (let i = 0; i < stmts.length; i += 80) await env.DB.batch(stmts.slice(i, i + 80));
   await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', key, JSON.stringify({ at: t, n: extraImport.docs.length }), t, t).run();
