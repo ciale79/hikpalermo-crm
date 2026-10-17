@@ -39,3 +39,24 @@
     return tile;
   };
 })();
+/* ——— Cruscotto: tasti rapidi in alto */
+(function () {
+  'use strict';
+  window.hpQuickBar = function () {
+    const n = (x, s, p) => x + ' ' + (x === 1 ? s : p);
+    const has = v => typeof VIEWS !== 'undefined' && VIEWS[v];
+    const mag = S.mag ? S.mag.size : 0, demo = S.demo ? [...S.demo.values()].filter(d => d.stato !== 'chiusa').length : 0;
+    const now = Date.now(), up = [...S.eventi.values()].filter(e => e.end >= now && e.start <= now + 7 * 864e5).length;
+    const today = [...S.eventi.values()].filter(e => new Date(e.start).toDateString() === new Date().toDateString()).length;
+    const part = [...S.clienti.values()].filter(c => c.partner).length;
+    const att = [...S.commesse.values()].filter(c => !['chiusa', 'persa'].includes(c.stato)).length;
+    const B = (icon, lab, sub, on, cls) => el('button', { type: 'button', class: 'hp-qb' + (cls ? ' ' + cls : ''), onclick: on }, el('span', { class: 'hp-qi' }, ic(icon, 22)), el('span', { class: 'hp-qt' }, el('b', {}, lab), el('small', {}, sub)));
+    return el('nav', { class: 'hp-qbar', 'aria-label': 'Accesso rapido' },
+      B('plus', 'Nuova commessa', att + (att === 1 ? ' attiva' : ' attive'), () => commessaForm({}), 'pri'),
+      B('brief', 'Commesse', n(S.commesse.size, 'commessa', 'commesse'), () => go('commesse')),
+      has('magazzino') ? B('whs', 'Magazzino', demo ? demo + ' in demo' : n(mag, 'articolo', 'articoli'), () => go('magazzino')) : null,
+      B('cal', 'Calendario', today ? today + ' oggi' : up + ' in 7 giorni', () => go('cal')),
+      B('box', 'Articoli', (S.cat ? S.cat.length.toLocaleString('it-IT') : '…') + ' a listino', () => go('art')),
+      has('partner') ? B('medal', 'Partner', part ? part + ' partner' : 'Programmi', () => go('partner')) : null);
+  };
+})();

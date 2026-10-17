@@ -153,6 +153,19 @@ tr:hover .hp-patflag.off,.hp-patflag.off:focus-visible,.hp-patflag.big.off{opaci
 .hp-tg-si .hp-ootog.on{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent);background:color-mix(in srgb,var(--ok) 8%,transparent)}
 .hp-cliaddr{margin-top:-6px}
 .hp-cliaddr:empty{display:none}
+.hp-qbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px}
+.hp-qb{display:flex;align-items:center;gap:12px;min-width:0;padding:14px 16px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}
+.hp-qb:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow)}
+.hp-qb:active{transform:translateY(0)}
+.hp-qi{flex:0 0 auto;display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent)}
+.hp-qt{display:flex;flex-direction:column;min-width:0}
+.hp-qt b{font-family:var(--font-display);font-stretch:90%;font-size:1.05rem;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hp-qt small{color:var(--ink-3);font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hp-qb.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.hp-qb.pri .hp-qi{background:rgba(255,255,255,.18);color:#fff}
+.hp-qb.pri small{color:rgba(255,255,255,.82)}
+.hp-qb .hp-qt b{white-space:normal;overflow-wrap:anywhere}
+@media (max-width:600px){.hp-qbar{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hp-qb{padding:10px;gap:8px}.hp-qi{width:34px;height:34px}.hp-qt b{font-size:.95rem}}
 .hp-itx{font-size:.72rem;color:var(--warn)}
 .hp-pev{margin-top:16px;padding-top:12px;border-top:1px solid var(--line-2)}
 .hp-pevc{font-size:.8rem;font-weight:600;flex-wrap:wrap}
@@ -974,7 +987,7 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
   const ppts=window.hpPartnerPts?hpPartnerPts():[];if(window.hpPartnerGeo)setTimeout(hpPartnerGeo,1500);
   const mapP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Mappa commesse e partner'}),el('span',{class:'hint'},pts.length+' commesse · '+ppts.length+' partner')),mapSvg(pts.concat(ppts)),el('div',{class:'row hp-mlg',style:'margin-top:8px;gap:10px;font-size:.78rem'},el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot',style:{background:'var(--accent)'}}),'Commesse (colore per stato)'),el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot star',style:{background:window.hpPartnerColor||'#D4A017'}}),'Partner'),el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot',style:{background:'#C8102E',borderRadius:'3px'}}),'Sede Hikvision')));
   const dB=[{k:'kpi',node:kpis,full:true,label:'Indicatori'},{k:'cli',node:stP,label:'Clienti per fatturato'},{k:'side',node:el('div',{class:'stack'},mx,evP),label:'Status di partnership e prossimi appuntamenti'},{k:'map',node:mapP,full:true,label:'Mappa commesse e partner'}];
-  r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),window.hpDragGrid?hpDragGrid('dashOrd3',dB,{cls:'dash',rerender:()=>this.update()}):el('div',{class:'stack'},...dB.map(b=>b.node))].filter(Boolean));
+  r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),window.hpQuickBar?hpQuickBar():null,window.hpDragGrid?hpDragGrid('dashOrd3',dB,{cls:'dash',rerender:()=>this.update()}):el('div',{class:'stack'},...dB.map(b=>b.node))].filter(Boolean));
 }};
 function matrix(){const g=el('div',{class:'matrix'},el('span'),TIERS.map(t=>el('span',{class:'h'},TLAB[t])));const cl=[...S.clienti.values()];
   for(const [L,lab,key] of [['pro','Pro','statusPro'],['sol','Solution','statusSol']]){const counts=TIERS.map(t=>cl.filter(c=>c[key]===t).length);const mx=Math.max(1,...counts);g.append(el('span',{class:'eyebrow'},lab));TIERS.forEach((t,i)=>g.append(el('button',{class:'c',type:'button',style:{'--c':`var(--t-${t.toLowerCase()})`,'--a':String(Math.round(counts[i]/mx*45))},title:`${lab} ${TLAB[t]}: apri elenco`,onclick:()=>{S.fCli={...S.fCli,pro:L==='pro'?t:'',sol:L==='sol'?t:''};go('clienti');}},counts[i])));}
@@ -1616,11 +1629,10 @@ function adjSales(){const r=S.salesRaw;if(!r)return null;const x=(S.config||{}).
   for(const k of ['italiaOwnQ','italiaQ'])if(Array.isArray(sa[k]))sa[k]=sa[k].map((v,i)=>(+v||0)+q[i]);for(const k of ['italiaOwn','italia','italiaNettoRebate'])if(sa[k]!=null)sa[k]=(+sa[k]||0)+tot;
   sa.itExtra={tot,q,finoQ:nq,totale:+x.totale||null,fonte:x.fonte||'Max',nota:x.nota||'',at:x.at||null};return sa;}
 function itExtraNote(v){const x=S.sales&&S.sales.itExtra;if(!x||!v)return null;return el('span',{class:'hint hp-itx',title:'Fatturato di altri canali e business unit fino al Q'+x.finoQ+' ('+eur0(x.tot)+') indicato da '+x.fonte+': nella Sales Analysis non ne abbiamo riscontro'},'incl. '+eurShort(v)+' altri canali/BU · indicati da '+x.fonte+', non riscontrati');}
-function sideWidget(){const {y,q}=S.qsel;const st=qStats(y,q);const set=(ny,nq)=>{S.qsel={y:ny,q:nq};renderSides();};
+function sideWidget(){const {y,q}=S.qsel;const set=(ny,nq)=>{S.qsel={y:ny,q:nq};renderSides();};
   const box=el('div',{class:'sidewid'});
   box.append(el('div',{class:'qrow'},el('button',{type:'button',class:'qy','aria-label':'Anno precedente',onclick:()=>set(y-1,q)},'‹'),el('span',{class:'yl'},y),el('button',{type:'button',class:'qy','aria-label':'Anno successivo',onclick:()=>set(y+1,q)},'›'),[1,2,3,4].map(n=>el('button',{type:'button',class:'qb'+(q===n?' on':''),'aria-pressed':String(q===n),title:'Trimestre '+n,onclick:()=>set(y,n)},'Q'+n)),el('button',{type:'button',class:'qb qt'+(!q?' on':''),'aria-pressed':String(!q),title:'Totale anno '+y,onclick:()=>set(y,0)},'T')),
-    el('div',{class:'lcds'},lcd('ATTIVE',st.a,42,'Commesse in lavorazione aperte nel periodo (da Opportunità a Trattativa)'),lcd('CHIUSE',st.c,125,'Commesse acquisite, in esecuzione o chiuse nel periodo'),lcd('PERSE',st.p,0,'Commesse perse nel periodo')),
-    el('div',{class:'qcap'},q?'Q'+q+' '+y:'Totale anno '+y));
+    null);
   const sa=S.sales;
   if(sa&&sa.italia!=null){const own=!!sa.italiaOwnQ;const IQ=own?sa.italiaOwnQ:sa.italiaQ,SQ=own?sa.siciliaOwnQ:sa.siciliaQ;const byQ=q&&y===sa.anno&&IQ&&SQ;
     const vS=byQ?SQ[q-1]:(own?sa.siciliaOwn:sa.sicilia),vI=byQ?IQ[q-1]:(own?sa.italiaOwn:sa.italia);const pct=vI?vS/vI*100:0;
