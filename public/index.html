@@ -538,6 +538,12 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 @media(max-width:700px){.hp-kamtot.p4,.hp-cliKpi.p4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .hp-pat{margin-top:12px;padding:10px 12px;border:1px solid var(--line-2);border-left:3px solid var(--violet);border-radius:10px;background:var(--surface-2);gap:6px}
 .hp-path{display:flex;align-items:center;gap:6px;margin:0;font-size:.9rem}
+.hp-pathead{cursor:pointer;user-select:none}
+.hp-patbody[hidden]{display:none!important}
+.hp-patchev{display:inline-block;transition:transform .15s;color:var(--ink-3);font-size:.8rem;width:10px}
+.hp-pat.open .hp-patchev{transform:rotate(90deg)}
+.hp-pattot{color:var(--violet);font-size:.9rem}
+.hp-pat.open .hp-pattot{display:none}
 .hp-patdot{width:9px;height:9px;border-radius:50%;background:var(--violet)}
 .hp-patrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:5px 2px;border-bottom:1px dashed var(--line-2)}
 .hp-patrow .n{display:flex;flex-direction:column;min-width:0}
@@ -883,7 +889,7 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
     const OOK=F&&F.ooKam?F.ooKam:F&&F.oo&&F.oo.siClienti?F.oo.siClienti.map(x=>[x[0],'SICILIA',x[1]]):[];
     for(const [n,ar,v] of OOK){const c=K.find(x=>x.n===n&&x.ar===ar);if(c)c.o+=v;else K.push({n,ar,t:'',a:0,b:0,o:v});}
     const ord=S.dashCliOrd||'fatt';
-    const aree=[...new Set(K.map(c=>c.ar))];const f=S.dashCli=S.dashCli||(aree.includes('SICILIA')?'SICILIA':'tutti');
+    const aree=[...new Set(K.map(c=>c.ar))];const f=S.dashCli||(aree.includes('SICILIA')?'SICILIA':'tutti');
     const segB=(k,l)=>el('button',{type:'button',class:f===k?'on':'','aria-pressed':String(f===k),onclick:()=>{S.dashCli=k;VIEWS.dash.update();}},l);
     const lab=aree.length>1?aree.map(a=>a.charAt(0)+a.slice(1).toLowerCase()).join(' e '):'Sicilia';
     const head=el('div',{class:'panel-h'},el('div',{class:'stack',style:'gap:2px'},el('h3',{text:'Clienti '+lab+' per fatturato'}),F?el('span',{class:'hint'},'Da inizio anno '+(F.anno||(S.sales&&S.sales.anno)||'')+' · '+K.filter(c=>c.a>0).length+' clienti con fatturato'):null),F?btn('Dettaglio',()=>window.hpGoFatt?hpGoFatt('clienti'):go('fatt'),'sm ghost'):null);

@@ -43,20 +43,31 @@
   window.hpPatTot = anno => window.hpPatRows(anno).reduce((t, p) => t + p.v, 0);
   const openP = p => { if (p.com) go('commesse', p.com.id); else if (p.cli) go('clienti', p.cli.id); else patForm(p); };
 
+  // riquadro collassabile, chiuso di default (lo stato aperto/chiuso resta finché non ricarichi la pagina)
+  const openSt = { dash: false, fatt: false };
+  function wrap(ctx, h, ...body) {
+    const b = el('div', { class: 'stack hp-patbody', style: 'gap:6px' }, ...body); b.hidden = !openSt[ctx];
+    const box = el('div', { class: 'hp-pat stack' + (openSt[ctx] ? ' open' : '') }, h, b);
+    const tog = () => { openSt[ctx] = !openSt[ctx]; b.hidden = !openSt[ctx]; box.classList.toggle('open', openSt[ctx]); h.setAttribute('aria-expanded', String(openSt[ctx])); };
+    h.addEventListener('click', tog); h.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tog(); } });
+    return box;
+  }
   // elenco (cruscotto: compatto · fatturato: tabella con modifica)
   window.hpPatBlock = function (anno, opt = {}) {
     const rows = window.hpPatRows(anno); const tot = rows.reduce((t, p) => t + p.v, 0);
     const per = [...new Set(rows.map(p => p.periodo).filter(Boolean))];
-    const h = el('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;align-items:center' },
-      el('h4', { class: 'hp-path' }, el('span', { class: 'hp-patdot' }), 'Paternità Team Sicilia'),
+    const ctx = opt.edit ? 'fatt' : 'dash';
+    const chev = el('span', { class: 'hp-patchev', 'aria-hidden': 'true' }, '▸');
+    const h = el('div', { class: 'row hp-pathead', role: 'button', tabindex: '0', 'aria-expanded': String(!!openSt[ctx]), title: 'Mostra / nascondi i progetti', style: 'gap:8px;flex-wrap:wrap;align-items:center' },
+      chev, el('h4', { class: 'hp-path' }, el('span', { class: 'hp-patdot' }), 'Paternità Team Sicilia'), rows.length ? el('b', { class: 'num hp-pattot' }, eur0(tot)) : null,
       el('span', { class: 'hint' }, rows.length ? rows.length + (rows.length === 1 ? ' progetto' : ' progetti') + (per.length ? ' · ' + per.join(', ') + (anno ? ' ' + anno : '') : '') + ' · fatturati fuori area, riconosciuti alla Sicilia' : 'Nessun progetto per il ' + (anno || 'periodo')),
-      el('span', { class: 'grow' }), opt.edit ? btn('Aggiungi progetto', () => patForm({ anno: anno || new Date().getFullYear(), periodo: '', area: 'SICILIA' }), 'sm ghost', 'plus') : null);
-    if (!rows.length) return el('div', { class: 'hp-pat stack' }, h);
+      el('span', { class: 'grow' }), opt.edit ? btn('Aggiungi progetto', e => { e.stopPropagation(); patForm({ anno: anno || new Date().getFullYear(), periodo: '', area: 'SICILIA' }); }, 'sm ghost', 'plus') : null);
+    if (!rows.length) return wrap(ctx, h);
     const link = p => p.com ? el('span', { class: 'pill', style: '--c:var(--info)', title: 'Apri la commessa «' + p.com.nome + '»' }, ic('brief', 12), ' Commessa') : null;
     if (!opt.edit) {
       const list = el('div', { class: 'hp-patlist' }, rows.map(p => el('div', { class: 'hp-patrow hp-click', title: p.com ? 'Apri la commessa «' + p.com.nome + '»' : p.cli ? 'Apri la scheda cliente' : 'Modifica', onclick: () => openP(p) },
         el('span', { class: 'n' }, el('b', {}, p.rif), el('small', { class: 'hint' }, p.cliente + (p.periodo ? ' · ' + p.periodo : ''))), link(p), el('b', { class: 'num' }, eur0(p.v)))));
-      return el('div', { class: 'hp-pat stack' }, h, list, el('div', { class: 'hp-patrow tot' }, el('span', { class: 'n' }, el('b', {}, 'Totale Paternità Team Sicilia')), el('b', { class: 'num', style: 'color:var(--violet)' }, eur(tot))));
+      return wrap(ctx, h, list, el('div', { class: 'hp-patrow tot' }, el('span', { class: 'n' }, el('b', {}, 'Totale Paternità Team Sicilia')), el('b', { class: 'num', style: 'color:var(--violet)' }, eur(tot))));
     }
     const tb = el('tbody', {}, rows.map(p => el('tr', { class: 'hp-click', onclick: () => openP(p) },
       el('td', {}, el('b', {}, p.rif), p.note ? el('div', { class: 'hint' }, p.note) : null),
@@ -66,7 +77,7 @@
       el('td', { class: 'r num', 'data-sort': String(p.v) }, el('b', {}, eur(p.v))),
       el('td', { class: 'r' }, el('button', { type: 'button', class: 'icon-btn', title: 'Modifica', 'aria-label': 'Modifica ' + p.rif, onclick: e => { e.stopPropagation(); patForm(p); } }, ic('edit', 16))))));
     const tf = el('tfoot', {}, el('tr', { class: 'hp-totrow' }, el('td', {}, el('b', {}, 'Totale')), el('td', {}), el('td', {}), el('td', { class: 'muted' }, rows.length + ' progetti'), el('td', { class: 'r num' }, el('b', { style: 'color:var(--violet)' }, eur(tot))), el('td', {})));
-    return el('div', { class: 'hp-pat stack' }, h, el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Riferimento progetto', 'Cliente', 'Periodo', 'Commessa', 'Netto fatturato', ''].map((x, i) => el('th', { class: i === 4 ? 'r' : '' }, x)))), tb, tf)),
+    return wrap(ctx, h, el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Riferimento progetto', 'Cliente', 'Periodo', 'Commessa', 'Netto fatturato', ''].map((x, i) => el('th', { class: i === 4 ? 'r' : '' }, x)))), tb, tf)),
       el('p', { class: 'hint' }, 'Clic su una riga per aprire la commessa collegata (o la scheda cliente). La commessa viene riconosciuta in automatico dal riferimento progetto; puoi sceglierla tu dalla matita.'));
   };
 
