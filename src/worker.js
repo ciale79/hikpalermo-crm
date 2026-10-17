@@ -137,6 +137,29 @@ async function autoGeo(env, col, id, prev, data) {
   const g = r[0];
   await patchDoc(env, col, id, g ? { lat: g.lat, lng: g.lng, geoAuto: true, geoQ: q } : { geoQ: q, ...(data.geoAuto ? { lat: null, lng: null, geoAuto: null } : {}) });
 }
+// commesse con l'indirizzo «del cliente» (addrCli): seguono l'indirizzo e la posizione del cliente
+const comAddrFields = k => ({ indirizzo: String(k.indirizzo || '').trim(), citta: String(k.citta || '').trim(), addrCli: true, ...(k.lat != null ? { lat: k.lat, lng: k.lng, geoAuto: true, geoQ: [String(k.indirizzo || '').trim(), String(k.citta || '').trim()].filter(Boolean).join(', ') } : { lat: null, lng: null, geoAuto: null }) });
+async function syncComAddr(env, cliId) {
+  const k = (await getDoc(env, 'clienti', cliId))?.data; if (!k) return;
+  const { results } = await env.DB.prepare("SELECT id FROM docs WHERE col='commesse' AND json_extract(data,'$.clienteId')=? AND json_extract(data,'$.addrCli')=1").bind(cliId).all();
+  for (const r of results) await patchDoc(env, 'commesse', r.id, comAddrFields(k));
+}
+async function migrateComAddr(env) {
+  const key = 'mig_com_addr_cli';
+  if (await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id=?").bind(key).first()) return;
+  const t = now(); const cli = new Map();
+  for (const r of (await env.DB.prepare("SELECT id,data FROM docs WHERE col='clienti'").all()).results) { const d = parse(r.data); if (d) cli.set(r.id, d); }
+  const stmts = [];
+  for (const r of (await env.DB.prepare("SELECT id,data FROM docs WHERE col='commesse'").all()).results) {
+    const d = parse(r.data); if (!d || !d.clienteId || String(d.indirizzo || '').trim() || String(d.citta || '').trim() || d.lat != null) continue;
+    const k = cli.get(d.clienteId); if (!k || !(String(k.indirizzo || '').trim() || String(k.citta || '').trim())) continue;
+    const next = { ...d, ...comAddrFields(k) }; if (next.geoAuto == null) delete next.geoAuto;
+    stmts.push(env.DB.prepare('UPDATE docs SET data=?, version=?, updated=? WHERE col=? AND id=?').bind(JSON.stringify(next), t, t, 'commesse', r.id));
+  }
+  for (let i = 0; i < stmts.length; i += 80) await env.DB.batch(stmts.slice(i, i + 80));
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', key, JSON.stringify({ at: t, n: stmts.length }), t, t).run();
+  if (stmts.length) await broadcast(env, { reload: 'commesse' });
+}
 async function patchDoc(env, col, id, fields) {
   const cur = await getDoc(env, col, id);
   if (!cur) return;
@@ -220,6 +243,7 @@ async function publicIcs(env, url) {
 /* ---------------- hook dopo le scritture ---------------- */
 async function afterWrite(env, u, op, col, id, prev, data) {
   if (op !== 'delete' && (col === 'eventi' || col === 'commesse' || col === 'clienti')) { try { await autoGeo(env, col, id, prev, data); } catch (e) { console.log('geo', e); } }
+  if (op !== 'delete' && col === 'clienti' && prev && data && cliAddr(prev) !== cliAddr(data)) { try { await syncComAddr(env, id); } catch (e) { console.log('addr', e); } }
   // Notifiche: ogni voce del feed con destinatari diventa una email
   if (col === 'feed' && op === 'set' && !prev && data && Array.isArray(data.to) && data.to.length) {
     if (data.t === 'evento' && !data.ref && /^ha annullato/.test(data.msg || '')) return; // gestito dalla cancellazione dell'evento
@@ -604,7 +628,7 @@ async function migrateMag(env) {
   await broadcast(env, { reload: 'magazzino' });
 }
 // Import una tantum di documenti preparati (es. schede demo dalle bolle): non sovrascrive documenti esistenti
-async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat, extraItx]) await migrateOne(env, x); await migrateStato(env); await migrateItTot(env); }
+async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat, extraItx]) await migrateOne(env, x); await migrateStato(env); await migrateItTot(env); await migrateComAddr(env); }
 // Italia: il totale Q1–Q3 indicato da Max (73,5 M€) sostituisce l'importo fisso degli altri canali/BU
 async function migrateItTot(env) {
   const key = 'mig_it_tot_735';
