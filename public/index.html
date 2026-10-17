@@ -122,6 +122,21 @@ button,input,select,textarea{font:inherit;color:inherit}
 .hp-tg-g{display:block;line-height:0}
 .hp-tg-num{font-family:var(--font-mono);font-size:1.9rem;font-weight:700;letter-spacing:-.02em;line-height:1;padding-bottom:2px;font-variant-numeric:tabular-nums}
 .hp-tg-dl{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line-2)}
+.hp-captile,.hp-pill{cursor:pointer}
+.hp-captile:hover,.hp-pill:hover{border-color:var(--accent)}
+.hp-capnew{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:999px;padding:1px 8px;font:inherit;font-size:.72rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.hp-capnew:hover{border-color:var(--accent);color:var(--accent)}
+.hp-capn{font-family:var(--font-display);font-stretch:85%;font-size:1.15rem;font-weight:700;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hp-pill-d{display:flex;align-items:baseline;gap:8px}
+.hp-pill-d b{font-family:var(--font-display);font-stretch:85%;font-size:1.45rem;line-height:1.1;text-transform:capitalize}
+.hp-pill-d small{color:var(--ink-3);font-size:.78rem;text-transform:capitalize}
+.hp-pill-b{display:flex;gap:10px;align-items:center;min-width:0;margin-top:2px}
+.hp-pill-t{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.hp-pill-t>.s{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-pill-c{font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-pill-x{font-size:.76rem;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}
+.hp-tg-g svg{width:120px;height:auto;max-width:100%}
+@media (max-width:600px){.hp-tg-row{gap:6px;flex-wrap:wrap;align-items:center}.hp-tg-g svg{width:88px}.hp-tg-num{font-size:1.45rem}.hp-pill-d{flex-wrap:wrap;gap:0 6px}.hp-pill-d b{font-size:1.2rem}.hp-pill .thumb{display:none}.hp-capn{font-size:1rem}}
 .hp-pev{margin-top:16px;padding-top:12px;border-top:1px solid var(--line-2)}
 .hp-pevc{font-size:.8rem;font-weight:600;flex-wrap:wrap}
 .hp-pevc a{color:var(--ink)}
@@ -895,10 +910,10 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
   const inv=[...S.offerte.values()].filter(o=>o.stato==='Inviata');const invN=inv.reduce((a,o)=>a+(o.totN||0),0);
   const up7=upcoming(7);const mine=up7.filter(e=>(e.part||[]).includes(S.me)||e.by===S.me);
   const kpis=el('div',{class:'kpis'},
-    el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Commesse attive'),el('span',{class:'v'},att.length),el('span',{class:'s'},S.commesse.size+' in totale')),
-    el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Pipeline · valore netto'),el('span',{class:'v'},eur0(pN)),el('span',{class:'s'},'A listino '+eur0(pL))),
+    (window.hpCapTile&&hpCapTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Commesse attive'),el('span',{class:'v'},att.length),el('span',{class:'s'},S.commesse.size+' in totale')),
+    (window.hpTargetTile&&hpTargetTile('it'))||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Pipeline · valore netto'),el('span',{class:'v'},eur0(pN)),el('span',{class:'s'},'A listino '+eur0(pL))),
     (window.hpTargetTile&&hpTargetTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Offerte in attesa'),el('span',{class:'v'},inv.length),el('span',{class:'s'},'Netto '+eur0(invN))),
-    el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Appuntamenti 7 giorni'),el('span',{class:'v'},up7.length),el('span',{class:'s'},mine.length+' ti riguardano')));
+    (window.hpPillTile&&hpPillTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Appuntamenti 7 giorni'),el('span',{class:'v'},up7.length),el('span',{class:'s'},mine.length+' ti riguardano')));
   const un=unread();
   const feedP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{},'Avvisi e attività ',un.length?el('span',{class:'pill s-persa'},un.length+' da leggere'):null),un.length?btn('Segna come letti',markRead,'sm ghost'):null),feedList(S.feed.slice(0,12)));
   const evP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Prossimi appuntamenti'}),btn('Nuovo evento',()=>eventForm({}),'sm','plus')),up7.length?el('div',{},up7.slice(0,8).map(evLi)):emptyBox('Nessun appuntamento nei prossimi 7 giorni','Aggiungi una riunione, una call Teams o una visita: i colleghi ricevono subito l\'avviso.'));
@@ -1693,6 +1708,7 @@ boot();
 <script src="/paternita.js"></script>
 <script src="/riquadri.js"></script>
 <script src="/target.js"></script>
+<script src="/kpitiles.js"></script>
 <script src="/offimport.js"></script>
 <script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
