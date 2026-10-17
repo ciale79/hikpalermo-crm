@@ -116,6 +116,12 @@ button,input,select,textarea{font:inherit;color:inherit}
 .hp-fgrid>.full{grid-column:1/-1}
 .hp-fgrid.dash{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
 .hp-fitem[data-k=map] svg{max-height:520px;width:100%}
+.hp-tg{text-align:left;font:inherit;color:inherit;cursor:pointer;padding-bottom:10px}
+.hp-tg:hover{border-color:var(--accent)}
+.hp-tg-row{display:flex;align-items:flex-end;gap:10px;margin:-2px 0 -2px}
+.hp-tg-g{display:block;line-height:0}
+.hp-tg-num{font-family:var(--font-mono);font-size:1.9rem;font-weight:700;letter-spacing:-.02em;line-height:1;padding-bottom:2px;font-variant-numeric:tabular-nums}
+.hp-tg-dl{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line-2)}
 .hp-pev{margin-top:16px;padding-top:12px;border-top:1px solid var(--line-2)}
 .hp-pevc{font-size:.8rem;font-weight:600;flex-wrap:wrap}
 .hp-pevc a{color:var(--ink)}
@@ -891,7 +897,7 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
   const kpis=el('div',{class:'kpis'},
     el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Commesse attive'),el('span',{class:'v'},att.length),el('span',{class:'s'},S.commesse.size+' in totale')),
     el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Pipeline · valore netto'),el('span',{class:'v'},eur0(pN)),el('span',{class:'s'},'A listino '+eur0(pL))),
-    el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Offerte in attesa'),el('span',{class:'v'},inv.length),el('span',{class:'s'},'Netto '+eur0(invN))),
+    (window.hpTargetTile&&hpTargetTile())||el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Offerte in attesa'),el('span',{class:'v'},inv.length),el('span',{class:'s'},'Netto '+eur0(invN))),
     el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Appuntamenti 7 giorni'),el('span',{class:'v'},up7.length),el('span',{class:'s'},mine.length+' ti riguardano')));
   const un=unread();
   const feedP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{},'Avvisi e attività ',un.length?el('span',{class:'pill s-persa'},un.length+' da leggere'):null),un.length?btn('Segna come letti',markRead,'sm ghost'):null),feedList(S.feed.slice(0,12)));
@@ -1686,6 +1692,7 @@ boot();
 <script src="/doclinks.js"></script>
 <script src="/paternita.js"></script>
 <script src="/riquadri.js"></script>
+<script src="/target.js"></script>
 <script src="/offimport.js"></script>
 <script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
