@@ -515,6 +515,20 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .hp-oo{display:block;font-size:.7rem;color:var(--warn);font-weight:600}
 .hp-kamtot{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line-2)}
 .hp-kamtot>div{display:flex;flex-direction:column;gap:2px}
+.hp-kamtot.p4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.hp-kamtot .off b,.kpi.off .v{opacity:.45;text-decoration:line-through}
+.hp-cliKpi.p4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:700px){.hp-kamtot.p4,.hp-cliKpi.p4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.hp-pat{margin-top:12px;padding:10px 12px;border:1px solid var(--line-2);border-left:3px solid var(--violet);border-radius:10px;background:var(--surface-2);gap:6px}
+.hp-path{display:flex;align-items:center;gap:6px;margin:0;font-size:.9rem}
+.hp-patdot{width:9px;height:9px;border-radius:50%;background:var(--violet)}
+.hp-patrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:5px 2px;border-bottom:1px dashed var(--line-2)}
+.hp-patrow .n{display:flex;flex-direction:column;min-width:0}
+.hp-patrow .n b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:.86rem}
+.hp-patrow.tot{border-bottom:0;grid-template-columns:minmax(0,1fr) auto}
+.hp-patrow.hp-click:hover{background:var(--surface)}
+.hp-pattog{display:inline-flex;align-items:center;gap:7px;margin-top:8px;font-size:.84rem;cursor:pointer;user-select:none}
+.hp-patfoot td{border-top:0}
 .hp-kamtot b{font-size:1.05rem}
 .hp-totrow td{border-top:2px solid var(--line);background:var(--surface-2)}
 .hp-cliKpi{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -863,9 +877,11 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
     const pool=K.filter(c=>(c.a>0||c.o>0)&&(f==='tutti'||(f==='ka'?isKA(c.t):c.ar===f)));const val=c=>ord==='tot'?c.a+c.o:c.a;
     const byN=new Map([...S.clienti.values()].map(c=>[nrm(c.nome),c]));
     const rows=pool.slice().sort((a,b)=>val(b)-val(a)).slice(0,12);const mx=Math.max(1,...rows.map(c=>c.a+c.o));const tot=pool.reduce((a,c)=>a+c.a,0),totO=pool.reduce((a,c)=>a+c.o,0);
+    const Yd=F&&(F.anno||(S.sales&&S.sales.anno));const pRows=(f==='SICILIA'||f==='tutti')&&window.hpPatRows?hpPatRows(Yd):[];const pT=pRows.reduce((t,p)=>t+p.v,0);const pIn=pRows.length&&hpPatOn()?pT:0;const pSfx=pIn?el('small',{class:'hp-oo',style:'color:var(--violet)'},'incl. paternità'):null;
     const tag=c=>el('span',{class:'hp-artag',title:(c.ar.charAt(0)+c.ar.slice(1).toLowerCase())+' · '+(c.t||'')},c.ar.slice(0,3)+(isKA(c.t)?' · KA':''));
     return el('section',{class:'panel'},head,el('div',{class:'row',style:'gap:8px;flex-wrap:wrap'},seg,ordSeg),el('div',{class:'hb hp-kamhb'},rows.map((c,k)=>{const crm=byN.get(nrm(c.n));return el('div',{class:'hr hp-click',title:crm?'Apri la scheda cliente':'Vai al fatturato clienti',onclick:()=>crm?go('clienti',crm.id):(window.hpGoFatt?hpGoFatt('clienti'):go('fatt'))},el('span',{class:'hn',title:c.n+' · '+c.ar+' · '+(c.t||'')},(k+1)+'. ',aree.length>1?tag(c):null,' '+c.n),el('div',{class:'ht hp-ht2',title:'Fatturato '+eur0(c.a)+(c.o?' · open order '+eur0(c.o):'')},el('i',{style:{width:(c.a/mx*100)+'%',background:k<3?'var(--accent)':(c.ar==='CALABRIA'?'var(--violet)':'var(--info)')}}),c.o?el('i',{class:'oo',style:{width:(c.o/mx*100)+'%'}}):null),el('span',{class:'num hv',style:'text-align:right'},eur0(c.a),c.o?el('small',{class:'hp-oo'},'+ OO '+eur0(c.o)):null),yoyChip(c.a,c.b));})),
-      el('div',{class:'hp-kamtot'},el('div',{},el('span',{class:'eyebrow'},'Totale senza open order'),el('b',{class:'num'},eur0(tot))),el('div',{},el('span',{class:'eyebrow'},'Open order'),el('b',{class:'num',style:'color:var(--warn)'},eur0(totO))),el('div',{},el('span',{class:'eyebrow'},'Totale con open order'),el('b',{class:'num',style:'color:var(--accent)'},eur0(tot+totO)))),
+      pRows.length?hpPatBlock(Yd):null,pRows.length?hpPatToggle(()=>VIEWS.dash.update()):null,
+      el('div',{class:'hp-kamtot'+(pRows.length?' p4':'')},el('div',{},el('span',{class:'eyebrow'},'Totale senza open order'),el('b',{class:'num'},eur0(tot+pIn)),pSfx),el('div',{},el('span',{class:'eyebrow'},'Open order'),el('b',{class:'num',style:'color:var(--warn)'},eur0(totO))),pRows.length?el('div',{class:pIn?'':'off'},el('span',{class:'eyebrow'},'Paternità Team Sicilia'),el('b',{class:'num',style:'color:var(--violet)'},eur0(pT)),el('small',{class:'hint'},pIn?'inclusa nei totali':'esclusa dai totali')):null,el('div',{},el('span',{class:'eyebrow'},'Totale con open order'),el('b',{class:'num',style:'color:var(--accent)'},eur0(tot+totO+pIn)),pSfx&&pSfx.cloneNode(true))),
       rows.length<pool.length?el('p',{class:'hint',style:'margin-top:6px'},'In classifica i primi '+rows.length+' clienti su '+pool.length+'; i totali comprendono tutti.'):null,
       !(F&&F.kamClienti)?el('p',{class:'hint'},'Per vedere anche la Calabria ricarica la Sales Analysis nella sezione Fatturato.'):null);})();
   const mx=el('section',{class:'panel'},el('h3',{text:'Clienti per status di partnership'}),matrix());
@@ -1589,13 +1605,16 @@ VIEWS.fatt={title:()=>'Fatturato',mount(){this.root=$('#view');if(this.q==null)t
     const cap=x=>x.charAt(0)+x.slice(1).toLowerCase();
     const segB=(k,l)=>el('button',{type:'button',class:f===k?'on':'','aria-pressed':String(f===k),onclick:()=>{this.cliF=k;this.update();}},l);
     const seg=el('div',{class:'seg'},segB('tutti','Tutti'),...aree.map(a=>segB(a,cap(a))),K.some(c=>isKA(c.t))?segB('ka','Key account'):null);
+    const pRows=(f==='SICILIA'||f==='tutti')&&window.hpPatRows?hpPatRows(Y):[];const pT=pRows.reduce((t,p)=>t+p.v,0);const pIn=pRows.length&&hpPatOn()?pT:0;
     const H=['Cliente','Reg.','Tipo',String(Y),'Stesso periodo '+PY,'Variazione','ProExpert','Solution','Open order','Totale + OO'];
     const num=(v,cls)=>el('td',{class:'r num'+(cls?' '+cls:''),'data-sort':String(v||0)},v?eur0(v):el('span',{class:'muted'},'—'));
     const tb=el('tbody',{},rows.map(c=>el('tr',{},el('td',{},el('b',{},c.n)),el('td',{'data-sort':c.ar},el('span',{class:'hp-artag',title:cap(c.ar)},c.ar.slice(0,3))),el('td',{class:'muted',style:'white-space:nowrap'},c.t?(isKA(c.t)?'Key account':/distrib/i.test(c.t)?'Distributore':cap(c.t)):'—'),el('td',{class:'r num','data-sort':String(c.a)},el('b',{},eur0(c.a))),num(c.b,'muted'),el('td',{'data-sort':String(c.b?(c.a-c.b)/c.b:-1)},yoyChip(c.a,c.b)),num(c.p),num(c.s),el('td',{class:'r num','data-sort':String(c.o)},c.o?el('b',{style:'color:var(--warn)'},eur0(c.o)):el('span',{class:'muted'},'—')),el('td',{class:'r num','data-sort':String(c.a+c.o)},el('b',{},eur0(c.a+c.o))))));
-    const tf=el('tfoot',{},el('tr',{class:'hp-totrow'},el('td',{},el('b',{},'Totale')),el('td',{}),el('td',{class:'muted'},rows.length+' clienti'),el('td',{class:'r num'},el('b',{},eur0(T.a))),el('td',{class:'r num muted'},eur0(T.b)),el('td',{},yoyChip(T.a,T.b)),el('td',{class:'r num'},eur0(T.p)),el('td',{class:'r num'},eur0(T.s)),el('td',{class:'r num'},el('b',{style:'color:var(--warn)'},eur0(T.o))),el('td',{class:'r num'},el('b',{style:'color:var(--accent)'},eur0(T.a+T.o)))));
+    const tf=el('tfoot',{},el('tr',{class:'hp-totrow'},el('td',{},el('b',{},'Totale')),el('td',{}),el('td',{class:'muted'},rows.length+' clienti'),el('td',{class:'r num'},el('b',{},eur0(T.a))),el('td',{class:'r num muted'},eur0(T.b)),el('td',{},yoyChip(T.a,T.b)),el('td',{class:'r num'},eur0(T.p)),el('td',{class:'r num'},eur0(T.s)),el('td',{class:'r num'},el('b',{style:'color:var(--warn)'},eur0(T.o))),el('td',{class:'r num'},el('b',{style:'color:var(--accent)'},eur0(T.a+T.o)))),pIn?el('tr',{class:'hp-totrow hp-patfoot'},el('td',{},el('b',{},'+ Paternità Team Sicilia')),el('td',{}),el('td',{class:'muted'},pRows.length+' progetti'),el('td',{class:'r num'},el('b',{style:'color:var(--violet)'},eur0(pIn))),el('td',{}),el('td',{}),el('td',{}),el('td',{}),el('td',{}),el('td',{class:'r num'},el('b',{style:'color:var(--violet)'},eur0(pIn)))):null,pIn?el('tr',{class:'hp-totrow'},el('td',{},el('b',{},'Totale con paternità')),el('td',{}),el('td',{}),el('td',{class:'r num'},el('b',{},eur0(T.a+pIn))),el('td',{class:'r num muted'},eur0(T.b)),el('td',{},yoyChip(T.a+pIn,T.b)),el('td',{}),el('td',{}),el('td',{class:'r num'},el('b',{style:'color:var(--warn)'},eur0(T.o))),el('td',{class:'r num'},el('b',{style:'color:var(--accent)'},eur0(T.a+T.o+pIn)))):null);
     return el('section',{class:'panel stack'},el('div',{class:'panel-h'},el('h3',{text:'Clienti '+(aree.length>1?aree.map(cap).join(' e '):'Sicilia')+' · da inizio anno'}),seg),
-      el('div',{class:'kpis hp-cliKpi'},el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Totale senza open order'),el('span',{class:'v'},eur0(T.a)),yoyChip(T.a,T.b)),el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Open order'),el('span',{class:'v',style:'color:var(--warn)'},eur0(T.o))),el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Totale con open order'),el('span',{class:'v',style:'color:var(--accent)'},eur0(T.a+T.o)))),
+      pRows.length?hpPatToggle(()=>this.update()):null,
+      el('div',{class:'kpis hp-cliKpi'+(pRows.length?' p4':'')},el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Totale senza open order'),el('span',{class:'v'},eur0(T.a+pIn)),pIn?el('span',{class:'s',style:'color:var(--violet)'},'incl. paternità '+eur0(pIn)):yoyChip(T.a,T.b)),el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Open order'),el('span',{class:'v',style:'color:var(--warn)'},eur0(T.o))),pRows.length?el('div',{class:'kpi'+(pIn?'':' off')},el('span',{class:'eyebrow'},'Paternità Team Sicilia'),el('span',{class:'v',style:'color:var(--violet)'},eur0(pT)),el('span',{class:'s'},pIn?'inclusa nei totali':'esclusa dai totali')):null,el('div',{class:'kpi'},el('span',{class:'eyebrow'},'Totale con open order'),el('span',{class:'v',style:'color:var(--accent)'},eur0(T.a+T.o+pIn)),pIn?el('span',{class:'s',style:'color:var(--violet)'},'incl. paternità'):null)),
       el('div',{class:'tbl-wrap'},el('table',{},el('thead',{},el('tr',{},H.map((h,i)=>el('th',{class:i>=3&&i!==5?'r':''},h)))),tb,tf)),
+      f==='SICILIA'||f==='tutti'?hpPatBlock(Y,{edit:true}):null,
       el('p',{class:'hint'},rows.filter(c=>c.a>0).length+' clienti con fatturato nel '+Y+(f==='tutti'?'':' (filtro: '+(f==='ka'?'key account':cap(f))+')')+'. Open order dal foglio Open Orders della Sales Analysis.'+(F.kamClienti?'':' Ricarica la Sales Analysis per vedere anche la Calabria.')));})();
   // categorie, canali, regioni
   const cat=el('section',{class:'panel stack'},el('h3',{text:'Sicilia · categorie di prodotto'}),hbars(F.macro.filter(m=>m[1]>1000).map(m=>[m[0],m[1],m[2]]),{color:'var(--info)'}));
@@ -1619,6 +1638,7 @@ boot();
 <script src="/magazzino.js"></script>
 <script src="/categorie.js"></script>
 <script src="/doclinks.js"></script>
+<script src="/paternita.js"></script>
 <script src="/offimport.js"></script>
 <script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
