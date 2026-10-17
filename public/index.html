@@ -852,7 +852,7 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
     const OOK=F&&F.ooKam?F.ooKam:F&&F.oo&&F.oo.siClienti?F.oo.siClienti.map(x=>[x[0],'SICILIA',x[1]]):[];
     for(const [n,ar,v] of OOK){const c=K.find(x=>x.n===n&&x.ar===ar);if(c)c.o+=v;else K.push({n,ar,t:'',a:0,b:0,o:v});}
     const ord=S.dashCliOrd||'fatt';
-    const aree=[...new Set(K.map(c=>c.ar))];const f=S.dashCli=S.dashCli||'tutti';
+    const aree=[...new Set(K.map(c=>c.ar))];const f=S.dashCli=S.dashCli||(aree.includes('SICILIA')?'SICILIA':'tutti');
     const segB=(k,l)=>el('button',{type:'button',class:f===k?'on':'','aria-pressed':String(f===k),onclick:()=>{S.dashCli=k;VIEWS.dash.update();}},l);
     const lab=aree.length>1?aree.map(a=>a.charAt(0)+a.slice(1).toLowerCase()).join(' e '):'Sicilia';
     const head=el('div',{class:'panel-h'},el('div',{class:'stack',style:'gap:2px'},el('h3',{text:'Clienti '+lab+' per fatturato'}),F?el('span',{class:'hint'},'Da inizio anno '+(F.anno||(S.sales&&S.sales.anno)||'')+' · '+K.filter(c=>c.a>0).length+' clienti con fatturato'):null),F?btn('Dettaglio',()=>window.hpGoFatt?hpGoFatt('clienti'):go('fatt'),'sm ghost'):null);
