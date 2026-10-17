@@ -5,6 +5,7 @@ import seed from '../seed/data.json';
 import mag1009 from '../seed/magazzino-1009.json';
 import extraImport from '../seed/import-bolle.json';
 import extraLinks from '../seed/import-links.json';
+import extraKam from '../seed/import-kam.json';
 
 const SESSION_DAYS = 60;
 const OTP_MIN = 10;
@@ -575,12 +576,12 @@ async function migrateMag(env) {
   await broadcast(env, { reload: 'magazzino' });
 }
 // Import una tantum di documenti preparati (es. schede demo dalle bolle): non sovrascrive documenti esistenti
-async function migrateExtra(env) { for (const x of [extraImport, extraLinks]) await migrateOne(env, x); }
+async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam]) await migrateOne(env, x); }
 async function migrateOne(env, extraImport) {
   const key = 'mig_' + String(extraImport.key || '').replace(/[^A-Za-z0-9_]/g, '');
   if (key === 'mig_' || await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id=?").bind(key).first()) return;
   const t = now();
-  const stmts = extraImport.docs.map(d => env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind(d.col, d.id, JSON.stringify(d.data), t, t));
+  const stmts = extraImport.docs.map(d => d.merge ? env.DB.prepare('UPDATE docs SET data=json_patch(data, ?), version=?, updated=? WHERE col=? AND id=? AND json_extract(data, \'$.kamClienti\') IS NULL').bind(JSON.stringify(d.merge), t, t, d.col, d.id) : env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind(d.col, d.id, JSON.stringify(d.data), t, t));
   for (let i = 0; i < stmts.length; i += 80) await env.DB.batch(stmts.slice(i, i + 80));
   await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', key, JSON.stringify({ at: t, n: extraImport.docs.length }), t, t).run();
   for (const c of new Set(extraImport.docs.map(d => d.col))) await broadcast(env, { reload: c });

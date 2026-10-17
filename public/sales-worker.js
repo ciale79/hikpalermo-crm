@@ -47,7 +47,7 @@ function compute(wb, name, kamName) {
   const T = { it: z4(), itO: z4(), si: z4(), siO: z4(), itNR: 0, siNR: 0, itSp: 0, siSp: 0,
     siCh: { PRO: z4(), SOLUTION: z4(), COMUNI: z4() },
     m: { it_m26: z12(), it_m25: z12(), si_m26: z12(), si_m25: z12(), si_pro_m26: z12(), si_sol_m26: z12(), si_pro_m25: z12(), si_sol_m25: z12() } };
-  const canali = {}, regioni = {}, macro = {}, clienti = {}, tipi = {}, famPro = {}, famSol = {}, kam = {};
+  const canali = {}, regioni = {}, macro = {}, clienti = {}, tipi = {}, famPro = {}, famSol = {}, kam = {}, kamCli = {};
   const pair = (o, k) => (o[k] || (o[k] = [0, 0]));
 
   for (let i = 1; i < rows.length; i++) {
@@ -84,7 +84,13 @@ function compute(wb, name, kamName) {
     if (!is26 && !isSp) continue;
     const k = is26 ? 0 : 1;
     if (area) pair(regioni, area)[k] += a;
-    if (kamName && String(r[I.am] || '').trim().toLowerCase() === kamName.toLowerCase() && area) pair(kam, area)[k] += a;
+    const isKam = kamName ? String(r[I.am] || '').trim().toLowerCase() === kamName.toLowerCase() : (area === 'SICILIA' || area === 'CALABRIA');
+    if (isKam && area) {
+      if (kamName) pair(kam, area)[k] += a;
+      const cn = String(r[I.cust] || '—').trim(); const key = area + '|' + cn;
+      const c = kamCli[key] || (kamCli[key] = { n: cn, ar: area, t: r[I.type] || '', a: 0, b: 0, p: 0, s: 0 });
+      if (is26) { c.a += a; if (ch === 'PRO') c.p += a; if (ch === 'SOLUTION') c.s += a; } else c.b += a;
+    }
     if (sic) {
       pair(canali, ch)[k] += a;
       pair(macro, r[I.macro] || '—')[k] += a;
@@ -118,7 +124,7 @@ function compute(wb, name, kamName) {
 
   const fatturato = {
     cut: iso(cut), cut25: iso(cut25), m: mapR(T.m), itSp25: r2(T.itSp), siSp25: r2(T.siSp),
-    regioni: pairs(regioni), kam: { nome: kamName || '', aree: pairs(kam) }, clienti: cl, nClienti: cl.length,
+    regioni: pairs(regioni), kam: { nome: kamName || '', aree: pairs(kam) }, kamClienti: Object.values(kamCli).filter(c => c.a || c.b).map(c => [c.n, c.ar, c.t, r2(c.a), r2(c.b), r2(c.p), r2(c.s)]).sort((x, y) => y[3] - x[3]), clienti: cl, nClienti: cl.length,
     macro: pairs(macro), canali: pairs(canali), siQ: mapR(T.siCh), tipiCliente: top(tipi, 20),
     famPro: top(famPro, 8), famSol: top(famSol, 8),
     oo: { italia: r2(oo.italia), sicilia: r2(oo.sicilia), siCanali: mapR(oo.siCanali), siClienti: top(oo.siClienti, 50) }

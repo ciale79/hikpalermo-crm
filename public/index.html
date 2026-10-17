@@ -502,6 +502,9 @@ tr.sel td{background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .hp-dltag:hover{background:color-mix(in srgb,var(--info) 24%,transparent)}
 .hp-dlrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line-2);border-radius:8px;text-decoration:none;color:inherit}
 .hp-dlrow:hover{border-color:var(--info)}
+.hp-kamhb .hr{grid-template-columns:minmax(150px,1.8fr) minmax(50px,1fr) auto auto}
+@media (max-width:700px){.hp-kamhb .hr{grid-template-columns:minmax(120px,1fr) minmax(40px,.6fr) auto}}
+.hp-artag{display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.04em;padding:0 4px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);vertical-align:1px}
 .hp-catrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface)}
 .hp-catrow.del{background:var(--surface-2)}
 .hp-catrow.del>span{flex:1;min-width:0}
@@ -831,12 +834,21 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
   const evP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Prossimi appuntamenti'}),btn('Nuovo evento',()=>eventForm({}),'sm','plus')),up7.length?el('div',{},up7.slice(0,8).map(evLi)):emptyBox('Nessun appuntamento nei prossimi 7 giorni','Aggiungi una riunione, una call Teams o una visita: i colleghi ricevono subito l\'avviso.'));
   const byS=CST.map(([k,l])=>[k,l,[...S.commesse.values()].filter(c=>(c.stato||'opp')===k)]);const maxC=Math.max(1,...byS.map(x=>x[2].length));
   const stP=(()=>{const F=S.fatt;const nrm=x=>String(x||'').toLowerCase().replace(/\b(s\.?r\.?l\.?s?|s\.?p\.?a\.?|s\.?n\.?c\.?|s\.?a\.?s\.?|unipersonale)\b/g,'').replace(/[^a-z0-9]+/g,' ').trim();
-    const head=el('div',{class:'panel-h'},el('div',{class:'stack',style:'gap:2px'},el('h3',{text:'Clienti Sicilia per fatturato'}),F?el('span',{class:'hint'},'Da inizio anno '+(F.anno||(S.sales&&S.sales.anno)||'')+' · '+(F.nClienti||F.clienti.length)+' clienti con fatturato'):null),F?btn('Dettaglio',()=>window.hpGoFatt?hpGoFatt('clienti'):go('fatt'),'sm ghost'):null);
-    if(!F||!F.clienti||!F.clienti.length)return el('section',{class:'panel'},head,emptyBox('Nessun dato di fatturato','Carica la Sales Analysis nella sezione Fatturato per vedere la classifica dei clienti.',btn('Vai a Fatturato',()=>go('fatt'),'pri sm','chart')));
+    const K=F&&F.kamClienti?F.kamClienti.map(c=>({n:c[0],ar:c[1],t:c[2],a:c[3],b:c[4]})):F&&F.clienti?F.clienti.map(c=>({n:c[0],ar:'SICILIA',t:c[1],a:c[2],b:c[3]})):[];
+    const aree=[...new Set(K.map(c=>c.ar))];const f=S.dashCli=S.dashCli||'tutti';
+    const segB=(k,l)=>el('button',{type:'button',class:f===k?'on':'','aria-pressed':String(f===k),onclick:()=>{S.dashCli=k;VIEWS.dash.update();}},l);
+    const lab=aree.length>1?aree.map(a=>a.charAt(0)+a.slice(1).toLowerCase()).join(' e '):'Sicilia';
+    const head=el('div',{class:'panel-h'},el('div',{class:'stack',style:'gap:2px'},el('h3',{text:'Clienti '+lab+' per fatturato'}),F?el('span',{class:'hint'},'Da inizio anno '+(F.anno||(S.sales&&S.sales.anno)||'')+' · '+K.filter(c=>c.a>0).length+' clienti con fatturato'):null),F?btn('Dettaglio',()=>window.hpGoFatt?hpGoFatt('clienti'):go('fatt'),'sm ghost'):null);
+    if(!K.length)return el('section',{class:'panel'},head,emptyBox('Nessun dato di fatturato','Carica la Sales Analysis nella sezione Fatturato per vedere la classifica dei clienti.',btn('Vai a Fatturato',()=>go('fatt'),'pri sm','chart')));
+    const isKA=t=>/key/i.test(t||'');
+    const seg=aree.length>1||K.some(c=>isKA(c.t))?el('div',{class:'seg',style:'margin:2px 0 10px'},segB('tutti','Tutti'),...aree.map(a=>segB(a,a.charAt(0)+a.slice(1).toLowerCase())),K.some(c=>isKA(c.t))?segB('ka','Key account'):null):null;
+    const pool=K.filter(c=>c.a>0&&(f==='tutti'||(f==='ka'?isKA(c.t):c.ar===f)));
     const byN=new Map([...S.clienti.values()].map(c=>[nrm(c.nome),c]));
-    const rows=F.clienti.filter(c=>c[2]>0).slice().sort((a,b)=>b[2]-a[2]).slice(0,12);const mx=Math.max(1,...rows.map(c=>c[2]));const tot=F.clienti.reduce((a,c)=>a+(c[2]||0),0);
-    return el('section',{class:'panel'},head,el('div',{class:'hb'},rows.map((c,k)=>{const crm=byN.get(nrm(c[0]));return el('div',{class:'hr hp-click',title:crm?'Apri la scheda cliente':'Vai al fatturato clienti',onclick:()=>crm?go('clienti',crm.id):(window.hpGoFatt?hpGoFatt('clienti'):go('fatt'))},el('span',{class:'hn',title:c[0]},(k+1)+'. '+c[0]),el('div',{class:'ht'},el('i',{style:{width:(c[2]/mx*100)+'%',background:k<3?'var(--accent)':'var(--info)'}})),el('span',{class:'num hv'},eur0(c[2])),yoyChip(c[2],c[3]));})),
-      el('p',{class:'hint',style:'margin-top:8px'},'Primi '+rows.length+': '+eur0(rows.reduce((a,c)=>a+c[2],0))+' su '+eur0(tot)+' ('+Math.round(rows.reduce((a,c)=>a+c[2],0)/Math.max(1,tot)*100)+'%)'));})();
+    const rows=pool.slice().sort((a,b)=>b.a-a.a).slice(0,12);const mx=Math.max(1,...rows.map(c=>c.a));const tot=pool.reduce((a,c)=>a+c.a,0);
+    const tag=c=>el('span',{class:'hp-artag',title:(c.ar.charAt(0)+c.ar.slice(1).toLowerCase())+' · '+(c.t||'')},c.ar.slice(0,3)+(isKA(c.t)?' · KA':''));
+    return el('section',{class:'panel'},head,seg,el('div',{class:'hb hp-kamhb'},rows.map((c,k)=>{const crm=byN.get(nrm(c.n));return el('div',{class:'hr hp-click',title:crm?'Apri la scheda cliente':'Vai al fatturato clienti',onclick:()=>crm?go('clienti',crm.id):(window.hpGoFatt?hpGoFatt('clienti'):go('fatt'))},el('span',{class:'hn',title:c.n+' · '+c.ar+' · '+(c.t||'')},(k+1)+'. ',aree.length>1?tag(c):null,' '+c.n),el('div',{class:'ht'},el('i',{style:{width:(c.a/mx*100)+'%',background:k<3?'var(--accent)':(c.ar==='CALABRIA'?'var(--violet)':'var(--info)')}})),el('span',{class:'num hv'},eur0(c.a)),yoyChip(c.a,c.b));})),
+      el('p',{class:'hint',style:'margin-top:8px'},(rows.length<pool.length?'Primi '+rows.length+': ':'Totale: ')+eur0(rows.reduce((a,c)=>a+c.a,0))+(rows.length<pool.length?' su '+eur0(tot)+' ('+Math.round(rows.reduce((a,c)=>a+c.a,0)/Math.max(1,tot)*100)+'%)':'')),
+      !(F&&F.kamClienti)?el('p',{class:'hint'},'Per vedere anche la Calabria ricarica la Sales Analysis nella sezione Fatturato.'):null);})();
   const mx=el('section',{class:'panel'},el('h3',{text:'Clienti per status di partnership'}),matrix());
   const pts=[...S.commesse.values()].filter(c=>c.lat!=null&&c.lng!=null).map(c=>({lat:c.lat,lng:c.lng,color:CCOL[c.stato||'opp'],title:c.nome+' · '+(CSTL[c.stato]||''),on:()=>go('commesse',c.id)}));
   const ppts=window.hpPartnerPts?hpPartnerPts():[];if(window.hpPartnerGeo)setTimeout(hpPartnerGeo,1500);
