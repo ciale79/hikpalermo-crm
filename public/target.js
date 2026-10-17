@@ -63,12 +63,14 @@
 
   // riquadro del cruscotto: percentuale di raggiungimento del target annuo (la tacca indica dove si dovrebbe essere oggi)
   const achCol = (area, r, exp) => area === 'it' ? (r >= exp ? 'var(--info)' : r >= exp * 0.85 ? 'color-mix(in srgb, var(--info) 70%, var(--violet))' : 'var(--violet)') : (r >= exp ? 'var(--ok)' : r >= exp * 0.85 ? 'var(--warn)' : 'var(--bad)');
-  function gaugeAch(r, exp, color) {
-    const p = Math.max(0, Math.min(1, r)), cx = 60, cy = 56, R = 50, a = Math.PI * (1 - p), x = cx + R * Math.cos(a), y = cy - R * Math.sin(a), b = Math.PI * (1 - Math.min(1, exp));
+  function gaugeAch(r, exp, color, r2) {
+    const arc = (f0, f1, st, w, extra) => { f0 = Math.max(0, Math.min(1, f0)); f1 = Math.max(0, Math.min(1, f1)); if (f1 - f0 < 0.004) return ''; const P = f => [60 + 50 * Math.cos(Math.PI * (1 - f)), 56 - 50 * Math.sin(Math.PI * (1 - f))]; const [x0, y0] = P(f0), [x1, y1] = P(f1); return `<path d="M${x0.toFixed(2)} ${y0.toFixed(2)} A50 50 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}" fill="none" stroke="${st}" stroke-width="${w}" ${extra || ''}/>`; };
+    const cx = 60, cy = 56, b = Math.PI * (1 - Math.min(1, exp));
     const s = el('span', { class: 'hp-tg-g' });
     s.innerHTML = `<svg viewBox="0 0 120 64" width="120" height="64" aria-hidden="true">
       <path d="M10 56 A50 50 0 0 1 110 56" fill="none" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/>
-      ${p > 0.005 ? `<path d="M10 56 A50 50 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"/>` : ''}
+      ${r2 != null ? arc(r, r2, color, 10, 'stroke-opacity=".38"') : ''}
+      ${arc(0, r, color, 10, 'stroke-linecap="round"')}
       <line x1="${(cx + 39 * Math.cos(b)).toFixed(1)}" y1="${(cy - 39 * Math.sin(b)).toFixed(1)}" x2="${(cx + 59 * Math.cos(b)).toFixed(1)}" y2="${(cy - 59 * Math.sin(b)).toFixed(1)}" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
     </svg>`;
     return s;
@@ -77,15 +79,15 @@
   const pc = v => (v * 100).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
   window.hpTargetTile = function (area) {
     const m = window.hpTargetModel(area); if (!m) return null; const N = m.A.n;
-    const v = m.ytd + m.pat, r = v / m.target;
+    const v = m.ytd + m.pat, r = v / m.target, vo = v + m.oo, ro = vo / m.target;
     const exp = expOf(m);
-    const color = achCol(m.area, r, exp);
+    const color = achCol(m.area, ro, exp);
     const note = m.area === 'si' && m.pat ? el('span', { class: 's', style: 'color:var(--violet);font-size:.72rem' }, 'incl. paternità ' + M(m.pat) + ' · senza: ' + pc(m.ytd / m.target))
       : m.area === 'it' && m.X ? el('span', { class: 's', style: 'color:var(--warn);font-size:.72rem', title: 'Q1–Q' + m.X.finoQ + ' allineato al totale indicato da ' + m.X.fonte + '; la parte oltre la Sales Analysis non è riscontrata' }, 'Q1–Q' + m.X.finoQ + ' ' + M(m.ytd - (S.sales.italiaOwnQ || []).slice(m.X.finoQ).reduce((a, b) => a + (+b || 0), 0)) + ' come da ' + m.X.fonte + ' · non riscontrato') : null;
-    return el('button', { type: 'button', class: 'kpi hp-tg hp-tg-' + m.area, title: 'Raggiungimento del target ' + N + ' ' + m.Y + '. La tacca nera indica il ritmo atteso a oggi (' + pc(exp) + ' dell\'anno trascorso). Clic per il dettaglio e la proiezione a fine anno.', onclick: () => detail(m) },
-      el('span', { class: 'eyebrow' }, 'Target ' + N + ' ' + m.Y + ' · raggiunto'),
-      el('div', { class: 'hp-tg-row' }, gaugeAch(r, exp, color), el('div', { class: 'hp-tg-num', style: { color } }, pc(r))),
-      el('span', { class: 's' }, M(v) + ' di ' + M(m.target)), note);
+    return el('button', { type: 'button', class: 'kpi hp-tg hp-tg-' + m.area, title: 'Raggiungimento del target ' + N + ' ' + m.Y + ' contando fatturato e ordini aperti (parte chiara dell\'arco). La tacca nera indica il ritmo atteso a oggi (' + pc(exp) + ' dell\'anno trascorso). Clic per il dettaglio e la proiezione a fine anno.', onclick: () => detail(m) },
+      el('span', { class: 'eyebrow' }, 'Target ' + N + ' ' + m.Y + ' · con open order'),
+      el('div', { class: 'hp-tg-row' }, gaugeAch(r, exp, color, ro), el('div', { class: 'stack', style: 'gap:0' }, el('div', { class: 'hp-tg-num', style: { color } }, pc(ro)), el('small', { class: 'hint', style: 'font-size:.68rem;white-space:nowrap' }, 'incl. open order'))),
+      el('span', { class: 's' }, M(vo) + ' di ' + M(m.target)), el('span', { class: 's', style: 'font-size:.72rem' }, 'Fatturato ' + pc(r) + ' + open order ' + M(m.oo)), note);
   };
 
   window.hpItExtraForm = function () {
@@ -102,14 +104,15 @@
     const row = (l, v, h) => el('div', { class: 'hp-tg-dl' }, el('span', {}, l, h ? el('small', { class: 'hint' }, ' ' + h) : null), el('b', { class: 'num' }, v));
     const pct = Math.round(m.p * 100);
     const box = el('div', { class: 'stack' },
-      el('div', { class: 'row', style: 'gap:16px;align-items:center' }, gaugeAch((m.ytd + m.pat) / m.target, expOf(m), achCol(m.area, (m.ytd + m.pat) / m.target, expOf(m))), el('div', { class: 'stack', style: 'gap:2px' }, el('b', { style: { fontSize: '1.8rem', color: achCol(m.area, (m.ytd + m.pat) / m.target, expOf(m)), fontFamily: 'var(--font-mono)' } }, pc((m.ytd + m.pat) / m.target) + ' del target'), el('span', { class: 'hint' }, m.done ? 'Target raggiunto' : 'Probabilità stimata di chiudere il ' + m.Y + ' a target: ' + (m.p <= 0.01 ? 'meno dell\'1%' : m.p >= 0.99 ? 'oltre il 99%' : pct + '%') + ' (proiezione ' + M(m.proj) + ')'))),
+      el('div', { class: 'row', style: 'gap:16px;align-items:center' }, gaugeAch((m.ytd + m.pat) / m.target, expOf(m), achCol(m.area, (m.ytd + m.pat + m.oo) / m.target, expOf(m)), (m.ytd + m.pat + m.oo) / m.target), el('div', { class: 'stack', style: 'gap:2px' }, el('b', { style: { fontSize: '1.8rem', color: achCol(m.area, (m.ytd + m.pat + m.oo) / m.target, expOf(m)), fontFamily: 'var(--font-mono)' } }, pc((m.ytd + m.pat + m.oo) / m.target) + ' del target'), el('span', { class: 'hint' }, 'con gli open order · solo fatturato ' + pc((m.ytd + m.pat) / m.target)), el('span', { class: 'hint' }, m.done ? 'Target raggiunto' : 'Probabilità stimata di chiudere il ' + m.Y + ' a target: ' + (m.p <= 0.01 ? 'meno dell\'1%' : m.p >= 0.99 ? 'oltre il 99%' : pct + '%') + ' (proiezione ' + M(m.proj) + ')'))),
       el('div', { class: 'stack', style: 'gap:0' },
         row('Target ' + m.A.n + ' ' + m.Y, eur0(m.target)),
         m.X ? row('Fatturato da Sales Analysis', eur0(m.ytdF), 'al ' + (m.dataLabel || '')) : row('Fatturato da inizio anno', eur0(m.ytd), 'al ' + (m.dataLabel || '')),
         m.X ? el('div', { class: 'hp-tg-dl', style: 'background:color-mix(in srgb,var(--warn) 8%,transparent);padding:7px 8px;border-radius:6px' }, el('span', {}, 'Altri canali e BU fino al Q' + m.X.finoQ, el('small', { class: 'hint' }, (m.X.totale ? ' per arrivare al totale Q1–Q' + m.X.finoQ + ' di ' + eur0(m.X.totale) : '') + ' indicato da ' + m.X.fonte + ' · non ne abbiamo riscontro nella Sales Analysis'), isAdmin() ? el('a', { href: '#', class: 'hint', style: 'margin-left:6px', onclick: e => { e.preventDefault(); md.close(); window.hpItExtraForm(); } }, 'modifica') : null), el('b', { class: 'num', style: 'color:var(--warn)' }, eur0(m.X.tot))) : (m.area === 'it' && isAdmin() ? el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); md.close(); window.hpItExtraForm(); } }, '+ Aggiungi fatturato di altri canali/BU non presenti nel file') : null),
         m.X ? row('Fatturato da inizio anno', eur0(m.ytd), 'compresi gli altri canali/BU') : null,
         m.pat ? row('Paternità Team Sicilia', eur0(m.pat), 'inclusa · senza paternità la probabilità è ' + Math.round(m.pNo * 100) + '%') : null,
-        row('Mancano al target', eur0(m.gap), m.left + ' giorni a fine anno'),
+        row('Fatturato + open order', eur0(m.ytd + m.pat + m.oo), 'open order ' + eur0(m.oo)),
+        row('Mancano al target', eur0(m.gap), 'solo fatturato · con gli open order ' + eur0(Math.max(0, m.gap - m.oo)) + ' · ' + m.left + ' giorni a fine anno'),
         m.X ? row('Altri canali/BU nel resto dell\'anno', eur0(m.xRest), 'stesso ritmo medio di Q1–Q' + m.X.finoQ) : null,
         row('Resto dell\'anno stimato' + (m.X ? ' (Sales Analysis)' : ''), eur0(m.restF), m.restF > m.rest0 + 1 ? 'coperto dagli ordini aperti (la stagionalità darebbe ' + eur0(m.rest0) + ')' : 'stesso periodo ' + (m.Y - 1) + ' ' + eur0(m.rest25) + ' × crescita ' + (m.g >= 1 ? '+' : '') + Math.round((m.g - 1) * 100) + '%'),
         row('Proiezione a fine anno', eur0(m.proj)),
