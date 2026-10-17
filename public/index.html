@@ -115,6 +115,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .hp-fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .hp-fgrid>.full{grid-column:1/-1}
 .hp-fgrid.dash{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+.hp-pev{margin-top:16px;padding-top:12px;border-top:1px solid var(--line-2)}
+.hp-pevc{font-size:.8rem;font-weight:600;flex-wrap:wrap}
+.hp-pevc a{color:var(--ink)}
 .hp-fgrid-bar{display:flex;justify-content:space-between;gap:10px;margin:-4px 0 -8px}
 .hp-fitem{position:relative;min-width:0;transition:opacity .15s}
 .hp-fitem>.panel,.hp-fitem>.grid2,.hp-fitem>.kpis{height:100%}
@@ -897,12 +900,19 @@ VIEWS.dash={title:()=>'Cruscotto',mount(){this.root=$('#view');this.update();},u
       el('div',{class:'hp-kamtot'+(pRows.length?' p4':'')},el('div',{},el('span',{class:'eyebrow'},'Totale senza open order'),el('b',{class:'num'},eur0(tot+pIn)),pSfx),el('div',{},el('span',{class:'eyebrow'},'Open order'),el('b',{class:'num',style:'color:var(--warn)'},eur0(totO))),pRows.length?el('div',{class:pIn?'':'off'},el('span',{class:'eyebrow'},'Paternità Team Sicilia'),el('b',{class:'num',style:'color:var(--violet)'},eur0(pT)),el('small',{class:'hint'},pIn?'inclusa nei totali':'esclusa dai totali')):null,el('div',{},el('span',{class:'eyebrow'},'Totale con open order'),el('b',{class:'num',style:'color:var(--accent)'},eur0(tot+totO+pIn)),pSfx&&pSfx.cloneNode(true))),
       rows.length<pool.length?el('p',{class:'hint',style:'margin-top:6px'},'In classifica i primi '+rows.length+' clienti su '+pool.length+'; i totali comprendono tutti.'):null,
       !(F&&F.kamClienti)?el('p',{class:'hint'},'Per vedere anche la Calabria ricarica la Sales Analysis nella sezione Fatturato.'):null);})();
-  const mx=el('section',{class:'panel'},el('h3',{text:'Clienti per status di partnership'}),matrix());
+  const mx=(()=>{const isP=c=>!!c&&(!!c.partner||TIERS.includes(c.statusPro)||TIERS.includes(c.statusSol));const now=Date.now();
+    const cliOf=e=>S.clienti.get(e.clienteId)||(e.commessaId&&S.commesse.get(e.commessaId)?S.clienti.get(S.commesse.get(e.commessaId).clienteId):null);
+    const pev=[...S.eventi.values()].filter(e=>e.end>=now&&isP(cliOf(e))).sort((a,b)=>a.start-b.start);
+    const li=e=>{const c=cliOf(e);const x=evLi(e);const t=x.querySelector('.t');t.insertBefore(el('div',{class:'row hp-pevc',style:'gap:6px'},el('a',{href:'#',onclick:ev=>{ev.preventDefault();ev.stopPropagation();go('clienti',c.id);}},c.nome),c.statusPro?tierChip(c.statusPro,'P'):null,c.statusSol?tierChip(c.statusSol,'S'):null),t.children[1]||null);return x;};
+    return el('section',{class:'panel'},el('h3',{text:'Clienti per status di partnership'}),matrix(),
+      el('div',{class:'hp-pev'},el('div',{class:'panel-h'},el('h4',{style:'margin:0'},'Prossime attività con i partner',pev.length?el('span',{class:'pill',style:'--c:var(--info);margin-left:6px'},String(pev.length)):null),btn('Nuovo',()=>eventForm({}),'sm ghost','plus')),
+        pev.length?el('div',{},pev.slice(0,6).map(li)):emptyBox('Nessuna attività in calendario con i partner','Crea un appuntamento collegato a un cliente partner (o a una sua commessa) e lo trovi qui.'),
+        pev.length>6?el('a',{href:'#',class:'hint',onclick:e=>{e.preventDefault();go('cal');}},'Altre '+(pev.length-6)+' in calendario →'):null));})();
   const pts=[...S.commesse.values()].filter(c=>c.lat!=null&&c.lng!=null).map(c=>({lat:c.lat,lng:c.lng,color:CCOL[c.stato||'opp'],title:c.nome+' · '+(CSTL[c.stato]||''),on:()=>go('commesse',c.id)}));
   const ppts=window.hpPartnerPts?hpPartnerPts():[];if(window.hpPartnerGeo)setTimeout(hpPartnerGeo,1500);
   const mapP=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:'Mappa commesse e partner'}),el('span',{class:'hint'},pts.length+' commesse · '+ppts.length+' partner')),mapSvg(pts.concat(ppts)),el('div',{class:'row hp-mlg',style:'margin-top:8px;gap:10px;font-size:.78rem'},el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot',style:{background:'var(--accent)'}}),'Commesse (colore per stato)'),el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot star',style:{background:window.hpPartnerColor||'#D4A017'}}),'Partner'),el('span',{class:'row',style:'gap:4px'},el('i',{class:'hp-mdot',style:{background:'#C8102E',borderRadius:'3px'}}),'Sede Hikvision')));
-  const dB=[{k:'kpi',node:kpis,full:true,label:'Indicatori'},{k:'ev',node:evP,full:true,label:'Prossimi appuntamenti'},{k:'cli',node:stP,label:'Clienti per fatturato'},{k:'map',node:mapP,label:'Mappa commesse e partner'},{k:'mx',node:mx,label:'Clienti per status di partnership'}];
-  r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),window.hpDragGrid?hpDragGrid('dashOrd',dB,{cls:'dash',rerender:()=>this.update()}):el('div',{class:'stack'},...dB.map(b=>b.node))].filter(Boolean));
+  const dB=[{k:'kpi',node:kpis,full:true,label:'Indicatori'},{k:'cli',node:stP,label:'Clienti per fatturato'},{k:'mx',node:mx,label:'Clienti per status di partnership'},{k:'map',node:mapP,label:'Mappa commesse e partner'},{k:'ev',node:evP,label:'Prossimi appuntamenti'}];
+  r.replaceChildren(...[dbGate(),loading(),el('div',{id:'mWid',class:'m-only'},sideWidget()),window.hpDragGrid?hpDragGrid('dashOrd2',dB,{cls:'dash',rerender:()=>this.update()}):el('div',{class:'stack'},...dB.map(b=>b.node))].filter(Boolean));
 }};
 function matrix(){const g=el('div',{class:'matrix'},el('span'),TIERS.map(t=>el('span',{class:'h'},TLAB[t])));const cl=[...S.clienti.values()];
   for(const [L,lab,key] of [['pro','Pro','statusPro'],['sol','Solution','statusSol']]){const counts=TIERS.map(t=>cl.filter(c=>c[key]===t).length);const mx=Math.max(1,...counts);g.append(el('span',{class:'eyebrow'},lab));TIERS.forEach((t,i)=>g.append(el('button',{class:'c',type:'button',style:{'--c':`var(--t-${t.toLowerCase()})`,'--a':String(Math.round(counts[i]/mx*45))},title:`${lab} ${TLAB[t]}: apri elenco`,onclick:()=>{S.fCli={...S.fCli,pro:L==='pro'?t:'',sol:L==='sol'?t:''};go('clienti');}},counts[i])));}
