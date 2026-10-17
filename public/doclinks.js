@@ -27,16 +27,16 @@
   };
   function dlModal(code) {
     const a = window.hpDl(code);
-    const m = modal('Download · ' + code, el('div', { class: 'stack' }, ...a.map(x => el('a', { class: 'hp-dlrow', href: x.u, target: '_blank', rel: 'noopener' }, ic('dl', 16), el('b', {}, x.l || kindOf(x.t)), x.t && x.t !== x.l ? el('span', { class: 'hint' }, x.t) : null)),
+    const m = modal('Datasheet e altro · ' + code, el('div', { class: 'stack' }, ...a.map(x => el('a', { class: 'hp-dlrow', href: x.u, target: '_blank', rel: 'noopener' }, ic('dl', 16), el('b', {}, x.l || kindOf(x.t)), x.t && x.t !== x.l ? el('span', { class: 'hint' }, x.t) : null)),
       el('p', { class: 'hint' }, 'I link aprono la cartella dei documenti su Google Drive di Hikvision Italia (schede tecniche, A&E, disegni…).')), [el('span', { class: 'grow' }), btn('Chiudi', () => m.close())]);
   }
   window.hpDlChip = function (code) {
     const a = window.hpDl(code); if (!a.length) return null;
-    return el('button', { type: 'button', class: 'tag hp-dltag', title: 'Download: ' + a.map(x => x.l).join(', '), onclick: e => { e.stopPropagation(); dlModal(code); } }, '⤓ DOWNLOAD ' + a.length);
+    return el('button', { type: 'button', class: 'tag hp-dltag', title: 'Datasheet e documentazione in italiano: ' + a.map(x => x.l).join(', '), onclick: e => { e.stopPropagation(); dlModal(code); } }, el('span', { class: 'hp-flag-it', role: 'img', 'aria-label': 'Documentazione in italiano', title: 'Documentazione in italiano' }), 'Datasheet e altro');
   };
   window.hpDlBox = function (code) {
     const a = window.hpDl(code); if (!a.length) return null;
-    return el('section', { class: 'panel stack', style: 'background:var(--surface-2)' }, el('h4', {}, 'Download'),
+    return el('section', { class: 'panel stack', style: 'background:var(--surface-2)' }, el('h4', { class: 'row', style: 'gap:6px' }, el('span', { class: 'hp-flag-it', role: 'img', 'aria-label': 'Documentazione in italiano' }), 'Datasheet e altro'),
       el('div', { class: 'linkrow' }, a.map(x => el('a', { class: 'btn', href: x.u, target: '_blank', rel: 'noopener', title: x.t || x.u }, ic('dl', 16), x.l || 'Download'))));
   };
 })();
