@@ -273,7 +273,7 @@
     const head = [['Offerta', o.numero || ''], ['Titolo', o.titolo || ''], ['Data', o.data || ''], ['Cliente', cli?.nome || ''], ['Commessa', com?.nome || ''], []];
     const H = ['Sezione', 'Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Prezzo listino'] : []), ...(sc ? ['Sconto %'] : []), 'Prezzo netto', 'Totale netto'];
     const aoa = [...head, H];
-    for (const r of o.righe || []) { const t = lineTot(r); aoa.push([r.sez || '', r.c, r.b || '', +r.q || 0, ...(lst ? [r.noList ? '' : +r.p || 0] : []), ...(sc ? [r.noList ? '' : r2(+r.sc || 0)] : []), t.unit, t.netto]); }
+    for (const r of o.righe || []) { const t = lineTot(r); aoa.push([r.sez || '', r.c, (r.b || '') + (r.net ? ' (prezzo netto)' : ''), +r.q || 0, ...(lst ? [r.noList ? '' : +r.p || 0] : []), ...(sc ? [r.noList ? '' : r2(+r.sc || 0)] : []), t.unit, t.netto]); }
     const T = offTot(o.righe), TL = offTot((o.righe || []).filter(r => !r.noList)); aoa.push([]); aoa.push(['', '', 'TOTALE', '', ...(lst ? [TL.L] : []), ...(sc ? [TL.sc] : []), '', T.N]);
     if (o.note) aoa.push([], ['Note', o.note]);
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = H.map((h, i) => ({ wch: i === 2 ? 60 : i === 1 ? 24 : 14 }));
@@ -299,7 +299,7 @@
     const body = []; let sez = null;
     for (const r of o.righe || []) {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: head.length, styles: { fontStyle: 'bold', fillColor: [245, 246, 248] } }]); }
-      const t = lineTot(r); body.push([r.c, (r.b || '').slice(0, 120), String(r.q), ...(lst ? [r.noList ? '—' : eur(r.p)] : []), ...(sc ? [r.noList ? '—' : fN.format(r2(+r.sc || 0)) + '%'] : []), eur(t.unit), eur(t.netto)]);
+      const t = lineTot(r); body.push([r.c, (r.b || '').slice(0, r.net ? 104 : 120) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList ? '—' : eur(r.p)] : []), ...(sc ? [r.noList ? '—' : fN.format(r2(+r.sc || 0)) + '%'] : []), eur(t.unit), eur(t.netto)]);
     }
     const ci = head.length; const right = {}; for (let i = 2; i < ci; i++) right[i] = { halign: 'right', cellWidth: i === 2 ? 10 : 21, overflow: 'visible' };
     doc.autoTable({ startY: 41 + cl.length * 4.6 + 6, head: [head], body, margin: { left: 14, right: 14 }, styles: { fontSize: 8, cellPadding: 1.8, textColor: [28, 36, 48], lineColor: [225, 228, 234], lineWidth: .1 }, headStyles: { fillColor: [28, 36, 48], textColor: 255 }, columnStyles: { 0: { cellWidth: 44, fontStyle: 'bold', fontSize: 7.5 }, ...right } });
