@@ -707,11 +707,13 @@
         filters = el('div', { class: 'filters' }, el('input', { type: 'search', placeholder: 'Cerca cliente, commessa, seriale…', value: f.q, oninput: e => { f.q = e.target.value; this.update(); } }),
           selectEl('mgDst', [['aperte', 'Aperte'], ['scadute', 'Rientro scaduto'], ['chiuse', 'Chiuse'], ['tutte', 'Tutte']], f.dst, { onchange: e => { f.dst = e.target.value; this.update(); } }));
         body = all.length ? el('section', { class: 'panel' }, el('div', { class: 'tbl-wrap' }, el('table', {},
-          el('thead', {}, el('tr', {}, ['N.', 'Cliente', 'Commessa', 'Tipo', 'Articoli', 'Consegna', 'Rientro previsto', 'Prossimo promemoria', 'Responsabile', 'Stato', ''].map((h, k) => el('th', { class: k === 4 ? 'r' : '' }, h)))),
+          el('thead', {}, el('tr', {}, ['N.', 'Cliente', 'Prodotti', 'Tipo', 'Articoli', 'Consegna', 'Rientro previsto', 'Prossimo promemoria', 'Responsabile', 'Stato', ''].map((h, k) => el('th', { class: k === 4 ? 'r' : '' }, h)))),
           el('tbody', {}, all.map(d => { const cm = S.commesse.get(d.commessaId); const out = (d.items || []).filter(x => !x.rientratoAt && !x.esito).length; const nr = nextRem(d);
             return el('tr', { class: 'click', onclick: () => demoDetail(d) },
-              el('td', { class: 'mono' }, d.n || '—'), el('td', {}, el('b', {}, cliName(d.clienteId) || '—'), d.referente ? el('div', { class: 'hint' }, d.referente) : null),
-              el('td', {}, cm ? el('a', { href: '#', onclick: e => { e.preventDefault(); e.stopPropagation(); go('commesse', cm.id); } }, cm.nome) : el('span', { class: 'muted' }, '—')),
+              el('td', { class: 'mono' }, d.n || '—'), el('td', {}, el('b', {}, cliName(d.clienteId) || '—'), d.referente ? el('div', { class: 'hint' }, d.referente) : null, cm ? el('div', { class: 'hint' }, el('a', { href: '#', onclick: e => { e.preventDefault(); e.stopPropagation(); go('commesse', cm.id); } }, 'Commessa ' + cm.nome)) : null),
+              el('td', { 'data-sort': ((d.items || [])[0] || {}).code || '' }, (() => { const its = d.items || []; const sh = its.slice(0, 3);
+                return el('div', { class: 'mg-prev', title: its.map(x => x.code + (x.seriale ? ' · S/N ' + x.seriale : '')).join('\n') }, ...sh.map(x => itemThumb(S.mag.get(x.id) || x, 40)), its.length > 3 ? el('span', { class: 'mg-more' }, '+' + (its.length - 3)) : null,
+                  its.length === 1 ? el('div', { class: 'cell-t', style: 'min-width:0' }, el('b', { class: 'mono', style: 'font-size:.78rem' }, its[0].code), its[0].seriale ? el('small', { class: 'muted mono' }, its[0].seriale) : null) : null); })()),
               el('td', {}, TIPL[d.tipo] || 'Demo'),
               el('td', { class: 'r num', 'data-sort': String((d.items || []).length), title: (d.items || []).map(x => x.code + (x.seriale ? ' ' + x.seriale : '')).join('\n') }, isOpen(d) && out !== (d.items || []).length ? out + ' / ' + (d.items || []).length : String((d.items || []).length)),
               el('td', { 'data-sort': d.consegna || '' }, fKs(d.consegna)),
