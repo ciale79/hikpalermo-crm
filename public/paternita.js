@@ -19,7 +19,12 @@
   const comp = x => String(x || '').toLowerCase().replace(/\b(s\.?\s?r\.?\s?l\.?s?|s\.?\s?p\.?\s?a\.?|s\.?n\.?c\.?|s\.?a\.?s\.?|unipersonale)\s*$/g, '').replace(/[^a-z0-9]/g, '');
   const sameCli = (a, b) => { const x = comp(a), y = comp(b); return !!x && !!y && x.length > 3 && y.length > 3 && (x === y || x.startsWith(y) || y.startsWith(x)); };
   const cliOf = name => [...S.clienti.values()].find(c => sameCli(c.nome, name)) || null;
+  let memoK = null, memo = new Map();
   function comFor(p) {
+    if (memoK && memoK[0] === S.commesse && memoK[1] === S.pat && memoK[2] === S.clienti) { if (memo.has(p.id + '|' + (p.commessaId || ''))) return memo.get(p.id + '|' + (p.commessaId || '')); } else { memoK = [S.commesse, S.pat, S.clienti]; memo = new Map(); }
+    const r = comFor0(p); if (p.id) memo.set(p.id + '|' + (p.commessaId || ''), r); return r;
+  }
+  function comFor0(p) {
     if (p.commessaId === '-') return null;
     if (p.commessaId) return S.commesse.get(p.commessaId) || null;
     const ws = [...new Set(words(p.rif))]; if (!ws.length) return null;
@@ -35,13 +40,36 @@
     }
     return best;
   }
+  const WONS = new Set(['conf', 'acq', 'exec', 'chiusa']);
   window.hpPatRows = function (anno) {
-    return [...S.pat.values()].filter(p => !anno || !p.anno || +p.anno === +anno)
+    const base = [...S.pat.values()].filter(p => !anno || !p.anno || +p.anno === +anno)
       .sort((a, b) => (+a.anno || 0) - (+b.anno || 0) || String(a.periodo || '').localeCompare(String(b.periodo || '')) || (a.ord || 0) - (b.ord || 0) || (a.at || 0) - (b.at || 0))
       .map(p => ({ ...p, v: +p.importo || 0, com: comFor(p), cli: cliOf(p.cliente) }));
+    // commesse contrassegnate «Paternità Team Sicilia» non già presenti tra i progetti: contano quando sono acquisite
+    const linked = new Set(base.map(p => p.com && p.com.id).filter(Boolean));
+    const extra = [...S.commesse.values()].filter(c => c.patTS && !linked.has(c.id) && (!anno || !c.chiusaAt || new Date(c.chiusaAt).getFullYear() === +anno)).map(c => {
+      const cl = S.clienti.get(c.clienteId); const val = (typeof comVal === 'function' ? comVal(c.id).N : 0) || +c.valore || 0; const won = WONS.has(c.stato);
+      return { id: 'com_' + c.id, fromCom: true, rif: c.nome, cliente: cl ? cl.nome : '', periodo: CSTL[c.stato] || '', anno: anno || '', v: won ? val : 0, pv: val, pending: !won, com: c, cli: cl || null };
+    });
+    return base.concat(extra);
+  };
+  // la commessa è «Paternità Team Sicilia»? (contrassegnata a mano o collegata a un progetto dell'elenco)
+  window.hpPatOf = function (c) {
+    if (!c) return null; if (c.patTS) return { manual: true };
+    for (const p of S.pat.values()) { const k = comFor(p); if (k && k.id === c.id) return { manual: false, p }; }
+    return null;
+  };
+  window.hpPatFlag = function (c, mode) {
+    const st = window.hpPatOf(c); const on = !!st;
+    const lab = mode === 'detail' ? 'Paternità Team Sicilia' : 'PATERNITÀ TS';
+    const b = el('button', { type: 'button', class: 'hp-patflag ' + (on ? 'on' : 'off') + (mode === 'detail' ? ' big' : ''), 'aria-pressed': String(on),
+      title: on ? (st.manual ? 'Commessa con Paternità Team Sicilia: clic per toglierla' : 'Collegata al progetto «' + st.p.rif + '» della Paternità Team Sicilia (si gestisce dalla pagina Fatturato)') : 'Contrassegna come Paternità Team Sicilia',
+      onclick: async e => { e.stopPropagation(); if (on && !st.manual) { window.hpGoFatt ? hpGoFatt('clienti') : go('fatt'); return; } if (await patch('commesse', c.id, { patTS: !on, upd: Date.now() })) toast(c.nome + (on ? ': Paternità Team Sicilia tolta' : ': contrassegnata Paternità Team Sicilia')); } },
+      el('span', { class: 'hp-patdot' }), on ? lab : '+ ' + lab);
+    return b;
   };
   window.hpPatTot = anno => window.hpPatRows(anno).reduce((t, p) => t + p.v, 0);
-  const openP = p => { if (p.com) go('commesse', p.com.id); else if (p.cli) go('clienti', p.cli.id); else patForm(p); };
+  const openP = p => { if (p.fromCom) { go('commesse', p.com.id); return; } if (p.com) go('commesse', p.com.id); else if (p.cli) go('clienti', p.cli.id); else patForm(p); };
 
   // riquadro collassabile, chiuso di default (lo stato aperto/chiuso resta finché non ricarichi la pagina)
   const openSt = { dash: false, fatt: false };
@@ -55,7 +83,7 @@
   // elenco (cruscotto: compatto · fatturato: tabella con modifica)
   window.hpPatBlock = function (anno, opt = {}) {
     const rows = window.hpPatRows(anno); const tot = rows.reduce((t, p) => t + p.v, 0);
-    const per = [...new Set(rows.map(p => p.periodo).filter(Boolean))];
+    const per = [...new Set(rows.filter(p => !p.fromCom).map(p => p.periodo).filter(Boolean))];
     const ctx = opt.edit ? 'fatt' : 'dash';
     const chev = el('span', { class: 'hp-patchev', 'aria-hidden': 'true' }); chev.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const lab = el('span', { class: 'hp-patlab' }, el('span', { class: 'show' }, 'Mostra progetti'), el('span', { class: 'hide' }, 'Nascondi'), el('span', { class: 'ar', 'aria-hidden': 'true' }, '▾'));
@@ -67,7 +95,7 @@
     const link = p => p.com ? el('span', { class: 'pill', style: '--c:var(--info)', title: 'Apri la commessa «' + p.com.nome + '»' }, ic('brief', 12), ' Commessa') : null;
     if (!opt.edit) {
       const list = el('div', { class: 'hp-patlist' }, rows.map(p => el('div', { class: 'hp-patrow hp-click', title: p.com ? 'Apri la commessa «' + p.com.nome + '»' : p.cli ? 'Apri la scheda cliente' : 'Modifica', onclick: () => openP(p) },
-        el('span', { class: 'n' }, el('b', {}, p.rif), el('small', { class: 'hint' }, p.cliente + (p.periodo ? ' · ' + p.periodo : ''))), link(p), el('b', { class: 'num' }, eur0(p.v)))));
+        el('span', { class: 'n' }, el('b', {}, p.rif), el('small', { class: 'hint' }, (p.fromCom ? 'Commessa contrassegnata · ' : '') + p.cliente + (p.periodo ? ' · ' + p.periodo : ''))), link(p), p.pending ? el('span', { class: 'num muted', title: 'Conteggiata nei totali quando la commessa sarà acquisita' }, eur0(p.pv) + ' in corso') : el('b', { class: 'num' }, eur0(p.v)))));
       return wrap(ctx, h, list, el('div', { class: 'hp-patrow tot' }, el('span', { class: 'n' }, el('b', {}, 'Totale Paternità Team Sicilia')), el('b', { class: 'num', style: 'color:var(--violet)' }, eur(tot))));
     }
     const tb = el('tbody', {}, rows.map(p => el('tr', { class: 'hp-click', onclick: () => openP(p) },
@@ -75,11 +103,11 @@
       el('td', {}, p.cli ? el('a', { href: '#', onclick: e => { e.preventDefault(); e.stopPropagation(); go('clienti', p.cli.id); } }, p.cliente) : p.cliente),
       el('td', { class: 'muted', style: 'white-space:nowrap' }, [p.periodo, p.anno].filter(Boolean).join(' ')),
       el('td', {}, p.com ? el('a', { href: '#', onclick: e => { e.preventDefault(); e.stopPropagation(); go('commesse', p.com.id); } }, ic('brief', 14), ' ', p.com.nome) : el('span', { class: 'muted' }, '—')),
-      el('td', { class: 'r num', 'data-sort': String(p.v) }, el('b', {}, eur(p.v))),
-      el('td', { class: 'r' }, el('button', { type: 'button', class: 'icon-btn', title: 'Modifica', 'aria-label': 'Modifica ' + p.rif, onclick: e => { e.stopPropagation(); patForm(p); } }, ic('edit', 16))))));
+      el('td', { class: 'r num', 'data-sort': String(p.v) }, p.pending ? el('span', { class: 'muted', title: 'Conteggiata quando la commessa sarà acquisita' }, eur(p.pv) + ' · in corso') : el('b', {}, eur(p.v))),
+      el('td', { class: 'r' }, p.fromCom ? el('span', { class: 'pill', style: '--c:var(--violet);font-size:.68rem', title: 'Commessa contrassegnata come Paternità Team Sicilia: si toglie dalla commessa' }, 'da commessa') : el('button', { type: 'button', class: 'icon-btn', title: 'Modifica', 'aria-label': 'Modifica ' + p.rif, onclick: e => { e.stopPropagation(); patForm(p); } }, ic('edit', 16))))));
     const tf = el('tfoot', {}, el('tr', { class: 'hp-totrow' }, el('td', {}, el('b', {}, 'Totale')), el('td', {}), el('td', {}), el('td', { class: 'muted' }, rows.length + ' progetti'), el('td', { class: 'r num' }, el('b', { style: 'color:var(--violet)' }, eur(tot))), el('td', {})));
     return wrap(ctx, h, el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Riferimento progetto', 'Cliente', 'Periodo', 'Commessa', 'Netto fatturato', ''].map((x, i) => el('th', { class: i === 4 ? 'r' : '' }, x)))), tb, tf)),
-      el('p', { class: 'hint' }, 'Clic su una riga per aprire la commessa collegata (o la scheda cliente). La commessa viene riconosciuta in automatico dal riferimento progetto; puoi sceglierla tu dalla matita.'));
+      el('p', { class: 'hint' }, 'Clic su una riga per aprire la commessa collegata (o la scheda cliente). La commessa viene riconosciuta in automatico dal riferimento progetto; puoi sceglierla tu dalla matita. Le commesse contrassegnate «Paternità Team Sicilia» (dall\'elenco commesse o dalla scheda) compaiono qui e contano nei totali quando sono acquisite.'));
   };
 
   function patForm(p) {

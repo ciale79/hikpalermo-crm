@@ -604,7 +604,18 @@ async function migrateMag(env) {
   await broadcast(env, { reload: 'magazzino' });
 }
 // Import una tantum di documenti preparati (es. schede demo dalle bolle): non sovrascrive documenti esistenti
-async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat, extraItx]) await migrateOne(env, x); await migrateStato(env); }
+async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat, extraItx]) await migrateOne(env, x); await migrateStato(env); await migrateItTot(env); }
+// Italia: il totale Q1–Q3 indicato da Max (73,5 M€) sostituisce l'importo fisso degli altri canali/BU
+async function migrateItTot(env) {
+  const key = 'mig_it_tot_735';
+  if (await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id=?").bind(key).first()) return;
+  const t = now();
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', 'app', '{}', t, t).run();
+  const x = { totale: 73500000, finoQ: 3, fonte: 'Max', nota: 'Totale Italia Q1–Q3 indicato da Max (70% del target annuo, 97,8% del target Q1–Q3): la differenza rispetto alla Sales Analysis sono altri canali e BU di cui non abbiamo riscontro', at: t, by: 'import' };
+  await env.DB.prepare("UPDATE docs SET data=json_set(data,'$.italiaExtra',json(?)), version=?, updated=? WHERE col='config' AND id='app'").bind(JSON.stringify(x), t, t).run();
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', key, JSON.stringify({ at: t }), t, t).run();
+  await broadcast(env, { reload: 'config' });
+}
 // «Stato progetto» (dall'importazione) confluisce in «Stato», con priorità al valore importato; l'originale resta in statoImport
 async function migrateStato(env) {
   const key = 'mig_stato_merge';

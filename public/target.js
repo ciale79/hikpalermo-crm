@@ -61,35 +61,52 @@
   }
   const M = v => (v / 1e6).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' M€';
 
+  // riquadro del cruscotto: percentuale di raggiungimento del target annuo (la tacca indica dove si dovrebbe essere oggi)
+  const achCol = (area, r, exp) => area === 'it' ? (r >= exp ? 'var(--info)' : r >= exp * 0.85 ? 'color-mix(in srgb, var(--info) 70%, var(--violet))' : 'var(--violet)') : (r >= exp ? 'var(--ok)' : r >= exp * 0.85 ? 'var(--warn)' : 'var(--bad)');
+  function gaugeAch(r, exp, color) {
+    const p = Math.max(0, Math.min(1, r)), cx = 60, cy = 56, R = 50, a = Math.PI * (1 - p), x = cx + R * Math.cos(a), y = cy - R * Math.sin(a), b = Math.PI * (1 - Math.min(1, exp));
+    const s = el('span', { class: 'hp-tg-g' });
+    s.innerHTML = `<svg viewBox="0 0 120 64" width="120" height="64" aria-hidden="true">
+      <path d="M10 56 A50 50 0 0 1 110 56" fill="none" stroke="var(--line)" stroke-width="10" stroke-linecap="round"/>
+      ${p > 0.005 ? `<path d="M10 56 A50 50 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"/>` : ''}
+      <line x1="${(cx + 39 * Math.cos(b)).toFixed(1)}" y1="${(cy - 39 * Math.sin(b)).toFixed(1)}" x2="${(cx + 59 * Math.cos(b)).toFixed(1)}" y2="${(cy - 59 * Math.sin(b)).toFixed(1)}" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>
+    </svg>`;
+    return s;
+  }
+  const expOf = m => { const cut = new Date((S.fatt.cut || S.sales.data) + 'T12:00'); return (cut - new Date(m.Y, 0, 1)) / (new Date(m.Y + 1, 0, 1) - new Date(m.Y, 0, 1)); };
+  const pc = v => (v * 100).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
   window.hpTargetTile = function (area) {
     const m = window.hpTargetModel(area); if (!m) return null; const N = m.A.n;
-    const pct = Math.round(m.p * 100);
-    const tile = el('button', { type: 'button', class: 'kpi hp-tg hp-tg-' + m.area, title: 'Stima della probabilità di raggiungere il target ' + N + ' ' + m.Y + ': clic per i dettagli del calcolo', onclick: () => detail(m) },
-      el('span', { class: 'eyebrow' }, 'Target ' + N + ' ' + m.Y + ' · probabilità'),
-      el('div', { class: 'hp-tg-row' }, gauge(m.p, m.area), el('div', { class: 'hp-tg-num', style: { color: colOf(m.area, m.p) } }, m.done ? '✓' : (m.p <= 0.01 ? '<1%' : m.p >= 0.99 ? '>99%' : pct + '%'))),
-      el('span', { class: 's' }, m.done ? 'Target raggiunto' : 'Proiezione ' + M(m.proj) + ' su ' + M(m.target)), m.pat ? el('span', { class: 's', style: 'color:var(--violet);font-size:.72rem' }, 'incl. paternità · senza: ' + Math.round(m.pNo * 100) + '%') : m.area === 'it' && m.oo ? el('span', { class: 's', style: 'color:var(--info);font-size:.72rem' }, 'incl. open order ' + M(m.oo) + (m.X ? ' e ' + M(m.X.tot) + ' altri canali/BU (da ' + m.X.fonte + ', non riscontrati)' : '')) : null);
-    return tile;
+    const v = m.ytd + m.pat, r = v / m.target;
+    const exp = expOf(m);
+    const color = achCol(m.area, r, exp);
+    const note = m.area === 'si' && m.pat ? el('span', { class: 's', style: 'color:var(--violet);font-size:.72rem' }, 'incl. paternità ' + M(m.pat) + ' · senza: ' + pc(m.ytd / m.target))
+      : m.area === 'it' && m.X ? el('span', { class: 's', style: 'color:var(--warn);font-size:.72rem', title: 'Q1–Q' + m.X.finoQ + ' allineato al totale indicato da ' + m.X.fonte + '; la parte oltre la Sales Analysis non è riscontrata' }, 'Q1–Q' + m.X.finoQ + ' ' + M(m.ytd - (S.sales.italiaOwnQ || []).slice(m.X.finoQ).reduce((a, b) => a + (+b || 0), 0)) + ' come da ' + m.X.fonte + ' · non riscontrato') : null;
+    return el('button', { type: 'button', class: 'kpi hp-tg hp-tg-' + m.area, title: 'Raggiungimento del target ' + N + ' ' + m.Y + '. La tacca nera indica il ritmo atteso a oggi (' + pc(exp) + ' dell\'anno trascorso). Clic per il dettaglio e la proiezione a fine anno.', onclick: () => detail(m) },
+      el('span', { class: 'eyebrow' }, 'Target ' + N + ' ' + m.Y + ' · raggiunto'),
+      el('div', { class: 'hp-tg-row' }, gaugeAch(r, exp, color), el('div', { class: 'hp-tg-num', style: { color } }, pc(r))),
+      el('span', { class: 's' }, M(v) + ' di ' + M(m.target)), note);
   };
 
   window.hpItExtraForm = function () {
     const x = (S.config || {}).italiaExtra || {};
-    const imp = el('input', { type: 'number', step: '1000', min: '0', value: x.importo || '' }), fino = selectEl('itxQ', [['1', 'Q1'], ['2', 'Q1–Q2'], ['3', 'Q1–Q3'], ['4', 'Q1–Q4']], String(x.finoQ || 3));
+    const imp = el('input', { type: 'number', step: '1000', min: '0', value: x.totale || '' }), fino = selectEl('itxQ', [['1', 'Q1'], ['2', 'Q1–Q2'], ['3', 'Q1–Q3'], ['4', 'Q1–Q4']], String(x.finoQ || 3));
     const fonte = el('input', { type: 'text', value: x.fonte || 'Max' }), nota = el('input', { type: 'text', value: x.nota || 'Altri canali e BU non presenti nella Sales Analysis (non ne abbiamo riscontro)' });
-    const m = modal('Italia · altri canali e BU', el('div', { class: 'stack' }, el('p', { class: 'hint' }, 'Fatturato Italia che non compare nella Sales Analysis (es. distribuzione IT, HikRobot). Viene sommato al totale Italia e ripartito sui trimestri in proporzione al fatturato del file. Lascia 0 per toglierlo.'),
-      el('div', { class: 'grid2' }, fld('Importo (€)', imp), fld('Periodo', fino)), el('div', { class: 'grid2' }, fld('Indicato da', fonte), fld('Nota', nota))), [el('span', { class: 'grow' }), btn('Annulla', () => m.close()), btn('Salva', async () => {
+    const m = modal('Italia · altri canali e BU', el('div', { class: 'stack' }, el('p', { class: 'hint' }, 'Totale Italia del periodo indicato da chi ha i dati completi (es. Max). La differenza rispetto alla Sales Analysis (altri canali e BU: distribuzione IT, HikRobot…) viene sommata al totale Italia e ripartita sui trimestri in proporzione al fatturato del file. Lascia vuoto per toglierlo.'),
+      el('div', { class: 'grid2' }, fld('Totale Italia del periodo (€)', imp), fld('Periodo', fino)), el('div', { class: 'grid2' }, fld('Indicato da', fonte), fld('Nota', nota))), [el('span', { class: 'grow' }), btn('Annulla', () => m.close()), btn('Salva', async () => {
         const v = +imp.value || 0;
-        if (await put('config', 'app', { ...S.config, italiaExtra: v ? { importo: v, finoQ: +fino.value, fonte: fonte.value.trim() || 'Max', nota: nota.value.trim(), at: Date.now(), by: S.me } : null })) { m.close(); toast(v ? 'Totale Italia aggiornato' : 'Altri canali/BU rimossi'); }
+        if (await put('config', 'app', { ...S.config, italiaExtra: v ? { totale: v, finoQ: +fino.value, fonte: fonte.value.trim() || 'Max', nota: nota.value.trim(), at: Date.now(), by: S.me } : null })) { m.close(); toast(v ? 'Totale Italia aggiornato' : 'Totale indicato rimosso'); }
       }, 'pri', 'check')]);
   };
   function detail(m) {
     const row = (l, v, h) => el('div', { class: 'hp-tg-dl' }, el('span', {}, l, h ? el('small', { class: 'hint' }, ' ' + h) : null), el('b', { class: 'num' }, v));
     const pct = Math.round(m.p * 100);
     const box = el('div', { class: 'stack' },
-      el('div', { class: 'row', style: 'gap:16px;align-items:center' }, gauge(m.p, m.area), el('div', { class: 'stack', style: 'gap:2px' }, el('b', { style: { fontSize: '1.8rem', color: colOf(m.area, m.p), fontFamily: 'var(--font-mono)' } }, m.done ? 'Target raggiunto' : (m.p <= 0.01 ? 'meno dell\'1%' : m.p >= 0.99 ? 'oltre il 99%' : pct + '%')), el('span', { class: 'hint' }, m.done ? '' : 'probabilità stimata di chiudere il ' + m.Y + ' a target'))),
+      el('div', { class: 'row', style: 'gap:16px;align-items:center' }, gaugeAch((m.ytd + m.pat) / m.target, expOf(m), achCol(m.area, (m.ytd + m.pat) / m.target, expOf(m))), el('div', { class: 'stack', style: 'gap:2px' }, el('b', { style: { fontSize: '1.8rem', color: achCol(m.area, (m.ytd + m.pat) / m.target, expOf(m)), fontFamily: 'var(--font-mono)' } }, pc((m.ytd + m.pat) / m.target) + ' del target'), el('span', { class: 'hint' }, m.done ? 'Target raggiunto' : 'Probabilità stimata di chiudere il ' + m.Y + ' a target: ' + (m.p <= 0.01 ? 'meno dell\'1%' : m.p >= 0.99 ? 'oltre il 99%' : pct + '%') + ' (proiezione ' + M(m.proj) + ')'))),
       el('div', { class: 'stack', style: 'gap:0' },
         row('Target ' + m.A.n + ' ' + m.Y, eur0(m.target)),
         m.X ? row('Fatturato da Sales Analysis', eur0(m.ytdF), 'al ' + (m.dataLabel || '')) : row('Fatturato da inizio anno', eur0(m.ytd), 'al ' + (m.dataLabel || '')),
-        m.X ? el('div', { class: 'hp-tg-dl', style: 'background:color-mix(in srgb,var(--warn) 8%,transparent);padding:7px 8px;border-radius:6px' }, el('span', {}, 'Altri canali e BU fino al Q' + m.X.finoQ, el('small', { class: 'hint' }, ' indicati da ' + m.X.fonte + ' · non ne abbiamo riscontro nella Sales Analysis'), isAdmin() ? el('a', { href: '#', class: 'hint', style: 'margin-left:6px', onclick: e => { e.preventDefault(); md.close(); window.hpItExtraForm(); } }, 'modifica') : null), el('b', { class: 'num', style: 'color:var(--warn)' }, eur0(m.X.tot))) : (m.area === 'it' && isAdmin() ? el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); md.close(); window.hpItExtraForm(); } }, '+ Aggiungi fatturato di altri canali/BU non presenti nel file') : null),
+        m.X ? el('div', { class: 'hp-tg-dl', style: 'background:color-mix(in srgb,var(--warn) 8%,transparent);padding:7px 8px;border-radius:6px' }, el('span', {}, 'Altri canali e BU fino al Q' + m.X.finoQ, el('small', { class: 'hint' }, (m.X.totale ? ' per arrivare al totale Q1–Q' + m.X.finoQ + ' di ' + eur0(m.X.totale) : '') + ' indicato da ' + m.X.fonte + ' · non ne abbiamo riscontro nella Sales Analysis'), isAdmin() ? el('a', { href: '#', class: 'hint', style: 'margin-left:6px', onclick: e => { e.preventDefault(); md.close(); window.hpItExtraForm(); } }, 'modifica') : null), el('b', { class: 'num', style: 'color:var(--warn)' }, eur0(m.X.tot))) : (m.area === 'it' && isAdmin() ? el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); md.close(); window.hpItExtraForm(); } }, '+ Aggiungi fatturato di altri canali/BU non presenti nel file') : null),
         m.X ? row('Fatturato da inizio anno', eur0(m.ytd), 'compresi gli altri canali/BU') : null,
         m.pat ? row('Paternità Team Sicilia', eur0(m.pat), 'inclusa · senza paternità la probabilità è ' + Math.round(m.pNo * 100) + '%') : null,
         row('Mancano al target', eur0(m.gap), m.left + ' giorni a fine anno'),
@@ -98,6 +115,6 @@
         row('Proiezione a fine anno', eur0(m.proj)),
         row('Ordini aperti ' + m.A.n, eur0(m.oo), 'inclusi: considerati fatturati al 90% entro fine anno')),
       el('p', { class: 'hint' }, 'Come si calcola: il resto dell\'anno segue la stagionalità del ' + (m.Y - 1) + ' moltiplicata per la crescita attuale (media tra quella da inizio anno, ' + (m.gY >= 1 ? '+' : '') + Math.round((m.gY - 1) * 100) + '%, e quella degli ultimi 3 mesi, ' + (m.g3 >= 1 ? '+' : '') + Math.round((m.g3 - 1) * 100) + '%). L\'incertezza viene dalla variabilità dei mesi ' + m.Y + ' rispetto al ' + (m.Y - 1) + ' ed è più bassa sulla parte già coperta dagli ordini aperti, che contano come fatturato quasi certo (il resto dell\'anno non viene mai stimato sotto il 90% degli open order). È una stima statistica, non una previsione commerciale: si aggiorna a ogni caricamento della Sales Analysis.'));
-    const md = modal('Probabilità di chiudere a target · ' + m.A.n, box, [btn('Vai al fatturato', () => { md.close(); window.hpGoFatt ? hpGoFatt(m.A.go) : go('fatt'); }, 'ghost', 'chart'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())]);
+    const md = modal('Target ' + m.A.n + ' ' + m.Y, box, [btn('Vai al fatturato', () => { md.close(); window.hpGoFatt ? hpGoFatt(m.A.go) : go('fatt'); }, 'ghost', 'chart'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())]);
   }
 })();
