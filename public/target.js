@@ -77,17 +77,22 @@
   }
   const expOf = m => { const cut = new Date((S.fatt.cut || S.sales.data) + 'T12:00'); return (cut - new Date(m.Y, 0, 1)) / (new Date(m.Y + 1, 0, 1) - new Date(m.Y, 0, 1)); };
   const pc = v => (v * 100).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  // open order inclusi o esclusi dall'indicatore (scelta di chi guarda, per area, ricordata nel browser)
+  const ooOn = area => { try { return localStorage.getItem('hp_tgOO_' + area) !== '0'; } catch (e) { return true; } };
+  const setOO = (area, v) => { try { localStorage.setItem('hp_tgOO_' + area, v ? '1' : '0'); } catch (e) { } };
   window.hpTargetTile = function (area) {
-    const m = window.hpTargetModel(area); if (!m) return null; const N = m.A.n;
-    const v = m.ytd + m.pat, r = v / m.target, vo = v + m.oo, ro = vo / m.target;
+    const m = window.hpTargetModel(area); if (!m) return null; const N = m.A.n; const withOO = ooOn(m.area);
+    const v = m.ytd + m.pat, r = v / m.target, vo = v + (withOO ? m.oo : 0), ro = vo / m.target;
     const exp = expOf(m);
     const color = achCol(m.area, ro, exp);
     const note = m.area === 'si' && m.pat ? el('span', { class: 's', style: 'color:var(--violet);font-size:.72rem' }, 'incl. paternità ' + M(m.pat) + ' · senza: ' + pc(m.ytd / m.target))
       : m.area === 'it' && m.X ? el('span', { class: 's', style: 'color:var(--warn);font-size:.72rem', title: 'Q1–Q' + m.X.finoQ + ' allineato al totale indicato da ' + m.X.fonte + '; la parte oltre la Sales Analysis non è riscontrata' }, 'Q1–Q' + m.X.finoQ + ' ' + M(m.ytd - (S.sales.italiaOwnQ || []).slice(m.X.finoQ).reduce((a, b) => a + (+b || 0), 0)) + ' come da ' + m.X.fonte + ' · non riscontrato') : null;
-    return el('button', { type: 'button', class: 'kpi hp-tg hp-tg-' + m.area, title: 'Raggiungimento del target ' + N + ' ' + m.Y + ' contando fatturato e ordini aperti (parte chiara dell\'arco). La tacca nera indica il ritmo atteso a oggi (' + pc(exp) + ' dell\'anno trascorso). Clic per il dettaglio e la proiezione a fine anno.', onclick: () => detail(m) },
-      el('span', { class: 'eyebrow' }, 'Target ' + N + ' ' + m.Y + ' · con open order'),
-      el('div', { class: 'hp-tg-row' }, gaugeAch(r, exp, color, ro), el('div', { class: 'stack', style: 'gap:0' }, el('div', { class: 'hp-tg-num', style: { color } }, pc(ro)), el('small', { class: 'hint', style: 'font-size:.68rem;white-space:nowrap' }, 'incl. open order'))),
-      el('span', { class: 's' }, M(vo) + ' di ' + M(m.target)), el('span', { class: 's', style: 'font-size:.72rem' }, 'Fatturato ' + pc(r) + ' + open order ' + M(m.oo)), note);
+    const tog = el('button', { type: 'button', class: 'hp-capnew hp-ootog' + (withOO ? ' on' : ''), 'aria-pressed': String(withOO), title: withOO ? 'Togli gli open order (' + M(m.oo) + ') dall\'indicatore' : 'Aggiungi gli open order (' + M(m.oo) + ') all\'indicatore', onclick: e => { e.stopPropagation(); setOO(m.area, !withOO); const n = window.hpTargetTile(area); if (n) tile.replaceWith(n); } }, withOO ? '✓ Open order' : '+ Open order');
+    const tile = el('div', { class: 'kpi hp-tg hp-tg-' + m.area, role: 'button', tabindex: '0', title: 'Raggiungimento del target ' + N + ' ' + m.Y + (withOO ? ' contando fatturato e ordini aperti (parte chiara dell\'arco)' : ' sul solo fatturato') + '. La tacca nera indica il ritmo atteso a oggi (' + pc(exp) + ' dell\'anno trascorso). Clic per il dettaglio e la proiezione a fine anno.', onclick: () => detail(m), onkeydown: e => { if (e.key === 'Enter') detail(m); } },
+      el('div', { class: 'row between', style: 'gap:6px;flex-wrap:nowrap' }, el('span', { class: 'eyebrow' }, 'Target ' + N + ' ' + m.Y), tog),
+      el('div', { class: 'hp-tg-row' }, gaugeAch(r, exp, color, withOO ? ro : null), el('div', { class: 'stack', style: 'gap:0' }, el('div', { class: 'hp-tg-num', style: { color } }, pc(ro)), el('small', { class: 'hint', style: 'font-size:.68rem;white-space:nowrap' }, withOO ? 'incl. open order' : 'solo fatturato'))),
+      el('span', { class: 's' }, M(vo) + ' di ' + M(m.target)), el('span', { class: 's', style: 'font-size:.72rem' }, withOO ? 'Fatturato ' + pc(r) + ' + open order ' + M(m.oo) : 'Con open order sarebbe ' + pc((v + m.oo) / m.target)), note);
+    return tile;
   };
 
   window.hpItExtraForm = function () {
