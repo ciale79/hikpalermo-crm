@@ -125,7 +125,7 @@
     const loc = [e.luogo, e.teams].filter(Boolean).join(' · ');
     const desc = inviteText(e);
     return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//HIK PALERMO//CRM//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
-      'UID:' + e.id + '@hikpalermo.com', 'DTSTAMP:' + icsDate(Date.now()), 'DTSTART:' + icsDate(e.start), 'DTEND:' + icsDate(e.end || e.start + 36e5),
+      'UID:' + e.id + '@hikpalermo.com', 'DTSTAMP:' + icsDate(Date.now()), ...(e.allDay ? ['DTSTART;VALUE=DATE:' + dayKey(e.start).replace(/-/g, ''), 'DTEND;VALUE=DATE:' + dayKey(evLast(e).getTime() + 864e5).replace(/-/g, ''), 'X-MICROSOFT-CDO-ALLDAYEVENT:TRUE', 'TRANSP:TRANSPARENT'] : ['DTSTART:' + icsDate(e.start), 'DTEND:' + icsDate(e.end || e.start + 36e5)]),
       'SUMMARY:' + icsTxt(e.titolo), loc ? 'LOCATION:' + icsTxt(loc) : '', 'DESCRIPTION:' + icsTxt(desc), e.teams ? 'URL:' + e.teams : '',
       e.lat != null ? 'GEO:' + e.lat + ';' + e.lng : '',
       'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsTxt(e.titolo), 'TRIGGER:-PT30M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).map(fold).join('\r\n');

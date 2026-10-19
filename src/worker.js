@@ -211,13 +211,16 @@ async function buildIcs(env, id, e, method) {
   const desc = [e.note, e.teams ? 'Riunione Teams: ' + e.teams : '', (env.APP_URL || '') + '/'].filter(Boolean).join('\n');
   const seq = Math.floor((e.upd || e.at || 0) / 1000) - 1700000000;
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//HIK PALERMO//CRM//IT', 'CALSCALE:GREGORIAN', 'METHOD:' + method, method === 'PUBLISH' ? 'X-WR-CALNAME:HIK PALERMO' : '', 'BEGIN:VEVENT',
-    'UID:' + id + '@hikpalermo.com', 'SEQUENCE:' + Math.max(0, seq), 'DTSTAMP:' + icsDate(now()), 'DTSTART:' + icsDate(e.start), 'DTEND:' + icsDate(e.end || e.start + 3600e3),
+    'UID:' + id + '@hikpalermo.com', 'SEQUENCE:' + Math.max(0, seq), 'DTSTAMP:' + icsDate(now()), ...(e.allDay ? ['DTSTART;VALUE=DATE:' + romeDay(e.start).replace(/-/g, ''), 'DTEND;VALUE=DATE:' + romeDay(Math.max(e.end || 0, e.start + 864e5 - 3600e3) + 3 * 3600e3).replace(/-/g, ''), 'X-MICROSOFT-CDO-ALLDAYEVENT:TRUE', 'TRANSP:TRANSPARENT'] : ['DTSTART:' + icsDate(e.start), 'DTEND:' + icsDate(e.end || e.start + 3600e3)]),
     'SUMMARY:' + icsTxt(e.titolo || 'Evento'), loc ? 'LOCATION:' + icsTxt(loc) : '', desc ? 'DESCRIPTION:' + icsTxt(desc) : '',
     e.teams ? 'URL:' + e.teams : '', method === 'PUBLISH' ? '' : 'ORGANIZER;CN=HIK PALERMO:mailto:notifiche@hikpalermo.com', ...att,
-    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsTxt(e.titolo || 'Evento'), 'TRIGGER:-PT30M', 'END:VALARM',
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsTxt(e.titolo || 'Evento'), e.allDay ? 'TRIGGER:-PT15H' : 'TRIGGER:-PT30M', 'END:VALARM',
     method === 'CANCEL' ? 'STATUS:CANCELLED' : 'STATUS:CONFIRMED', 'END:VEVENT', 'END:VCALENDAR'].filter(Boolean);
   return lines.map(fold).join('\r\n');
 }
+const fmtD = t => new Intl.DateTimeFormat('it-IT', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(t));
+// eventi a giornata intera (anche su più giorni): end = mezzanotte del giorno dopo l'ultimo
+const whenTxt = e => { if (!e.allDay) return fmtDT(e.start) + (e.end ? ' – ' + fmtDT(e.end) : ''); const last = Math.max(e.start, (e.end || e.start) - 1); return romeDay(e.start) === romeDay(last) ? fmtD(e.start) + ' · giornata intera' : fmtD(e.start) + ' – ' + fmtD(last) + ' · giornate intere'; };
 const fmtDT = t => new Intl.DateTimeFormat('it-IT', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(t));
 const romeDay = t => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t));
 const b64 = s => { const b = enc.encode(s); let o = ''; for (let i = 0; i < b.length; i++) o += String.fromCharCode(b[i]); return btoa(o); };
@@ -259,7 +262,7 @@ async function afterWrite(env, u, op, col, id, prev, data) {
       if (!to) continue;
       let body = `<p style="margin:0 0 8px"><b>${esc(by)}</b> ${esc(data.msg)}</p>`;
       if (ev) body += `<table cellpadding="0" cellspacing="0" style="margin-top:12px;font-size:14px">
-<tr><td style="color:#768797;padding:2px 12px 2px 0">Quando</td><td>${esc(fmtDT(ev.start))}${ev.end ? ' – ' + esc(fmtDT(ev.end)) : ''}</td></tr>
+<tr><td style="color:#768797;padding:2px 12px 2px 0">Quando</td><td>${esc(whenTxt(ev))}</td></tr>
 ${ev.luogo ? `<tr><td style="color:#768797;padding:2px 12px 2px 0">Dove</td><td>${esc(ev.luogo)}</td></tr>` : ''}
 ${ev.teams ? `<tr><td style="color:#768797;padding:2px 12px 2px 0">Teams</td><td><a href="${esc(ev.teams)}">Partecipa alla riunione</a></td></tr>` : ''}
 ${ev.note ? `<tr><td style="color:#768797;padding:2px 12px 2px 0;vertical-align:top">Note</td><td>${esc(ev.note)}</td></tr>` : ''}</table>
@@ -282,8 +285,8 @@ ${ev.note ? `<tr><td style="color:#768797;padding:2px 12px 2px 0;vertical-align:
       if (p === u.id) continue;
       const to = await emailOf(env, p); if (!to) continue;
       await sendMail(env, {
-        to, kind: 'evento:annullato', subject: 'Annullato · ' + (prev.titolo || 'evento') + ' · ' + fmtDT(prev.start),
-        html: mailShell('Evento annullato', `<p><b>${esc(by)}</b> ha annullato «${esc(prev.titolo)}» del ${esc(fmtDT(prev.start))}.</p>`, ['Apri il calendario', env.APP_URL + '/']),
+        to, kind: 'evento:annullato', subject: 'Annullato · ' + (prev.titolo || 'evento') + ' · ' + (prev.allDay ? whenTxt(prev) : fmtDT(prev.start)),
+        html: mailShell('Evento annullato', `<p><b>${esc(by)}</b> ha annullato «${esc(prev.titolo)}» del ${esc(prev.allDay ? whenTxt(prev) : fmtDT(prev.start))}.</p>`, ['Apri il calendario', env.APP_URL + '/']),
         attachments: [{ filename: 'annullamento.ics', content: b64(ics), content_type: 'text/calendar; method=CANCEL' }]
       });
     }
@@ -864,7 +867,7 @@ export default {
     for (const [pid, evs] of per) {
       const to = await emailOf(env, pid); if (!to) continue;
       evs.sort((a, b) => a.start - b.start);
-      const rows = evs.map(e => `<tr><td style="padding:6px 12px 6px 0;font-family:Consolas,monospace;color:#C8102E;vertical-align:top">${esc(new Intl.DateTimeFormat('it-IT', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(e.start)))}</td><td style="padding:6px 0"><b>${esc(e.titolo)}</b>${e.luogo ? '<br><span style="color:#45576A;font-size:13px">' + esc(e.luogo) + '</span>' : ''}${e.teams ? '<br><a href="' + esc(e.teams) + '" style="font-size:13px">Riunione Teams</a>' : ''}</td></tr>`).join('');
+      const rows = evs.map(e => `<tr><td style="padding:6px 12px 6px 0;font-family:Consolas,monospace;color:#C8102E;vertical-align:top">${esc(e.allDay ? 'Tutto il giorno' : new Intl.DateTimeFormat('it-IT', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(e.start)))}</td><td style="padding:6px 0"><b>${esc(e.titolo)}</b>${e.luogo ? '<br><span style="color:#45576A;font-size:13px">' + esc(e.luogo) + '</span>' : ''}${e.teams ? '<br><a href="' + esc(e.teams) + '" style="font-size:13px">Riunione Teams</a>' : ''}</td></tr>`).join('');
       const attachments = [];
       for (const e of evs) attachments.push({ filename: 'evento-' + (attachments.length + 1) + '.ics', content: b64(await buildIcs(env, e._id, e, 'REQUEST')), content_type: 'text/calendar; method=REQUEST' });
       await sendMail(env, {
