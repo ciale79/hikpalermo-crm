@@ -28,7 +28,7 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Room"] }
   ],
-  "triggers": { "crons": ["0 6 * * *", "*/10 * * * *"] },
+  "triggers": { "crons": ["*/10 * * * *"] }, // un solo cron: limite di 5 per account sul piano Free
   "vars": {
     "APP_URL": "https://hikpalermo.com",
     "MAIL_FROM": "HIK PALERMO <notifiche@hikpalermo.com>",

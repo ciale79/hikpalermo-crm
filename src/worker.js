@@ -884,7 +884,11 @@ export default {
 
   // Ogni mattina (06:00 UTC): promemoria degli eventi di domani + pulizia
   async scheduled(ev, env, ctx) {
-    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).catch(e => console.log('mig', e && e.stack || e)); await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); return; }
+    // un solo cron ogni 10 minuti (il piano Free consente 5 cron per tutto l'account): le attività giornaliere
+    // (promemoria di domani e pulizia) girano nel primo passaggio delle 06:00 UTC; i promemoria non si duplicano (tabella reminders)
+    const st = new Date((ev && ev.scheduledTime) || Date.now());
+    const daily = !ev || !ev.cron || ev.cron === '0 6 * * *' || (st.getUTCHours() === 6 && st.getUTCMinutes() < 10);
+    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).catch(e => console.log('mig', e && e.stack || e)); await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); if (!daily) return; }
     const t = now();
     await env.DB.batch([env.DB.prepare('DELETE FROM otp WHERE expires<?').bind(t - 864e5), env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(t)]);
     const tomorrow = romeDay(t + 864e5);
