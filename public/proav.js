@@ -16,6 +16,20 @@
   const sub = document.querySelector('.brand .sub'); if (sub) sub.textContent = 'Area riservata ProAV';
   if (!NAV.some(n => n[0] === 'pav')) NAV.splice(1, 0, ['pav', 'Listini ProAV', 'av']);
 
+  /* ---------- archivio: privato ProAV o del gruppo (commesse, offerte, calendario, magazzino, attività) ---------- */
+  const space = (() => { try { return localStorage.getItem('hp_pavSpace') === 'grp' ? 'grp' : 'pav'; } catch (e) { return 'pav'; } })();
+  S.pavSpace = space;
+  const setSpace = v => { if (v === space) return; try { localStorage.setItem('hp_pavSpace', v); } catch (e) { } if (NAV.some(n => n[0] === S.view)) location.hash = S.view; location.reload(); };
+  function spaceSeg(cls) {
+    const b = (k, l, t) => el('button', { type: 'button', class: space === k ? 'on' : '', 'aria-pressed': String(space === k), title: t, onclick: () => setSpace(k) }, l);
+    return el('div', { class: 'seg hp-spaceseg' + (cls ? ' ' + cls : ''), role: 'group', 'aria-label': 'Archivio di commesse, calendario e magazzino' },
+      b('pav', ['ProAV', el('span', { class: 'hp-long' }, ' privato')], 'Commesse, offerte, calendario e magazzino riservati ProAV'), b('grp', [el('span', { class: 'hp-long' }, 'Tutto il gruppo'), el('span', { class: 'hp-short' }, 'Gruppo')], 'Commesse, offerte, calendario e magazzino di tutto il gruppo, come su hikpalermo.com'));
+  }
+  window.hpSpaceSeg = spaceSeg;
+  const top = document.querySelector('header.top #vtitle');
+  if (top) top.after(el('div', { class: 'hp-spacebox' + (space === 'grp' ? ' grp' : '') }, spaceSeg()));
+  if (space === 'grp') document.documentElement.classList.add('pav-grp');
+
   /* ---------- dati ---------- */
   const fmtP = p => { const m = /^(\d{4})-(\d{2})$/.exec(p || ''); return m ? ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'][+m[2] - 1] + ' ' + m[1] : (p || ''); };
   const num = v => { if (typeof v === 'number') return isFinite(v) ? v : null; let s = String(v == null ? '' : v).replace(/[€\s]/g, '').replace(/eur/i, ''); if (!s) return null; if (/^-?\d{1,3}(\.\d{3})*(,\d+)?$/.test(s) || /^-?\d+,\d+$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(/,/g, ''); const n = parseFloat(s); return isFinite(n) ? n : null; };
@@ -242,7 +256,7 @@
     const sp = S.salesP;
     const qIn = el('input', { type: 'search', placeholder: 'Cerca nei listini ProAV…', 'aria-label': 'Cerca nei listini ProAV', onkeydown: e => { if (e.key === 'Enter') { S.pavQ = e.target.value; S.pavL = ''; go('pav'); } } });
     return el('section', { class: 'panel hp-pavstrip' },
-      el('div', { class: 'hp-pavhero' }, el('span', { class: 'hp-pavlogo', 'aria-hidden': 'true' }, ic('av', 26)), el('div', { class: 'stack', style: 'gap:2px' }, el('b', {}, 'Area ProAV'), el('span', { class: 'hint' }, 'Riservata a ' + whoTxt()), el('span', { class: 'hint', style: 'font-size:.72rem' }, 'Commesse, offerte, calendario e magazzino separati da quelli del gruppo'))),
+      el('div', { class: 'hp-pavhero' }, el('span', { class: 'hp-pavlogo', 'aria-hidden': 'true' }, ic('av', 26)), el('div', { class: 'stack', style: 'gap:2px' }, el('b', {}, 'Area ProAV'), el('span', { class: 'hint' }, 'Riservata a ' + whoTxt()), el('span', { class: 'hint', style: 'font-size:.72rem' }, space === 'grp' ? 'Stai vedendo commesse, calendario e magazzino di tutto il gruppo' : 'Commesse, calendario e magazzino: archivio privato ProAV'))),
       el('div', { class: 'hp-pavcell' }, el('span', { class: 'eyebrow' }, 'Sales Analysis'), srcSeg(() => VIEWS.dash.update()),
         el('span', { class: 'hint' }, S.salesSrc === 'grp' ? 'Stai vedendo i dati del gruppo' : sp && sp.dataLabel ? 'ProAV al ' + sp.dataLabel : 'ProAV non ancora caricata', ' · ', el('a', { href: '#', onclick: e => { e.preventDefault(); go('fatt'); } }, S.salesSrc !== 'grp' && !(sp && sp.dataLabel) ? 'caricala' : 'dettaglio'))),
       el('div', { class: 'hp-pavcell', role: 'button', tabindex: '0', style: 'cursor:pointer', onclick: e => { if (e.target.tagName !== 'INPUT') go('pav'); } }, el('span', { class: 'eyebrow' }, 'Listini ProAV'), el('b', { class: 'hp-pavn' }, String(L.length)), el('span', { class: 'hint' }, L.length ? L.reduce((a, m) => a + (m.righe || 0), 0).toLocaleString('it-IT') + ' articoli · agg. ' + fD(last) : 'Nessun listino caricato')),

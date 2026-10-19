@@ -112,7 +112,8 @@
   }
   /* area ProAV (proav.hikpalermo.com): commesse, offerte, calendario, magazzino, demo e attività hanno raccolte proprie
      (proavCommesse, proavEventi…), riservate ai membri ProAV. Un «!» davanti al nome forza la raccolta del gruppo. */
-  const PAV = /^proav\./i.test(location.hostname);
+  // archivio scelto da chi usa ProAV: «pav» (privato, predefinito) oppure «grp» (quello di tutto il gruppo)
+  const PAV = /^proav\./i.test(location.hostname) && (() => { try { return localStorage.getItem('hp_pavSpace') !== 'grp'; } catch (e) { return true; } })();
   const PAVMAP = { commesse: 'proavCommesse', offerte: 'proavOfferte', eventi: 'proavEventi', magazzino: 'proavMagazzino', demo: 'proavDemo', feed: 'proavFeed' };
   const mapCol = p => { p = String(p).replace(/^\/|\/$/g, ''); if (p.startsWith('!')) return p.slice(1); if (!PAV) return p; const s = p.split('/'); if (PAVMAP[s[0]]) s[0] = PAVMAP[s[0]]; return s.join('/'); };
   const db = { collection: p => CollRef(mapCol(p)), doc: p => { const s = splitPath(mapCol(p)); return DocRef(s.col, s.id); } };
