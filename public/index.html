@@ -365,6 +365,9 @@ th.r,td.r{text-align:right}
 .cal .day:hover{background:var(--surface-2)}
 .cal .day.out{background:color-mix(in srgb,var(--surface) 55%,var(--bg))}
 .cal .day.out .n{color:var(--ink-3)}
+.cal .day.cz{background:color-mix(in srgb,#C8102E 22%,var(--surface))}
+.cal .day.cz:hover{background:color-mix(in srgb,#C8102E 30%,var(--surface))}
+.cal .day.cz.out{background:color-mix(in srgb,#C8102E 12%,var(--surface))}
 .cal .day.sel{box-shadow:inset 0 0 0 2px var(--accent)}
 .cal .n{font-size:.8rem;font-weight:600;font-variant-numeric:tabular-nums}
 .cal .day.today .n{background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:0 6px;align-self:flex-start}
@@ -500,6 +503,7 @@ body[data-lockwait] .app{visibility:hidden}
   .side{position:sticky;top:0;height:auto;z-index:25;flex-direction:row;align-items:center;gap:10px;padding-block:8px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-top:max(8px,env(safe-area-inset-top,0px));overflow-x:auto}
   .brand .sub,.side-foot{display:none}
   .brand b{font-size:1.05rem}
+  .brand .hp-pavlogo-img{width:96px;max-width:none;margin:0;flex:none}
   .nav{flex-direction:row}
   .nav button{padding:7px 9px}
   .nav button.on{box-shadow:inset 0 -3px 0 var(--side-accent)}
@@ -557,6 +561,7 @@ th.r .hp-sb{flex-direction:row-reverse}
 html.pav{--accent:#5B3FD6;--accent-ink:#FFFFFF;--accent-soft:#E7E1FB;--side:#17123A;--side-hover:#241C55;--side-accent:#B39DFF;--side-ink-2:#A59CD6;--lcd:#120E2E}
 @media (prefers-color-scheme:dark){html.pav:not([data-theme="light"]){--accent:#9D86FF;--accent-ink:#140B38;--accent-soft:#2C2160;--side:#0E0B26;--side-hover:#1A1540;--side-accent:#B39DFF;--lcd:#08061A}}
 html.pav[data-theme="dark"]{--accent:#9D86FF;--accent-ink:#140B38;--accent-soft:#2C2160;--side:#0E0B26;--side-hover:#1A1540;--side-accent:#B39DFF;--lcd:#08061A}
+.hp-pavlogo-img{display:block;width:100%;max-width:180px;height:auto;margin:2px 0 4px}
 .hp-pavtag{display:inline-block;margin-left:6px;font-style:normal;font-size:.62rem;letter-spacing:.12em;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--side-accent);color:#17123A;vertical-align:4px}
 .hp-pavstrip{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:stretch;margin-bottom:12px;border-left:4px solid var(--accent);background:linear-gradient(100deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface) 60%)}
 .hp-pavhero{display:flex;align-items:center;gap:10px;min-width:200px}
@@ -1320,9 +1325,9 @@ async function exportOffer(o){const X=await xlsxLib();const com=S.commesse.get(o
 VIEWS.cal={title:()=>'Calendario condiviso',mount(){if(!S.calMonth)S.calMonth=new Date();if(!S.calSel)S.calSel=dayKey(Date.now());this.root=$('#view');this.mine=this.mine||false;this.update();},update(){
   const r=this.root;const m=new Date(S.calMonth.getFullYear(),S.calMonth.getMonth(),1);const start=new Date(m);start.setDate(1-((m.getDay()+6)%7));
   const evs=[...S.eventi.values()].filter(e=>!this.mine||(e.part||[]).includes(S.me)||e.by===S.me);const byDay=new Map();evs.forEach(e=>{const last=dayKey(evLast(e));for(let d=new Date(dayKey(e.start)+'T12:00'),i=0;i<92;d.setDate(d.getDate()+1),i++){const k=dayKey(d);if(!byDay.has(k))byDay.set(k,[]);byDay.get(k).push(e);if(k>=last)break;}});byDay.forEach(a=>a.sort((x,y)=>(y.allDay?1:0)-(x.allDay?1:0)||x.start-y.start));
-  const grid=el('div',{class:'cal'},['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>el('div',{class:'dh'},d)));const today=dayKey(Date.now());
+  const CZ=chiusureAz();const grid=el('div',{class:'cal'},['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>el('div',{class:'dh'},d)));const today=dayKey(Date.now());
   for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=dayKey(d);const a=byDay.get(k)||[];
-    grid.append(el('div',{class:'day'+(d.getMonth()!==m.getMonth()?' out':'')+(k===today?' today':'')+(k===S.calSel?' sel':''),onclick:()=>{S.calSel=k;this.update();},ondblclick:()=>eventForm({day:k})},el('span',{class:'n'},d.getDate()),a.slice(0,3).map(e=>{const cont=dayKey(e.start)!==k;const lbl=e.allDay?e.titolo:(cont?'↳ ':fT(e.start)+' ')+e.titolo;return el('div',{class:'ch e-'+e.tipo+(e.allDay?' ad':'')+(cont?' cont':''),title:evWhen(e)+' · '+e.titolo,onclick:ev=>{ev.stopPropagation();eventDetail(e);}},lbl);}),a.length>3?el('span',{class:'more'},'+'+(a.length-3)+' altri'):null));}
+    const cz=CZ.get(d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate());grid.append(el('div',{class:'day'+(d.getMonth()!==m.getMonth()?' out':'')+(k===today?' today':'')+(k===S.calSel?' sel':'')+(cz?' cz':''),title:cz?'Chiusura aziendale':null,onclick:()=>{S.calSel=k;this.update();},ondblclick:()=>eventForm({day:k})},el('span',{class:'n'},d.getDate()),a.slice(0,3).map(e=>{const cont=dayKey(e.start)!==k;const lbl=e.allDay?e.titolo:(cont?'↳ ':fT(e.start)+' ')+e.titolo;return el('div',{class:'ch e-'+e.tipo+(e.allDay?' ad':'')+(cont?' cont':''),title:evWhen(e)+' · '+e.titolo,onclick:ev=>{ev.stopPropagation();eventDetail(e);}},lbl);}),a.length>3?el('span',{class:'more'},'+'+(a.length-3)+' altri'):null));}
   const selEv=byDay.get(S.calSel)||[];const selD=new Date(S.calSel+'T12:00');
   const side=el('section',{class:'panel'},el('div',{class:'panel-h'},el('h3',{text:selD.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}),btn('Nuovo evento',()=>eventForm({day:S.calSel}),'pri sm','plus')),selEv.length?el('div',{},selEv.map(evLi)):el('p',{class:'hint'},'Nessun evento in questa giornata. Fai doppio clic su un giorno del calendario per creare un evento.'),el('h4',{style:'margin-top:16px;margin-bottom:6px'},'In arrivo'),upcoming(30).filter(e=>!this.mine||(e.part||[]).includes(S.me)||e.by===S.me).slice(0,8).map(evLi));
   const nav=el('div',{class:'row between'},el('div',{class:'row'},btn('‹',()=>{S.calMonth=new Date(m.getFullYear(),m.getMonth()-1,1);this.update();},'sm'),el('h2',{style:'min-width:170px;text-align:center;text-transform:capitalize'},m.toLocaleDateString('it-IT',{month:'long',year:'numeric'})),btn('›',()=>{S.calMonth=new Date(m.getFullYear(),m.getMonth()+1,1);this.update();},'sm'),btn('Oggi',()=>{S.calMonth=new Date();S.calSel=today;this.update();},'sm ghost')),el('div',{class:'row'},el('label',{class:'row',style:'gap:6px'},el('input',{type:'checkbox',id:'calMine',checked:this.mine,onchange:e=>{this.mine=e.target.checked;this.update();}}),'Solo i miei'),el('div',{class:'row',style:'gap:4px'},ETIPI.map(([k])=>evPill(k)),window.hpEvTypes?el('button',{type:'button',class:'hp-capnew',title:'Aggiungi, rinomina o elimina i tipi di appuntamento',onclick:()=>hpEvTypes()},ic('edit',12),'Tipi'):null),btn('Nuovo evento',()=>eventForm({day:S.calSel}),'pri','plus')));
