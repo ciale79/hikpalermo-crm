@@ -5,7 +5,9 @@
 (function () {
   'use strict';
   const KEY = 'hp_cmpSel';
-  let sub = false, backfilled = false;
+  // uno storico per ogni fonte: salesHist (gruppo) e proavHist (area riservata ProAV)
+  const subs = new Map(), backfilled = new Set();
+  const hcol = () => (typeof salesDst === 'function' ? salesDst().hist : 'salesHist');
   S.sHist = null;
   const getSel = () => { try { return localStorage.getItem(KEY) || 'prev'; } catch (e) { return 'prev'; } };
   const setSel = v => { try { localStorage.setItem(KEY, v); } catch (e) { } };
@@ -14,22 +16,27 @@
   const days = (a, b) => Math.round((new Date(a + 'T12:00') - new Date(b + 'T12:00')) / 864e5);
 
   function ensure() {
-    if (sub || typeof db === 'undefined' || !db) return; sub = true;
-    db.collection('salesHist').onSnapshot(s => {
-      S.sHist = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(h => h.data && h.sales).sort((a, b) => a.data < b.data ? 1 : a.data > b.data ? -1 : 0);
-      cache.clear(); backfill(); changed();
-    }, () => { S.sHist = []; });
+    if (typeof db === 'undefined' || !db) return;
+    const col = hcol();
+    if (subs.has(col)) { if (S.sHist !== subs.get(col)) { S.sHist = subs.get(col); cache.clear(); } return; }
+    subs.set(col, null); S.sHist = null;
+    db.collection(col).onSnapshot(s => {
+      const arr = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(h => h.data && h.sales).sort((a, b) => a.data < b.data ? 1 : a.data > b.data ? -1 : 0);
+      subs.set(col, arr);
+      if (hcol() === col) { S.sHist = arr; cache.clear(); backfill(); changed(); }
+    }, () => { subs.set(col, []); if (hcol() === col) S.sHist = []; });
   }
   // istantanea dei dati attuali: si salva una volta sola (serve da base per i confronti futuri)
   const snap = (sales, fatt, extra) => ({ data: sales.data, dataLabel: sales.dataLabel || labF(sales.data), anno: sales.anno, file: sales.file || fatt.fileName || '', sales, fatt, at: Date.now(), by: S.me || null, ...(extra || {}) });
   window.hpSalesSnap = snap;
   async function backfill() {
     const r = S.salesRaw, F = S.fatt;
-    if (backfilled || !r || !F || !r.data || !S.sHist || !S.me) return;
+    const col = hcol();
+    if (backfilled.has(col) || !r || !F || !r.data || !S.sHist || !S.me) return;
     if (F.cut && F.cut !== r.data) return; // dati in aggiornamento: fatturato e totali non ancora allineati
-    backfilled = true;
+    backfilled.add(col);
     if (S.sHist.some(h => h.id === r.data)) return;
-    try { await db.collection('salesHist').doc(r.data).set(snap(r, F, { caricatoIl: F.caricatoIl || r.caricatoIl || null, caricatoDa: F.caricatoDa || r.caricatoDa || null })); } catch (e) { }
+    try { await db.collection(col).doc(r.data).set(snap(r, F, { caricatoIl: F.caricatoIl || r.caricatoIl || null, caricatoDa: F.caricatoDa || r.caricatoDa || null })); } catch (e) { }
   }
 
   // caricamenti confrontabili: stesso anno, con dati anteriori a quelli attuali
@@ -41,7 +48,7 @@
     const sel = getSel(); if (sel === 'none') return null;
     const P = pool(); if (!P.length) return null;
     const h = sel === 'prev' ? P[0] : (P.find(x => x.id === sel) || P[0]);
-    const ck = h.id + '|' + h.at + '|' + JSON.stringify((S.config || {}).italiaExtra || null);
+    const ck = hcol() + '|' + h.id + '|' + h.at + '|' + JSON.stringify((S.config || {}).italiaExtra || null);
     if (cache.has(ck)) return cache.get(ck);
     const C = { id: h.id, h, sales: typeof adjSales === 'function' ? adjSales(h.sales) : h.sales, F: h.fatt || {}, lab: 'dal ' + lab2(h.data), dataLabel: h.dataLabel || labF(h.data), gg: days(cur.data, h.data), prev: h === P[0] };
     cache.set(ck, C); return C;
@@ -104,11 +111,12 @@
     const draw = () => list.replaceChildren(...(S.sHist || []).map(h => el('div', { class: 'hp-catrow' },
       el('span', { class: 'grow' }, el('b', {}, h.dataLabel || labF(h.data)), el('span', { class: 'hint' }, ' · ' + (h.file || 'Sales Analysis') + (h.id === (S.salesRaw || {}).data ? ' · dati attuali' : '') + (h.solo ? ' · aggiunto allo storico' : ''))),
       el('span', { class: 'num hint' }, 'Sicilia ' + eurShort((h.sales || {}).siciliaOwn) + ' · Italia ' + eurShort((h.sales || {}).italiaOwn)),
-      h.id === (S.salesRaw || {}).data ? null : el('button', { type: 'button', class: 'icon-btn', title: 'Elimina dallo storico', 'aria-label': 'Elimina il caricamento del ' + (h.dataLabel || h.data), onclick: async () => { if (!await ask('Eliminare dallo storico il caricamento del ' + (h.dataLabel || labF(h.data)) + '?', 'Elimina')) return; if (await remove('salesHist', h.id)) { S.sHist = S.sHist.filter(x => x.id !== h.id); draw(); rerender && rerender(); } } }, ic('trash', 16)))));
+      h.id === (S.salesRaw || {}).data ? null : el('button', { type: 'button', class: 'icon-btn', title: 'Elimina dallo storico', 'aria-label': 'Elimina il caricamento del ' + (h.dataLabel || h.data), onclick: async () => { if (!await ask('Eliminare dallo storico il caricamento del ' + (h.dataLabel || labF(h.data)) + '?', 'Elimina')) return; if (await remove(hcol(), h.id)) { S.sHist = S.sHist.filter(x => x.id !== h.id); draw(); rerender && rerender(); } } }, ic('trash', 16)))));
     draw();
     const m = modal('Storico della Sales Analysis', el('div', { class: 'stack' }, el('p', { class: 'hint' }, 'Ogni caricamento resta nello storico e si può usare come termine di confronto. Quello dei dati attuali non si elimina.'), list), [el('span', { class: 'grow' }), btn('Chiudi', () => m.close())], { wide: true });
   }
 
   // si aggancia allo stato appena i dati sono disponibili
   const t = setInterval(() => { if (typeof db !== 'undefined' && db && S.me) { clearInterval(t); ensure(); } }, 800);
+  window.hpCmpEnsure = ensure;
 })();

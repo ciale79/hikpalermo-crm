@@ -7,7 +7,8 @@
   "workers_dev": false,
   "routes": [
     { "pattern": "hikpalermo.com", "custom_domain": true },
-    { "pattern": "www.hikpalermo.com", "custom_domain": true }
+    { "pattern": "www.hikpalermo.com", "custom_domain": true },
+    { "pattern": "proav.hikpalermo.com", "custom_domain": true }
   ],
   "assets": {
     "directory": "./public",

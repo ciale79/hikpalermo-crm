@@ -300,6 +300,23 @@ ${ev.note ? `<tr><td style="color:#768797;padding:2px 12px 2px 0;vertical-align:
   }
 }
 
+/* ---------------- area riservata ProAV (proav.hikpalermo.com) ----------------
+   Collezioni che iniziano per «proav» (listini, Sales Analysis e storico ProAV): le leggono e scrivono solo
+   i membri ProAV (config/proav.emails, di base Antonino Pumilia) e il proprietario del CRM. */
+const PAV_DEF = ['antonino.pumilia@hikvision.com'];
+const isPavCol = col => /^proav/i.test(String(col || ''));
+const isPavHost = url => /^proav\./i.test(url.hostname);
+async function pavEmails(env) { const d = (await getDoc(env, 'config', 'proav'))?.data; return (d && Array.isArray(d.emails) ? d.emails : PAV_DEF).map(normEmail).filter(Boolean); }
+async function isOwnerU(env, u) { if (!u) return false; if (u.email === normEmail(env.OWNER_EMAIL)) return true; return (await ruoli(env)).owner === u.id; }
+async function isPav(env, u) { if (!u) return false; if (await isOwnerU(env, u)) return true; return (await pavEmails(env)).includes(normEmail(u.email)); }
+async function pavUids(env) {
+  const em = [...new Set([...(await pavEmails(env)), normEmail(env.OWNER_EMAIL)])];
+  const ids = (await env.DB.prepare(`SELECT id FROM users WHERE email IN (${em.map(() => '?').join(',')})`).bind(...em).all()).results.map(x => x.id);
+  const o = (await ruoli(env)).owner; if (o && !ids.includes(o)) ids.push(o);
+  return ids;
+}
+const pavDenied = () => new Response(`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HIK PALERMO · ProAV</title><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#15123A;color:#E9E6FF}.b{max-width:420px;padding:24px;text-align:center}h1{font-size:1.3rem}a{color:#C4B5FD}</style></head><body><div class="b"><h1>Area riservata ProAV</h1><p>Il tuo account non è abilitato a quest'area.</p><p><a href="https://hikpalermo.com/">Vai al CRM HIK PALERMO</a> · <a href="/api/auth/logout" onclick="fetch('/api/auth/logout',{method:'POST',headers:{'x-hp':'1'}}).then(()=>location.href='/login');return false">Esci</a></p></div></body></html>`, { status: 403, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+
 /* ---------------- permessi ---------------- */
 function validPath(col, id) {
   if (!col || !id || typeof col !== 'string' || typeof id !== 'string') return false;
@@ -312,6 +329,8 @@ function canRead(u, col) {
 }
 async function canWrite(env, u, col, id) {
   if (!canRead(u, col)) return false;
+  if (isPavCol(col)) return isPav(env, u);
+  if (col === 'config' && id === 'proav') return isOwnerU(env, u); // chi entra nell'area ProAV lo decide solo il proprietario
   if (col === 'config') return id === 'sales' || id === 'fatturato' ? true : isAdmin(env, u); // fatturato: lo aggiorna chiunque nel gruppo
   if (col === 'team') return id === u.id || isAdmin(env, u);
   return true;
@@ -352,7 +371,8 @@ async function writeDoc(env, ctx, u, { op, col, id, data }) {
   }
   const msg = { col, id, v, data: next, by: u.id };
   const only = col.startsWith('data/') ? u.id : null;
-  ctx.waitUntil(broadcast(env, msg, only));
+  if (isPavCol(col)) ctx.waitUntil(pavUids(env).then(ids => Promise.all(ids.map(id => broadcast(env, msg, id)))));
+  else ctx.waitUntil(broadcast(env, msg, only));
   ctx.waitUntil(afterWrite(env, u, op, col, id, prev?.data || null, next).catch(e => console.log('hook', e)));
   return json({ ok: true, v, data: next });
 }
@@ -713,11 +733,12 @@ async function api(req, env, ctx, url, u) {
     ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).catch(e => console.log('mig', e && e.stack || e)));
     const r = await ruoli(env);
     const team = await getDoc(env, 'team', u.id);
-    return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd });
+    return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd, proav: await isPav(env, u) });
   }
   if (p === '/api/db' && m === 'GET') {
     const col = url.searchParams.get('col') || '';
     if (!validPath(col, 'x') || !canRead(u, col)) return err('permission_denied', 'Accesso negato', 403);
+    if (isPavCol(col) && !(await isPav(env, u))) return err('permission_denied', 'Area riservata ProAV', 403);
     const { results } = await env.DB.prepare('SELECT id,data,version FROM docs WHERE col=?').bind(col).all();
     return json({ docs: results.map(r => ({ id: r.id, data: parse(r.data), v: r.version })) });
   }
@@ -791,6 +812,17 @@ async function api(req, env, ctx, url, u) {
   if (p === '/api/fetch' && m === 'GET') return fetchExternal(url.searchParams.get('u') || '');
   if (p === '/api/hikpage' && m === 'GET') return json(await hikPage(env, url.searchParams.get('code'), url.searchParams.get('force') === '1'));
   if (p === '/api/auth/password' && m === 'POST') return setPassword(req, env, u);
+  // listini ProAV: file JSON su R2, accessibili solo ai membri ProAV
+  if (p === '/api/proav/blob') {
+    if (!(await isPav(env, u))) return err('permission_denied', 'Area riservata ProAV', 403);
+    const id = url.searchParams.get('id') || '';
+    if (!/^[A-Za-z0-9_-]{6,60}$/.test(id)) return err('invalid_argument', 'Id non valido');
+    const key = 'proav/' + id;
+    if (m === 'GET') { const o = await env.FILES.get(key); if (!o) return err('not_found', 'Listino non trovato', 404); return new Response(o.body, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }); }
+    if (m === 'PUT') { const buf = await req.arrayBuffer(); if (buf.byteLength > 40 * 1048576) return err('too_large', 'Listino troppo grande', 413); await env.FILES.put(key, buf, { httpMetadata: { contentType: 'application/json' }, customMetadata: { by: u.id } }); return json({ ok: true, size: buf.byteLength }); }
+    if (m === 'DELETE') { await env.FILES.delete(key); return json({ ok: true }); }
+    return err('invalid_argument', 'Metodo non valido');
+  }
   if (p === '/api/ics-link' && m === 'GET') { const id = url.searchParams.get('id') || ''; if (!(await getDoc(env, 'eventi', id))) return err('not_found', 'Evento non trovato', 404); return json({ url: (env.APP_URL || url.origin) + '/ics/' + encodeURIComponent(id) + '.ics?k=' + await icsSig(env, id) }); }
   if (p === '/api/geocode' && m === 'GET') return json(await geocode(env, url.searchParams.get('q')));
   if (p === '/api/auth/logout' && m === 'POST') {
@@ -829,9 +861,11 @@ export default {
         if (req.method === 'GET' && (p === '/' || p.endsWith('.html') || (req.headers.get('accept') || '').includes('text/html'))) return Response.redirect(url.origin + '/login', 302);
         return new Response('Accesso richiesto', { status: 401 });
       }
+      if (isPavHost(url) && req.method === 'GET' && (p === '/' || p === '/index.html') && !(await isPav(env, u))) return pavDenied();
       if (p === '/go/hik') return new Response(goHikHtml(url.searchParams.get('code')), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
       if (p.startsWith('/_blob/')) {
         const id = p.slice(7);
+        if (/^proav/i.test(id)) return new Response('File non trovato', { status: 404 });
         const o = await env.FILES.get(id);
         if (!o) return new Response('File non trovato', { status: 404 });
         const h = new Headers(); o.writeHttpMetadata(h); h.set('etag', o.httpEtag); h.set('cache-control', 'private, max-age=31536000, immutable');

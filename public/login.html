@@ -149,5 +149,12 @@ $('#back').onclick=()=>step(1);$('#back2').onclick=()=>{setMode('login');step(1)
 (async()=>{const q=new URLSearchParams(location.search);if(q.get('step')==='pwd'){try{const r=await fetch('/api/me',{credentials:'same-origin'});if(r.ok){const m=await r.json();$('#emailHid').value=m.email;step(4);return;}}catch(e){}}
   if(q.get('reset')){reset=true;setMode('code');}})();
 </script>
+<script>
+/* area riservata ProAV: stesso accesso, grafica dedicata */
+if(/^proav\./i.test(location.hostname)){document.title='HIK Palermo · ProAV';const r=document.documentElement.style;r.setProperty('--side','#17123A');r.setProperty('--accent','#5B3FD6');r.setProperty('--side-accent','#B39DFF');r.setProperty('--accent-soft','#E7E1FB');
+const l=document.querySelector('.brand .logo');if(l)l.insertAdjacentHTML('beforeend',' <span style="font-size:.4em;letter-spacing:.14em;vertical-align:middle;background:#B39DFF;color:#17123A;padding:3px 8px;border-radius:5px;font-style:normal">ProAV</span>');
+const p=document.querySelector('.brand p');if(p)p.textContent='Area riservata ProAV: listini e Sales Analysis dedicati. Accedi con lo stesso account del CRM HIK PALERMO.';
+const d=document.querySelector('.brand > span');if(d)d.textContent='proav.hikpalermo.com';}
+</script>
 </body>
 </html>

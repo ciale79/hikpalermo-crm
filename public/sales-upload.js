@@ -40,13 +40,14 @@
     const diff = (a, b) => b == null ? '' : ' (' + (a - b >= 0 ? '+' : '') + eurShort(a - b) + ' rispetto ai dati attuali)';
     const older = cur.data && sales.data < cur.data;
     const same = cur.data && sales.data === cur.data;
+    const D = salesDst(); // gruppo o area riservata ProAV
     const hist = S.sHist || [];
     const inHist = hist.some(h => h.id === sales.data);
     // storico: l'istantanea dei dati attuali (se manca) e quella del file appena letto
     const saveHist = async solo => {
       try {
-        if (cur.data && S.fatt && !hist.some(h => h.id === cur.data) && cur.data !== sales.data) await db.collection('salesHist').doc(cur.data).set(window.hpSalesSnap(S.salesRaw, S.fatt, { caricatoIl: S.fatt.caricatoIl || null, caricatoDa: S.fatt.caricatoDa || null }));
-        await db.collection('salesHist').doc(sales.data).set(window.hpSalesSnap({ ...(solo ? {} : cur), ...sales }, { ...fatturato, fileName: fname }, { caricatoIl: Date.now(), caricatoDa: S.me, solo: !!solo }));
+        if (cur.data && S.fatt && !hist.some(h => h.id === cur.data) && cur.data !== sales.data) await db.collection(D.hist).doc(cur.data).set(window.hpSalesSnap(S.salesRaw, S.fatt, { caricatoIl: S.fatt.caricatoIl || null, caricatoDa: S.fatt.caricatoDa || null }));
+        await db.collection(D.hist).doc(sales.data).set(window.hpSalesSnap({ ...(solo ? {} : cur), ...sales }, { ...fatturato, fileName: fname }, { caricatoIl: Date.now(), caricatoDa: S.me, solo: !!solo }));
         return true;
       } catch (e) { toast(errMsg(e), 'bad'); return false; }
     };
@@ -64,17 +65,17 @@
       mode === 'hist' || older ? el('div', { class: 'banner' }, older ? 'Questo file (dati al ' + sales.dataLabel + ') è più vecchio dei dati attuali (' + cur.dataLabel + '): aggiungilo allo storico per usarlo come confronto, senza cambiare i dati che vedono tutti.' + (inHist ? ' Lo storico ha già un caricamento con questa data: verrà sostituito.' : '') : 'Il file verrà aggiunto allo storico dei caricamenti.' + (same ? ' Ha la stessa data dei dati attuali.' : '')) : null,
       yearChange ? el('div', { class: 'banner' }, 'Il file riguarda il ' + sales.anno + ', i dati attuali il ' + cur.anno + ': gli obiettivi restano quelli già impostati, ricordati di aggiornarli.') : null,
       el('dl', { class: 'dl' }, rows.map(([a, b]) => [el('dt', {}, a), el('dd', {}, b)])),
-      el('p', { class: 'hint' }, 'Gli obiettivi (Italia, Sicilia, ProExpert e Solution) restano invariati. Tutti i colleghi vedranno subito i nuovi dati.'));
+      D.pav ? el('div', { class: 'banner hp-pavban' }, 'Sales Analysis riservata ProAV: la vedete solo tu e chi è abilitato all\'area ProAV. I dati del gruppo non cambiano.') : el('p', { class: 'hint' }, 'Gli obiettivi (Italia, Sicilia, ProExpert e Solution) restano invariati. Tutti i colleghi vedranno subito i nuovi dati.'));
     const histBtn = older || mode === 'hist' ? btn('Aggiungi solo allo storico', async () => {
       if (await saveHist(true)) { m.close(); toast('Caricamento del ' + sales.dataLabel + ' aggiunto allo storico: lo trovi in «Confronta con»'); if (S.view === 'fatt' || S.view === 'dash') VIEWS[S.view].update(); }
     }, older ? 'pri' : '', 'plus') : null;
-    const m = modal(mode === 'hist' ? 'Storico della Sales Analysis' : 'Aggiorna il fatturato', body, [el('span', { class: 'grow' }), btn('Annulla', () => m.close()), histBtn, older ? null : btn('Aggiorna i dati', async () => {
+    const m = modal((mode === 'hist' ? 'Storico della Sales Analysis' : 'Aggiorna il fatturato') + (D.pav ? ' · ProAV' : ''), body, [el('span', { class: 'grow' }), btn('Annulla', () => m.close()), histBtn, older ? null : btn('Aggiorna i dati', async () => {
       if (!await saveHist(false)) return;
-      const ok1 = await put('config', 'fatturato', { ...fatturato, caricatoDa: S.me, caricatoIl: Date.now(), fileName: fname });
-      const ok2 = ok1 && await patch('config', 'sales', { ...sales, caricatoDa: S.me, caricatoIl: Date.now() });
+      const ok1 = await put(D.fatt[0], D.fatt[1], { ...fatturato, caricatoDa: S.me, caricatoIl: Date.now(), fileName: fname });
+      const ok2 = ok1 && await (D.pav && !S.salesP ? put : patch)(D.sales[0], D.sales[1], { ...sales, caricatoDa: S.me, caricatoIl: Date.now() });
       if (ok1 && ok2) {
         m.close(); toast('Fatturato aggiornato al ' + sales.dataLabel);
-        feed('fatturato', 'ha aggiornato il fatturato con la Sales Analysis al ' + sales.dataLabel, null, []);
+        if (!D.pav) feed('fatturato', 'ha aggiornato il fatturato con la Sales Analysis al ' + sales.dataLabel, null, []);
         if (S.view === 'fatt') VIEWS.fatt.update();
       }
     }, 'pri', 'up')]);
