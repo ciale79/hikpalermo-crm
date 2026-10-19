@@ -17,9 +17,13 @@
   // ——— Pillola del giorno: un articolo contrassegnato NEW, scelto in base alla data (uguale per tutti nella giornata)
   let shift = 0;
   const hash = s => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+  // su proav.hikpalermo.com: prodotti audio video del listino Pro T&D (display, LED, monitor interattivi, audio…)
+  const AV = new Set(['LCD WALL', 'DISPLAY', 'DIGITAL SIGNAGE', 'INTERACTIVE MONITOR', 'LEDWALL', 'WEBCAM', 'AUDIO', 'CONTROLLER']);
+  const isPav = () => typeof HP_PAV !== 'undefined' && HP_PAV;
   function pick() {
     const seen = new Set(), news = [];
-    for (const it of S.cat || []) if (it.inf === 'NEW' && !seen.has(it.cn)) { seen.add(it.cn); news.push(it); }
+    const ok = isPav() ? (it => it.L === 'td' && AV.has(String(it.sz || '').toUpperCase()) && !/accessor|staff|bracket|support|mount|kit\b|cavo|cable|telecomando|remote/i.test((it.b || '') + ' ' + (it.fm || ''))) : (it => it.inf === 'NEW');
+    for (const it of S.cat || []) if (ok(it) && !seen.has(it.cn)) { seen.add(it.cn); news.push(it); }
     if (!news.length) return null;
     news.sort((a, b) => a.cn < b.cn ? -1 : 1);
     const d = new Date(), key = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
@@ -28,14 +32,14 @@
   window.hpPillTile = function () {
     const d = new Date(); const P = pick();
     const date = el('div', { class: 'hp-pill-d' }, el('b', {}, d.getDate() + ' ' + d.toLocaleDateString('it-IT', { month: 'long' })), el('small', {}, d.toLocaleDateString('it-IT', { weekday: 'long' })));
-    if (!P) return el('div', { class: 'kpi hp-pill' }, el('span', { class: 'eyebrow' }, 'Pillola del giorno'), date, el('div', {}, el('span', { class: 's' }, S.cat ? 'Nessun articolo NEW nei listini' : 'Caricamento listini…')));
+    if (!P) return el('div', { class: 'kpi hp-pill' }, el('span', { class: 'eyebrow' }, 'Pillola del giorno'), date, el('div', {}, el('span', { class: 's' }, S.cat && S.cat.length ? (isPav() ? 'Nessun prodotto audio video nel listino Pro T&D' : 'Nessun articolo NEW nei listini') : 'Caricamento listini…')));
     const it = P.it;
-    const again = el('button', { type: 'button', class: 'hp-capnew', title: 'Mostra un altro articolo NEW', 'aria-label': 'Un altro articolo NEW', onclick: e => { e.stopPropagation(); shift += 1 + Math.floor(Math.random() * (P.n - 1)); const n = window.hpPillTile(); tile.replaceWith(n); } }, '↻');
+    const again = el('button', { type: 'button', class: 'hp-capnew', title: isPav() ? 'Mostra un altro prodotto audio video' : 'Mostra un altro articolo NEW', 'aria-label': isPav() ? 'Un altro prodotto audio video' : 'Un altro articolo NEW', onclick: e => { e.stopPropagation(); shift += 1 + Math.floor(Math.random() * (P.n - 1)); const n = window.hpPillTile(); tile.replaceWith(n); } }, '↻');
     const tile = el('div', { class: 'kpi hp-pill', role: 'button', tabindex: '0', title: 'Apri la scheda di ' + it.c, onclick: () => artDetail(it), onkeydown: e => { if (e.key === 'Enter') artDetail(it); } },
       el('div', { class: 'row between', style: 'gap:6px;flex-wrap:nowrap' }, el('span', { class: 'eyebrow' }, 'Pillola del giorno'), again),
       date,
       el('div', { class: 'hp-pill-b' }, thumb(it.im, 48),
-        el('div', { class: 'hp-pill-t' }, el('div', { class: 'row', style: 'gap:6px;flex-wrap:nowrap;min-width:0' }, el('span', { class: 'tag new' }, 'NEW'), el('b', { class: 'mono hp-pill-c', title: it.c }, it.c)), el('span', { class: 'hp-pill-x', title: it.b }, it.b), el('span', { class: 's num' }, 'Listino ' + eur(it.p) + (it.L === 'sol' ? ' · Solution' : ' · Pro')))));
+        el('div', { class: 'hp-pill-t' }, el('div', { class: 'row', style: 'gap:6px;flex-wrap:nowrap;min-width:0' }, isPav() ? el('span', { class: 'tag new hp-avtag', title: 'Categoria nel listino Pro T&D' }, String(it.sz || 'AV')) : el('span', { class: 'tag new' }, 'NEW'), el('b', { class: 'mono hp-pill-c', title: it.c }, it.c)), el('span', { class: 'hp-pill-x', title: it.b }, it.b), el('span', { class: 's num' }, 'Listino ' + eur(it.p) + (isPav() ? ' · Pro T&D' : it.L === 'sol' ? ' · Solution' : ' · Pro')))));
     return tile;
   };
 })();
