@@ -120,17 +120,17 @@ function cliAddr(d) {
 }
 async function autoGeo(env, col, id, prev, data) {
   if (!data) return;
-  let q = '';
-  if (col === 'eventi') q = String(data.luogo || '').trim();
-  else if (col === 'commesse') q = [data.indirizzo, data.citta].filter(x => x && String(x).trim()).join(', ');
+  let q = ''; const kind = baseCol(col);
+  if (kind === 'eventi') q = String(data.luogo || '').trim();
+  else if (kind === 'commesse') q = [data.indirizzo, data.citta].filter(x => x && String(x).trim()).join(', ');
   else if (col === 'clienti') q = cliAddr(data);
   else return;
-  const prevQ = prev ? (col === 'eventi' ? String(prev.luogo || '').trim() : col === 'clienti' ? cliAddr(prev) : [prev.indirizzo, prev.citta].filter(x => x && String(x).trim()).join(', ')) : '';
+  const prevQ = prev ? (kind === 'eventi' ? String(prev.luogo || '').trim() : col === 'clienti' ? cliAddr(prev) : [prev.indirizzo, prev.citta].filter(x => x && String(x).trim()).join(', ')) : '';
   const manual = data.lat != null && (!prev || prev.lat !== data.lat || prev.lng !== data.lng);
   if (manual) { if (data.geoAuto) await patchDoc(env, col, id, { geoAuto: null }); return; } // coordinate inserite a mano
   if (data.lat != null && !data.geoAuto) return;        // posizione manuale: resta
   if (data.lat != null && q === prevQ) return;          // già posizionato e indirizzo invariato
-  if (!q) { if (col === 'eventi' && data.lat != null && data.geoAuto) await patchDoc(env, col, id, { lat: null, lng: null, geoAuto: null }); return; }
+  if (!q) { if (kind === 'eventi' && data.lat != null && data.geoAuto) await patchDoc(env, col, id, { lat: null, lng: null, geoAuto: null }); return; }
   if (data.geoQ === q && data.lat == null) return;      // già cercato senza risultati
   let r = await geocode(env, q);
   if (!r[0] && col === 'clienti' && data.citta) r = await geocode(env, [data.citta, data.prov, 'Italia'].filter(Boolean).join(', ')); // ripiego: centro città
@@ -141,8 +141,10 @@ async function autoGeo(env, col, id, prev, data) {
 const comAddrFields = k => ({ indirizzo: String(k.indirizzo || '').trim(), citta: String(k.citta || '').trim(), addrCli: true, ...(k.lat != null ? { lat: k.lat, lng: k.lng, geoAuto: true, geoQ: [String(k.indirizzo || '').trim(), String(k.citta || '').trim()].filter(Boolean).join(', ') } : { lat: null, lng: null, geoAuto: null }) });
 async function syncComAddr(env, cliId) {
   const k = (await getDoc(env, 'clienti', cliId))?.data; if (!k) return;
-  const { results } = await env.DB.prepare("SELECT id FROM docs WHERE col='commesse' AND json_extract(data,'$.clienteId')=? AND json_extract(data,'$.addrCli')=1").bind(cliId).all();
-  for (const r of results) await patchDoc(env, 'commesse', r.id, comAddrFields(k));
+  for (const col of ['commesse', 'proavCommesse']) {
+    const { results } = await env.DB.prepare("SELECT id FROM docs WHERE col=? AND json_extract(data,'$.clienteId')=? AND json_extract(data,'$.addrCli')=1").bind(col, cliId).all();
+    for (const r of results) await patchDoc(env, col, r.id, comAddrFields(k));
+  }
 }
 async function migrateComAddr(env) {
   const key = 'mig_com_addr_cli';
@@ -167,7 +169,7 @@ async function patchDoc(env, col, id, fields) {
   for (const k of Object.keys(fields)) if (fields[k] === null && (k === 'geoAuto')) delete next[k];
   const v = Math.max(cur.v + 1, now());
   await env.DB.prepare('UPDATE docs SET data=?, version=?, updated=? WHERE col=? AND id=?').bind(JSON.stringify(next), v, now(), col, id).run();
-  await broadcast(env, { col, id, v, data: next, by: 'server' });
+  await bcast(env, { col, id, v, data: next, by: 'server' });
 }
 
 /* ---------------- email (Resend) ---------------- */
@@ -236,7 +238,7 @@ async function publicIcs(env, url) {
   const id = decodeURIComponent(url.pathname.slice(5).replace(/\.ics$/, ''));
   const k = url.searchParams.get('k') || '';
   if (!/^[A-Za-z0-9_\-]{1,100}$/.test(id) || !safeEq(k, await icsSig(env, id))) return new Response('Link non valido', { status: 404 });
-  const d = await getDoc(env, 'eventi', id);
+  const d = (await getDoc(env, 'eventi', id)) || (await getDoc(env, 'proavEventi', id));
   if (!d) return new Response('Evento non più disponibile', { status: 404 });
   const ics = await buildIcs(env, id, d.data, 'PUBLISH');
   const name = (d.data.titolo || 'evento').replace(/[^\w\- àèéìòù]/gi, '').trim().slice(0, 60) || 'evento';
@@ -245,15 +247,15 @@ async function publicIcs(env, url) {
 
 /* ---------------- hook dopo le scritture ---------------- */
 async function afterWrite(env, u, op, col, id, prev, data) {
-  if (op !== 'delete' && (col === 'eventi' || col === 'commesse' || col === 'clienti')) { try { await autoGeo(env, col, id, prev, data); } catch (e) { console.log('geo', e); } }
+  if (op !== 'delete' && ['eventi', 'commesse', 'clienti'].includes(baseCol(col))) { try { await autoGeo(env, col, id, prev, data); } catch (e) { console.log('geo', e); } }
   if (op !== 'delete' && col === 'clienti' && prev && data && cliAddr(prev) !== cliAddr(data)) { try { await syncComAddr(env, id); } catch (e) { console.log('addr', e); } }
   // Notifiche: ogni voce del feed con destinatari diventa una email
-  if (col === 'feed' && op === 'set' && !prev && data && Array.isArray(data.to) && data.to.length) {
+  if (baseCol(col) === 'feed' && op === 'set' && !prev && data && Array.isArray(data.to) && data.to.length) {
     if (data.t === 'evento' && !data.ref && /^ha annullato/.test(data.msg || '')) return; // gestito dalla cancellazione dell'evento
     const by = await nameOf(env, data.by) || u.name || 'Un collega';
     let ics = null, ev = null;
     if (data.t === 'evento' && data.ref && data.ref.k === 'evento') {
-      ev = (await getDoc(env, 'eventi', data.ref.id))?.data;
+      ev = (await getDoc(env, pavTwin(col, 'eventi'), data.ref.id))?.data;
       if (ev) ics = await buildIcs(env, data.ref.id, ev, 'REQUEST');
     }
     for (const rid of data.to) {
@@ -271,14 +273,14 @@ ${ev.note ? `<tr><td style="color:#768797;padding:2px 12px 2px 0;vertical-align:
       const subj = (data.t === 'evento' && ev ? 'Calendario · ' : 'HIK PALERMO · ') + by + ' ' + (data.msg || '').slice(0, 120);
       await sendMail(env, {
         to, subject: subj, kind: 'feed:' + data.t,
-        html: mailShell(data.t === 'evento' ? 'Aggiornamento del calendario' : 'Novità nel CRM', body, ['Apri il CRM', env.APP_URL + '/']),
-        text: by + ' ' + data.msg + '\n' + env.APP_URL,
+        html: mailShell(data.t === 'evento' ? 'Aggiornamento del calendario' : 'Novità nel CRM', body, ['Apri il CRM', appUrlFor(env, col) + '/']),
+        text: by + ' ' + data.msg + '\n' + appUrlFor(env, col),
         attachments: ics ? [{ filename: 'invito.ics', content: b64(ics), content_type: 'text/calendar; method=REQUEST' }] : undefined
       });
     }
   }
   // Evento cancellato: invia l'annullamento ai partecipanti
-  if (col === 'eventi' && op === 'delete' && prev) {
+  if (baseCol(col) === 'eventi' && op === 'delete' && prev) {
     const ics = await buildIcs(env, id, { ...prev, upd: now() }, 'CANCEL');
     const by = await nameOf(env, u.id) || u.name || 'Un collega';
     for (const p of prev.part || []) {
@@ -286,7 +288,7 @@ ${ev.note ? `<tr><td style="color:#768797;padding:2px 12px 2px 0;vertical-align:
       const to = await emailOf(env, p); if (!to) continue;
       await sendMail(env, {
         to, kind: 'evento:annullato', subject: 'Annullato · ' + (prev.titolo || 'evento') + ' · ' + (prev.allDay ? whenTxt(prev) : fmtDT(prev.start)),
-        html: mailShell('Evento annullato', `<p><b>${esc(by)}</b> ha annullato «${esc(prev.titolo)}» del ${esc(prev.allDay ? whenTxt(prev) : fmtDT(prev.start))}.</p>`, ['Apri il calendario', env.APP_URL + '/']),
+        html: mailShell('Evento annullato', `<p><b>${esc(by)}</b> ha annullato «${esc(prev.titolo)}» del ${esc(prev.allDay ? whenTxt(prev) : fmtDT(prev.start))}.</p>`, ['Apri il calendario', appUrlFor(env, col) + '/']),
         attachments: [{ filename: 'annullamento.ics', content: b64(ics), content_type: 'text/calendar; method=CANCEL' }]
       });
     }
@@ -315,6 +317,12 @@ async function pavUids(env) {
   const o = (await ruoli(env)).owner; if (o && !ids.includes(o)) ids.push(o);
   return ids;
 }
+// raccolte ProAV «gemelle» di quelle del gruppo (commesse, calendario, magazzino…): stessa logica, dati separati
+const PAV_BASE = { proavCommesse: 'commesse', proavOfferte: 'offerte', proavEventi: 'eventi', proavMagazzino: 'magazzino', proavDemo: 'demo', proavFeed: 'feed' };
+const baseCol = col => PAV_BASE[col] || col;
+const pavTwin = (col, base) => isPavCol(col) ? Object.keys(PAV_BASE).find(k => PAV_BASE[k] === base) : base; // es. pavTwin('proavFeed','eventi') → 'proavEventi'
+const appUrlFor = (env, col) => isPavCol(col) ? String(env.APP_URL || 'https://hikpalermo.com').replace('://', '://proav.') : env.APP_URL;
+async function bcast(env, msg) { if (isPavCol(msg.col)) { for (const id of await pavUids(env)) await broadcast(env, msg, id); } else await broadcast(env, msg); }
 const pavDenied = () => new Response(`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HIK PALERMO · ProAV</title><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#15123A;color:#E9E6FF}.b{max-width:420px;padding:24px;text-align:center}h1{font-size:1.3rem}a{color:#C4B5FD}</style></head><body><div class="b"><h1>Area riservata ProAV</h1><p>Il tuo account non è abilitato a quest'area.</p><p><a href="https://hikpalermo.com/">Vai al CRM HIK PALERMO</a> · <a href="/api/auth/logout" onclick="fetch('/api/auth/logout',{method:'POST',headers:{'x-hp':'1'}}).then(()=>location.href='/login');return false">Esci</a></p></div></body></html>`, { status: 403, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 
 /* ---------------- permessi ---------------- */
@@ -823,7 +831,7 @@ async function api(req, env, ctx, url, u) {
     if (m === 'DELETE') { await env.FILES.delete(key); return json({ ok: true }); }
     return err('invalid_argument', 'Metodo non valido');
   }
-  if (p === '/api/ics-link' && m === 'GET') { const id = url.searchParams.get('id') || ''; if (!(await getDoc(env, 'eventi', id))) return err('not_found', 'Evento non trovato', 404); return json({ url: (env.APP_URL || url.origin) + '/ics/' + encodeURIComponent(id) + '.ics?k=' + await icsSig(env, id) }); }
+  if (p === '/api/ics-link' && m === 'GET') { const id = url.searchParams.get('id') || ''; if (!(await getDoc(env, 'eventi', id)) && !((await isPav(env, u)) && (await getDoc(env, 'proavEventi', id)))) return err('not_found', 'Evento non trovato', 404); return json({ url: (env.APP_URL || url.origin) + '/ics/' + encodeURIComponent(id) + '.ics?k=' + await icsSig(env, id) }); }
   if (p === '/api/geocode' && m === 'GET') return json(await geocode(env, url.searchParams.get('q')));
   if (p === '/api/auth/logout' && m === 'POST') {
     const tok = cookie(req, 'hp_s');
@@ -892,7 +900,7 @@ export default {
     const t = now();
     await env.DB.batch([env.DB.prepare('DELETE FROM otp WHERE expires<?').bind(t - 864e5), env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(t)]);
     const tomorrow = romeDay(t + 864e5);
-    const { results } = await env.DB.prepare("SELECT id,data FROM docs WHERE col='eventi' AND json_extract(data,'$.start') BETWEEN ? AND ?").bind(t, t + 3 * 864e5).all();
+    const { results } = await env.DB.prepare("SELECT id,col,data FROM docs WHERE col IN ('eventi','proavEventi') AND json_extract(data,'$.start') BETWEEN ? AND ?").bind(t, t + 3 * 864e5).all();
     const per = new Map();
     for (const r of results) {
       const e = parse(r.data); if (!e || romeDay(e.start) !== tomorrow) continue;
@@ -921,7 +929,7 @@ export default {
 // Promemoria del magazzino: prodotti in demo / POC alle date scelte e il giorno del rientro (poi ogni 7 giorni se scaduto)
 async function demoReminders(env, t) {
   const today = romeDay(t);
-  const { results } = await env.DB.prepare("SELECT id,data FROM docs WHERE col='demo' AND coalesce(json_extract(data,'$.stato'),'aperta')<>'chiusa'").all();
+  const { results } = await env.DB.prepare("SELECT id,col,data FROM docs WHERE col IN ('demo','proavDemo') AND coalesce(json_extract(data,'$.stato'),'aperta')<>'chiusa'").all();
   const TIP = { demo: 'demo', poc: 'POC', visione: 'conto visione' };
   const fk = k => k ? k.slice(8, 10) + '/' + k.slice(5, 7) + '/' + k.slice(0, 4) : '';
   for (const r of results) {
@@ -936,17 +944,18 @@ async function demoReminders(env, t) {
     if (await env.DB.prepare('SELECT 1 FROM reminders WHERE key=?').bind(key).first()) continue;
     await env.DB.prepare('INSERT INTO reminders(key,at) VALUES(?,?)').bind(key, t).run();
     const cli = d.clienteId ? (await getDoc(env, 'clienti', d.clienteId))?.data : null;
-    const com = d.commessaId ? (await getDoc(env, 'commesse', d.commessaId))?.data : null;
+    const com = d.commessaId ? (await getDoc(env, pavTwin(r.col, 'commesse'), d.commessaId))?.data : null;
     const cn = cli && cli.nome || 'cliente';
     const subj = why === 'scaduto' ? 'Rientro scaduto: ' + TIP[d.tipo || 'demo'] + ' presso ' + cn : why === 'rientro' ? 'Oggi rientro previsto: ' + TIP[d.tipo || 'demo'] + ' presso ' + cn : 'Promemoria ' + TIP[d.tipo || 'demo'] + ': materiale presso ' + cn;
     const rows = out.map(x => `<tr><td style="padding:4px 12px 4px 0;font-family:Consolas,monospace;font-weight:bold">${esc(x.code)}</td><td style="padding:4px 12px 4px 0;font-family:Consolas,monospace;color:#45576A">${esc(x.seriale || '—')}</td><td style="padding:4px 0;color:#45576A;font-size:13px">${esc((x.desc || '').slice(0, 80))}</td></tr>`).join('');
     const info = `<p style="margin:0 0 10px"><b>${esc(cn)}</b>${com ? ' · commessa ' + esc(com.nome || '') : ''}<br><span style="color:#45576A;font-size:13px">Consegna ${esc(d.n || '')} del ${fk(d.consegna)}${d.referente ? ', ricevuto da ' + esc(d.referente) : ''}${d.rientro ? ' · rientro previsto <b style="color:' + (why === 'scaduto' ? '#C8102E' : '#1C2430') + '">' + fk(d.rientro) + '</b>' : ''}</span></p>`;
-    const html = mailShell(subj, info + `<table cellpadding="0" cellspacing="0">${rows}</table>` + (d.note ? `<p style="font-size:13px;color:#45576A;margin-top:12px">${esc(d.note)}</p>` : ''), ['Apri il magazzino', env.APP_URL + '/#magazzino']);
+    const html = mailShell(subj, info + `<table cellpadding="0" cellspacing="0">${rows}</table>` + (d.note ? `<p style="font-size:13px;color:#45576A;margin-top:12px">${esc(d.note)}</p>` : ''), ['Apri il magazzino', appUrlFor(env, r.col) + '/#magazzino']);
     for (const pid of new Set([d.resp, d.by].filter(Boolean))) { const to = await emailOf(env, pid); if (to) await sendMail(env, { to, subject: subj, html, kind: 'demo' }); }
     const fid = 'dm' + r.id.slice(-10) + today.replace(/-/g, '');
     const fd = { t: 'demo', msg: subj.charAt(0).toLowerCase() + subj.slice(1) + ' (' + out.length + (out.length === 1 ? ' articolo' : ' articoli') + ')', ref: { k: 'demo', id: r.id }, to: [], by: d.resp || d.by, at: t };
-    await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('feed', fid, JSON.stringify(fd), t, t).run();
-    await broadcast(env, { col: 'feed', id: fid, v: t, data: fd, by: 'server' });
+    const fcol = pavTwin(r.col, 'feed');
+    await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind(fcol, fid, JSON.stringify(fd), t, t).run();
+    await bcast(env, { col: fcol, id: fid, v: t, data: fd, by: 'server' });
   }
 }
 

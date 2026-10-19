@@ -39,6 +39,8 @@
   const t0 = setInterval(() => {
     if (typeof db === 'undefined' || !db || !S.me) return; clearInterval(t0);
     db.collection('proavListini').onSnapshot(s => { S.pavList = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.periodo || '').localeCompare(a.periodo || '') || (b.at || 0) - (a.at || 0)); for (const id of [...S.pavRows.keys()]) { const m = S.pavList.find(x => x.id === id); if (!m || m.at !== (S.pavRows.get(id).at)) S.pavRows.delete(id); } changed(); }, () => { S.pavList = []; changed(); });
+    // le chiusure aziendali del calendario del gruppo valgono anche qui (giorni lavorativi e caselle rosse)
+    db.collection('!eventi').onSnapshot(s => { const m = new Map(); s.docs.forEach(d => { const e = d.data(); if (/chiusura\s+aziendal/i.test((e.titolo || '') + ' ' + (e.note || '') + ' ' + ((ETIPI.find(x => x[0] === e.tipo) || [])[1] || e.tipo || ''))) m.set(d.id, { id: d.id, ...e }); }); S.eventiGrp = m; changed(); }, () => { });
     ref('config', 'proav').onSnapshot(s => { S.pavCfg = s.exists ? s.data() : null; changed(); }, () => { });
   }, 500);
 
@@ -240,7 +242,7 @@
     const sp = S.salesP;
     const qIn = el('input', { type: 'search', placeholder: 'Cerca nei listini ProAV…', 'aria-label': 'Cerca nei listini ProAV', onkeydown: e => { if (e.key === 'Enter') { S.pavQ = e.target.value; S.pavL = ''; go('pav'); } } });
     return el('section', { class: 'panel hp-pavstrip' },
-      el('div', { class: 'hp-pavhero' }, el('span', { class: 'hp-pavlogo', 'aria-hidden': 'true' }, ic('av', 26)), el('div', { class: 'stack', style: 'gap:2px' }, el('b', {}, 'Area ProAV'), el('span', { class: 'hint' }, 'Riservata a ' + whoTxt()))),
+      el('div', { class: 'hp-pavhero' }, el('span', { class: 'hp-pavlogo', 'aria-hidden': 'true' }, ic('av', 26)), el('div', { class: 'stack', style: 'gap:2px' }, el('b', {}, 'Area ProAV'), el('span', { class: 'hint' }, 'Riservata a ' + whoTxt()), el('span', { class: 'hint', style: 'font-size:.72rem' }, 'Commesse, offerte, calendario e magazzino separati da quelli del gruppo'))),
       el('div', { class: 'hp-pavcell' }, el('span', { class: 'eyebrow' }, 'Sales Analysis'), srcSeg(() => VIEWS.dash.update()),
         el('span', { class: 'hint' }, S.salesSrc === 'grp' ? 'Stai vedendo i dati del gruppo' : sp && sp.dataLabel ? 'ProAV al ' + sp.dataLabel : 'ProAV non ancora caricata', ' · ', el('a', { href: '#', onclick: e => { e.preventDefault(); go('fatt'); } }, S.salesSrc !== 'grp' && !(sp && sp.dataLabel) ? 'caricala' : 'dettaglio'))),
       el('div', { class: 'hp-pavcell', role: 'button', tabindex: '0', style: 'cursor:pointer', onclick: e => { if (e.target.tagName !== 'INPUT') go('pav'); } }, el('span', { class: 'eyebrow' }, 'Listini ProAV'), el('b', { class: 'hp-pavn' }, String(L.length)), el('span', { class: 'hint' }, L.length ? L.reduce((a, m) => a + (m.righe || 0), 0).toLocaleString('it-IT') + ' articoli · agg. ' + fD(last) : 'Nessun listino caricato')),

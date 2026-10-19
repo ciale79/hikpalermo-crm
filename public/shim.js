@@ -110,7 +110,12 @@
     apply(col, id, op === 'delete' ? null : j.data, j.v);
     return undefined;
   }
-  const db = { collection: p => CollRef(String(p).replace(/^\/|\/$/g, '')), doc: p => { const s = splitPath(p); return DocRef(s.col, s.id); } };
+  /* area ProAV (proav.hikpalermo.com): commesse, offerte, calendario, magazzino, demo e attività hanno raccolte proprie
+     (proavCommesse, proavEventi…), riservate ai membri ProAV. Un «!» davanti al nome forza la raccolta del gruppo. */
+  const PAV = /^proav\./i.test(location.hostname);
+  const PAVMAP = { commesse: 'proavCommesse', offerte: 'proavOfferte', eventi: 'proavEventi', magazzino: 'proavMagazzino', demo: 'proavDemo', feed: 'proavFeed' };
+  const mapCol = p => { p = String(p).replace(/^\/|\/$/g, ''); if (p.startsWith('!')) return p.slice(1); if (!PAV) return p; const s = p.split('/'); if (PAVMAP[s[0]]) s[0] = PAVMAP[s[0]]; return s.join('/'); };
+  const db = { collection: p => CollRef(mapCol(p)), doc: p => { const s = splitPath(mapCol(p)); return DocRef(s.col, s.id); } };
 
   /* ---------- tempo reale ---------- */
   let ws = null, wsOk = false, retry = 1000, pingT = null;
