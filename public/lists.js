@@ -120,9 +120,10 @@
     for (const r of tbl.tBodies[0].rows) {
       if (r.hidden || r.style.display === 'none') continue;
       if (r.cells.length === 1 && r.cells[0].colSpan > 1) { rows.push({ group: cellText(r.cells[0]) }); continue; }
-      rows.push({ cells: [...r.cells].map(c => { const L = lines(c); const f = L[0] || ''; const n = num(f); const d = n == null && L.length === 1 ? date(f) : null; const full = L.join(' · '); return { text: n != null && L.length > 1 ? f : full, n, d, extra: n != null && L.length > 1 ? L.slice(1).join(' · ') : '' }; }) });
+      const im = r.querySelector('img.hp-afimg, img.mg-uimg, img.thumbimg, .thumb:not(.none)');
+      rows.push({ img: im || null, cells: [...r.cells].map(c => { const L = lines(c); const f = L[0] || ''; const n = num(f); const d = n == null && L.length === 1 ? date(f) : null; const full = L.join(' · '); return { text: n != null && L.length > 1 ? f : full, n, d, extra: n != null && L.length > 1 ? L.slice(1).join(' · ') : '' }; }) });
     }
-    return { H: H.map((h, i) => h || 'Colonna ' + (i + 1)).filter((h, i) => keep[i]), rows: rows.map(x => x.group != null ? x : { cells: x.cells.filter((c, i) => keep[i]) }) };
+    return { H: H.map((h, i) => h || 'Colonna ' + (i + 1)).filter((h, i) => keep[i]), rows: rows.map(x => x.group != null ? x : { img: x.img, cells: x.cells.filter((c, i) => keep[i]) }) };
   }
   function title(tbl) {
     const v = (typeof VIEWS !== 'undefined' && typeof S !== 'undefined' && VIEWS[S.view] && VIEWS[S.view].title && VIEWS[S.view].title()) || 'Elenco';
@@ -132,7 +133,7 @@
     return t && t.length < 70 ? t : v;
   }
   const stamp = () => new Date().toISOString().slice(0, 10);
-  const fname = (t, ext) => ('HIK PALERMO - ' + t + ' - ' + stamp()).replace(/[\\/:*?"<>|]/g, '-') + '.' + ext;
+  const fname = (t, ext) => ('Hikvision - ' + t + ' - ' + stamp()).replace(/[\\/:*?"<>|]/g, '-') + '.' + ext;
   async function saveBlob(name, blob) {
     try { const d = await claude.use('downloads'); if (d) { await d.save({ filename: name, data: blob }); return; } } catch (e) { }
     const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
@@ -166,30 +167,55 @@
     const buf = X.write(wb, { type: 'array', bookType: 'xlsx', cellStyles: true });
     await saveBlob(fname(title(tbl), 'xlsx'), new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   }
+  /* anteprime: <img> (foto caricate) o miniature del listino (sprite CSS) → immagine JPEG per il PDF */
+  const sprites = new Map();
+  const loadImg = src => { if (!sprites.has(src)) sprites.set(src, new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; })); return sprites.get(src); };
+  async function imgData(node, px = 160) {
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = px; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, px, px);
+      if (node.tagName === 'IMG') {
+        const im = await loadImg(node.currentSrc || node.src); const k = Math.min(px / im.naturalWidth, px / im.naturalHeight);
+        const w = im.naturalWidth * k, h = im.naturalHeight * k; g.drawImage(im, (px - w) / 2, (px - h) / 2, w, h);
+      } else {
+        const cs = node.style.backgroundImage ? node.style : getComputedStyle(node); const m = /url\(["']?([^"')]+)["']?\)/.exec(cs.backgroundImage); if (!m) return null;
+        const im = await loadImg(m[1]); const [bw] = cs.backgroundSize.split(' ').map(parseFloat); const [px0, py0] = cs.backgroundPosition.split(' ').map(parseFloat);
+        const el = node.getBoundingClientRect(); const size = parseFloat(node.style.width) || el.width || 48; const r = im.naturalWidth / bw;
+        g.drawImage(im, -px0 * r, -py0 * r, size * r, size * r, 0, 0, px, px);
+      }
+      return c.toDataURL('image/jpeg', .85);
+    } catch (e) { return null; }
+  }
+  window.hpImgData = imgData;
   async function exportPdf(tbl) {
     if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     if (!window.jspdf.jsPDF.API.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
     const { jsPDF } = window.jspdf;
-    const { H, rows } = matrix(tbl);
+    const { H: H0, rows } = matrix(tbl);
+    const withImg = rows.some(r => r.img);
+    const imgs = withImg ? await Promise.all(rows.map(r => r.img ? imgData(r.img) : null)) : [];
+    const H = withImg ? ['', ...H0] : H0;
+    if (withImg) rows.forEach(r => { if (r.cells) r.cells = [{ text: '' }, ...r.cells]; });
     const doc = new jsPDF({ orientation: H.length > 5 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
     const W = doc.internal.pageSize.getWidth();
     const t = title(tbl);
-    doc.setFillColor(20, 33, 44); doc.rect(0, 0, W, 16, 'F'); doc.setFillColor(200, 16, 46); doc.rect(0, 16, W, 1.2, 'F');
-    doc.setFont('helvetica', 'bolditalic'); doc.setFontSize(14); doc.setTextColor(232, 56, 79); doc.text('HIK', 10, 10.5);
-    doc.setTextColor(255, 255, 255); doc.text('PALERMO', 10 + doc.getTextWidth('HIK '), 10.5);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.text(new Date().toLocaleString('it-IT', { dateStyle: 'medium', timeStyle: 'short' }), W - 10, 10.5, { align: 'right' });
+    // intestazione con il logo ufficiale Hikvision
+    try { const lg = await loadImg('/hik-logo.png'); const c = document.createElement('canvas'); c.width = 1000; c.height = Math.round(1000 * lg.naturalHeight / lg.naturalWidth); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(lg, 0, 0, c.width, c.height); doc.addImage(c.toDataURL('image/png'), 'PNG', 10, 5, 46, 46 * c.height / c.width); } catch (e) { doc.setFont('helvetica', 'bolditalic'); doc.setFontSize(15); doc.setTextColor(215, 25, 32); doc.text('HIKVISION', 10, 11); }
+    doc.setFillColor(215, 25, 32); doc.rect(0, 15, W, .8, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(110, 112, 116); doc.text(new Date().toLocaleString('it-IT', { dateStyle: 'medium', timeStyle: 'short' }), W - 10, 10.5, { align: 'right' });
     doc.setTextColor(20, 33, 44); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text(t, 10, 25);
     const n = rows.filter(r => r.group == null).length;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(118, 135, 151); doc.text(n + (n === 1 ? ' riga' : ' righe'), 10, 30);
     const numCols = H.map((h, i) => rows.filter(r => r.cells).every(r => !r.cells[i] || r.cells[i].n != null || !r.cells[i].text || r.cells[i].text === '—'));
+    const bodyRows = rows.map((r, i) => i);
     const body = rows.map(r => r.group != null ? [{ content: r.group, colSpan: H.length, styles: { fontStyle: 'bold', fillColor: [233, 237, 241] } }] : r.cells.map(c => (c.n != null ? c.text.replace(/^0+(\d)/, '$1') : c.text) + (c.extra ? '\n' + c.extra : '')));
     doc.autoTable({
       head: [H], body, startY: 34, margin: { left: 10, right: 10 },
       styles: { fontSize: 8, cellPadding: 1.8, overflow: 'linebreak', textColor: [20, 33, 44], lineColor: [211, 218, 225], lineWidth: .1 },
       headStyles: { fillColor: [20, 33, 44], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [246, 248, 250] },
-      columnStyles: Object.fromEntries(numCols.map((v, i) => [i, v ? { halign: 'right' } : {}])),
-      didDrawPage: d => { doc.setFontSize(8); doc.setTextColor(118, 135, 151); doc.text('hikpalermo.com · pagina ' + doc.internal.getNumberOfPages(), W - 10, doc.internal.pageSize.getHeight() - 6, { align: 'right' }); }
+      columnStyles: Object.fromEntries(numCols.map((v, i) => [i, withImg && i === 0 ? { cellWidth: 18, minCellHeight: 16 } : v ? { halign: 'right' } : {}])),
+      didDrawCell: d => { if (!withImg || d.section !== 'body' || d.column.index !== 0) return; const r = bodyRows[d.row.index]; const im = r != null ? imgs[r] : null; if (!im) return; const sz = Math.min(d.cell.width - 2, d.cell.height - 2, 15); try { doc.addImage(im, 'JPEG', d.cell.x + (d.cell.width - sz) / 2, d.cell.y + (d.cell.height - sz) / 2, sz, sz); } catch (e) { } },
+      didDrawPage: d => { doc.setFontSize(8); doc.setTextColor(118, 135, 151); doc.text('Hikvision Italy · Filiale di Palermo · pagina ' + doc.internal.getNumberOfPages(), W - 10, doc.internal.pageSize.getHeight() - 6, { align: 'right' }); }
     });
     await saveBlob(fname(t, 'pdf'), doc.output('blob'));
   }

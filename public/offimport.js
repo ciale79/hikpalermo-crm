@@ -295,14 +295,16 @@
     const cl = [cli.nome, [cli.indirizzo, [cli.cap, cli.citta].filter(Boolean).join(' '), cli.prov].filter(Boolean).join(', '), cli.piva ? 'P. IVA ' + cli.piva : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
     doc.setFont('helvetica', 'bold'); doc.text('Spett.le', 120, 36); doc.setFont('helvetica', 'normal'); cl.forEach((s, i) => doc.text(doc.splitTextToSize(s, W - 134)[0], 120, 41 + i * 4.6));
     if (com) { doc.setFont('helvetica', 'bold'); doc.text('Commessa', 14, 36); doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize(com.nome, 90)[0], 14, 41); }
-    const head = ['Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Listino'] : []), ...(sc ? ['Sc. %'] : []), 'Prezzo', 'Totale'];
-    const body = []; let sez = null;
+    const rimg = window.hpImgData ? await Promise.all((o.righe || []).map(r => { try { const n = window.artThumbC ? artThumbC(r.c, r.im, 48) : thumb(r.im, 48); return n && !n.classList.contains('none') ? window.hpImgData(n) : null; } catch (e) { return null; } })) : [];
+    const withImg = rimg.some(Boolean);
+    const head = [...(withImg ? [''] : []), 'Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Listino'] : []), ...(sc ? ['Sc. %'] : []), 'Prezzo', 'Totale'];
+    const body = [], rowImg = []; let sez = null;
     for (const r of o.righe || []) {
-      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: head.length, styles: { fontStyle: 'bold', fillColor: [245, 246, 248] } }]); }
-      const t = lineTot(r); body.push([r.c, (r.b || '').slice(0, r.net ? 104 : 120) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList ? '—' : eur(r.p)] : []), ...(sc ? [r.noList ? '—' : fN.format(r2(+r.sc || 0)) + '%'] : []), eur(t.unit), eur(t.netto)]);
+      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) { rowImg.push(null); body.push([{ content: sez, colSpan: head.length, styles: { fontStyle: 'bold', fillColor: [245, 246, 248] } }]); } }
+      const t = lineTot(r); rowImg.push(rimg[(o.righe || []).indexOf(r)] || null); body.push([...(withImg ? [''] : []), r.c, (r.b || '').slice(0, r.net ? 104 : 120) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList ? '—' : eur(r.p)] : []), ...(sc ? [r.noList ? '—' : fN.format(r2(+r.sc || 0)) + '%'] : []), eur(t.unit), eur(t.netto)]);
     }
-    const ci = head.length; const right = {}; for (let i = 2; i < ci; i++) right[i] = { halign: 'right', cellWidth: i === 2 ? 10 : 21, overflow: 'visible' };
-    doc.autoTable({ startY: 41 + cl.length * 4.6 + 6, head: [head], body, margin: { left: 14, right: 14 }, styles: { fontSize: 8, cellPadding: 1.8, textColor: [28, 36, 48], lineColor: [225, 228, 234], lineWidth: .1 }, headStyles: { fillColor: [28, 36, 48], textColor: 255 }, columnStyles: { 0: { cellWidth: 44, fontStyle: 'bold', fontSize: 7.5 }, ...right } });
+    const ci = head.length, o0 = withImg ? 1 : 0; const right = {}; for (let i = 2 + o0; i < ci; i++) right[i] = { halign: 'right', cellWidth: i === 2 + o0 ? 10 : 21, overflow: 'visible' };
+    doc.autoTable({ startY: 41 + cl.length * 4.6 + 6, head: [head], body, margin: { left: 14, right: 14 }, styles: { fontSize: 8, cellPadding: 1.8, textColor: [28, 36, 48], lineColor: [225, 228, 234], lineWidth: .1 }, headStyles: { fillColor: [28, 36, 48], textColor: 255 }, columnStyles: { ...(withImg ? { 0: { cellWidth: 15, minCellHeight: 13 } } : {}), [o0]: { cellWidth: withImg ? 38 : 44, fontStyle: 'bold', fontSize: 7.5 }, ...right }, didDrawCell: d => { if (!withImg || d.section !== 'body' || d.column.index !== 0) return; const im = rowImg[d.row.index]; if (!im) return; const sz = Math.min(d.cell.width - 2, d.cell.height - 2, 12); try { doc.addImage(im, 'JPEG', d.cell.x + (d.cell.width - sz) / 2, d.cell.y + (d.cell.height - sz) / 2, sz, sz); } catch (e) { } } });
     const T = offTot(o.righe), TL = offTot((o.righe || []).filter(r => !r.noList)); let y = doc.lastAutoTable.finalY + 6;
     const tl = (l, v, b) => { doc.setFont('helvetica', b ? 'bold' : 'normal'); doc.setFontSize(b ? 11 : 9.5); doc.text(l, W - 50, y, { align: 'right' }); doc.text(v, W - 14, y, { align: 'right' }); y += b ? 7 : 5.5; };
     if (lst) tl('Totale a listino' + (TL.L !== T.L ? ' (righe con listino)' : ''), eur(TL.L)); if (sc) tl('Sconto medio' + (TL.L !== T.L ? ' sulle righe a listino' : ''), fN.format(TL.sc) + '%'); tl('Totale offerta (IVA esclusa)', eur(T.N), true);

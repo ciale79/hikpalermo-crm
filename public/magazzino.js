@@ -596,7 +596,7 @@
   }
   function footer(doc) {
     const n = doc.internal.getNumberOfPages(); const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
-    for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT); doc.text('HIK PALERMO - documento di consegna materiale', 14, H - 8); doc.text('Pagina ' + p + ' di ' + n, W - 14, H - 8, { align: 'right' }); }
+    for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...SOFT); doc.text('Hikvision Italy · Filiale di Palermo - documento di consegna materiale', 14, H - 8); doc.text('Pagina ' + p + ' di ' + n, W - 14, H - 8, { align: 'right' }); }
   }
   async function demoPdf(dm) {
     let jsPDF; try { jsPDF = await pdfLibs(); } catch (e) { toast('Non riesco a caricare il generatore PDF: controlla la connessione.', 'bad'); return; }
