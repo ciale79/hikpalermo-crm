@@ -1797,9 +1797,7 @@ function sideWidget(){const {y,q}=S.qsel;const set=(ny,nq)=>{S.qsel={y:ny,q:nq};
     const chRows=Object.entries(sa.targetSiciliaCh||{}).map(([ch,tt])=>{const arr=(sa.siciliaCh||{})[ch]||[0,0,0,0];const v=byQ?arr[q-1]:arr.reduce((x,z)=>x+z,0);const t=byQ?(tt.q||[])[q-1]:tt.y;return [el('div',{class:'srow sub'},el('span',{},'↳ '+ch),el('b',{title:eur(v)},eurShort(v))),ach(v,t,'Sicilia '+ch)];});
     box.append(el('div',{class:'sales',title:(own?'Fatturato prodotti propri (esclusi EZVIZ, Outdoor e Rebate)':'Fatturato escluso Rebate')+' · fonte: '+(sa.file||'Sales Analysis')},el('div',{class:'sh'},(byQ?'FATTURATO Q'+q+' '+sa.anno:'FATTURATO '+(sa.anno||'')+' YTD')+' · AL '+(sa.dataLabel||fD(sa.data)).toUpperCase()),
       el('div',{class:'srow'},el('span',{},'SICILIA'),el('b',{title:eur(vS)},eurShort(vS))),ach(vS,tS,'Sicilia'),
-      el('div',{class:'srow'},el('span',{},'ITALIA'+((sa.itExtra&&(byQ?sa.itExtra.q[q-1]:sa.itExtra.tot))?'*':'')),el('b',{title:eur(vI)+((sa.itExtra&&(byQ?sa.itExtra.q[q-1]:sa.itExtra.tot))?' · * incl. '+eur0(byQ?sa.itExtra.q[q-1]:sa.itExtra.tot)+' di altri canali/BU indicati da '+sa.itExtra.fonte+', non riscontrati nella Sales Analysis':'')},eurShort(vI))),ach(vI,tI,'Italia'),
-      (()=>{const C=window.hpCmp&&hpCmp();if(!C)return null;const cs=C.sales;const pS=byQ?(cs.siciliaOwnQ||[])[q-1]:cs.siciliaOwn,pI=byQ?(cs.italiaOwnQ||[])[q-1]:cs.italiaOwn;const d=(a,b)=>{const x=(+a||0)-(+b||0);return el('b',{class:x>=0.5?'up':x<=-0.5?'dn':''},(x>=0?'+':'−')+eurShort(Math.abs(x)));};return el('div',{class:'hp-sdl',title:'Variazione rispetto al caricamento del '+C.dataLabel},el('span',{},C.lab.toUpperCase()),el('span',{},'SIC ',d(vS,pS)),el('span',{},'ITA ',d(vI,pI)));})(),
-      el('div',{class:'qcap'},'Sicilia '+fN.format(round2(pct))+'% del nazionale'+(own?' · prodotti propri':''))));}
+      null));}
   else box.append(el('div',{class:'sales empty'},'FATTURATO · in attesa del file Sales Analysis'));
   return box;}
 function renderSides(){const s=$('#sideWid');if(s)s.replaceChildren(sideWidget());const m=$('#mWid');if(m)m.replaceChildren(sideWidget());}
