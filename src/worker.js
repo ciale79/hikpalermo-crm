@@ -628,6 +628,28 @@ async function migrateMag(env) {
   await broadcast(env, { reload: 'magazzino' });
 }
 // Import una tantum di documenti preparati (es. schede demo dalle bolle): non sovrascrive documenti esistenti
+// Scarica un documento o una pagina esterna per l'analisi dei capitolati (link incollati dall'utente)
+async function fetchExternal(raw) {
+  let u; try { u = new URL(String(raw).trim()); } catch { return err('invalid_argument', 'Link non valido', 400); }
+  if (!/^https?:$/.test(u.protocol)) return err('invalid_argument', 'Sono ammessi solo link http o https', 400);
+  const h = u.hostname.toLowerCase();
+  if (h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal') || /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.)/.test(h) || h === '[::1]') return err('invalid_argument', 'Link non raggiungibile', 400);
+  let m;
+  if (h === 'docs.google.com' && (m = /^\/document\/d\/([^/]+)/.exec(u.pathname))) u = new URL('https://docs.google.com/document/d/' + m[1] + '/export?format=txt');
+  else if (h === 'docs.google.com' && (m = /^\/spreadsheets\/d\/([^/]+)/.exec(u.pathname))) u = new URL('https://docs.google.com/spreadsheets/d/' + m[1] + '/export?format=xlsx');
+  else if (h === 'docs.google.com' && (m = /^\/presentation\/d\/([^/]+)/.exec(u.pathname))) u = new URL('https://docs.google.com/presentation/d/' + m[1] + '/export/txt');
+  else if (h === 'drive.google.com' && (m = /\/file\/d\/([^/]+)/.exec(u.pathname))) u = new URL('https://drive.google.com/uc?export=download&id=' + m[1]);
+  else if (/(^|\.)dropbox\.com$/.test(h)) { u.searchParams.set('dl', '1'); }
+  let r;
+  try { r = await fetch(u.toString(), { redirect: 'follow', headers: { 'user-agent': 'Mozilla/5.0 (HIK PALERMO CRM; analisi capitolati)', accept: '*/*' }, signal: AbortSignal.timeout ? AbortSignal.timeout(25000) : undefined }); }
+  catch (e) { return err('unavailable', 'Il sito non risponde (' + (e && e.message || 'errore') + ')', 502); }
+  if (!r.ok) return err('unavailable', 'Il sito ha risposto ' + r.status + (r.status === 401 || r.status === 403 ? ': il link non è pubblico' : ''), 502);
+  const len = +(r.headers.get('content-length') || 0); if (len > 25e6) return err('too_large', 'File troppo grande (oltre 25 MB)', 413);
+  const buf = await r.arrayBuffer(); if (buf.byteLength > 25e6) return err('too_large', 'File troppo grande (oltre 25 MB)', 413);
+  const cd = r.headers.get('content-disposition') || ''; const fn = (/filename\*?=(?:UTF-8'')?"?([^";]+)/i.exec(cd) || [])[1];
+  const name = decodeURIComponent(fn || decodeURIComponent(u.pathname.split('/').pop() || '') || h).slice(0, 120);
+  return new Response(buf, { headers: { 'content-type': r.headers.get('content-type') || 'application/octet-stream', 'x-name': encodeURIComponent(name), 'x-final-url': encodeURIComponent(r.url || u.toString()), 'cache-control': 'no-store' } });
+}
 async function migrateExtra(env) { for (const x of [extraImport, extraLinks, extraKam, extraOo, extraPat, extraItx]) await migrateOne(env, x); await migrateStato(env); await migrateItTot(env); await migrateComAddr(env); }
 // Italia: il totale Q1–Q3 indicato da Max (73,5 M€) sostituisce l'importo fisso degli altri canali/BU
 async function migrateItTot(env) {
@@ -763,6 +785,7 @@ async function api(req, env, ctx, url, u) {
   }
   if (p === '/api/claude' && m === 'POST') return claudeProxy(req, env);
   if (p === '/api/prodimg' && m === 'POST') return productImage(req, env, u);
+  if (p === '/api/fetch' && m === 'GET') return fetchExternal(url.searchParams.get('u') || '');
   if (p === '/api/hikpage' && m === 'GET') return json(await hikPage(env, url.searchParams.get('code'), url.searchParams.get('force') === '1'));
   if (p === '/api/auth/password' && m === 'POST') return setPassword(req, env, u);
   if (p === '/api/ics-link' && m === 'GET') { const id = url.searchParams.get('id') || ''; if (!(await getDoc(env, 'eventi', id))) return err('not_found', 'Evento non trovato', 404); return json({ url: (env.APP_URL || url.origin) + '/ics/' + encodeURIComponent(id) + '.ics?k=' + await icsSig(env, id) }); }
