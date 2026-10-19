@@ -116,7 +116,7 @@
     return R;
   }
 
-  /* ---------------- ripiego: lettura con Claude per layout diversi ---------------- */
+  /* ---------------- ripiego: lettura con 800AI per layout diversi ---------------- */
   async function parseWithClaude(buf) {
     let bin = ''; const u8 = new Uint8Array(buf); for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
     const prompt = 'Estrai dal preventivo PDF tutti i dati utili e rispondi SOLO con JSON valido con questa forma: {"meta":{"numero":"","data":"gg/mm/aaaa","riferimento":"","redatto":"","redattoEmail":"","redattoTel":"","partner":""},"cliente":{"nome":"","indirizzo":"","cap":"","citta":"","prov":"","sede":"","piva":"","cf":"","referente":"","tel":"","email":"","pec":"","sdi":""},"righe":[{"sez":"titolo del gruppo/sezione o vuoto","codice":"","sap":"","desc":"descrizione breve","descLunga":"","q":1,"listino":null,"netto":false,"sc":null,"ex":null,"cad":0,"tot":0}],"tot":{"subtotale":0,"ivaPct":22,"iva":0,"totale":0},"cond":{"TITOLO SEZIONE":"testo"}}. listino = prezzo di listino unitario se indicato (numero) altrimenti null; netto = true se la riga riporta "NETTO" invece di uno sconto; sc ed ex = percentuali di sconto e di extra sconto se indicate; cad = prezzo unitario finale; tot = totale riga. Numeri senza simbolo €, decimali con il punto.';
@@ -165,7 +165,7 @@
     const buf = await file.arrayBuffer(); let R = null, via = 'pdf';
     try { const pages = await pdfPages(buf.slice(0)); R = parseGest(pages); } catch (e) { console.warn(e); }
     if (!R || !R.righe.length) {
-      try { const w = document.getElementById('opWait'); if (w) w.textContent = 'Layout non riconosciuto: lo faccio leggere a Claude…'; R = await parseWithClaude(buf.slice(0)); via = 'claude'; }
+      try { const w = document.getElementById('opWait'); if (w) w.textContent = 'Layout non riconosciuto: lo faccio leggere a 800AI…'; R = await parseWithClaude(buf.slice(0)); via = 'claude'; }
       catch (e) { wait.close(); toast('Non riesco a leggere l\'offerta: ' + (e.message || e), 'bad'); return; }
     }
     wait.close();
@@ -204,7 +204,7 @@
     const T = R.tot || {};
     const okTot = T.subtotale == null || Math.abs(T.subtotale - sum) < 1;
     const body = el('div', { class: 'stack' },
-      via === 'claude' ? el('div', { class: 'banner' }, 'Il PDF non ha il layout del gestionale: i dati sono stati letti da Claude, controllali prima di salvare.') : null,
+      via === 'claude' ? el('div', { class: 'banner' }, 'Il PDF non ha il layout del gestionale: i dati sono stati letti da 800AI, controllali prima di salvare.') : null,
       el('div', { class: 'grid2' },
         el('section', { class: 'panel' }, el('h4', {}, 'Offerta'), el('dl', { class: 'dl' }, dd('Numero', M.numero), dd('Data', M.data), dd('Riferimento', M.riferimento), dd('Redatta da', [M.redatto, M.redattoEmail, M.redattoTel].filter(Boolean).join(' · ')), dd('Partner', M.partner),
           ...Object.entries(R.cond || {}).slice(0, 4).map(([k, v]) => dd(k.charAt(0) + k.slice(1).toLowerCase(), v.split('\n')[0])))),

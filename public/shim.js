@@ -156,7 +156,7 @@
     }
   };
 
-  /* ---------- Claude (analisi capitolati) ---------- */
+  /* ---------- 800AI (analisi capitolati) ---------- */
   async function runClaude(prompt, opt = {}) {
     const tools = opt.tools || [];
     const defs = tools.map(t => ({ name: t.name, description: t.description || '', input_schema: t.inputSchema || t.input_schema || { type: 'object', properties: {} } }));
@@ -168,7 +168,7 @@
       if (defs.length) { body.tools = defs; if (round === maxRounds) body.tool_choice = { type: 'none' }; }
       const r = await fetch('/api/claude', { method: 'POST', credentials: 'same-origin', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: opt.signal });
       const j = await r.json().catch(() => null);
-      if (!r.ok) throw E((j && j.error && (j.error.code || j.error.type)) || 'http_' + r.status, (j && j.error && j.error.message) || 'Errore Claude');
+      if (!r.ok) throw E((j && j.error && (j.error.code || j.error.type)) || 'http_' + r.status, (j && j.error && j.error.message) || 'Errore 800AI');
       const content = j.content || [];
       const uses = content.filter(b => b.type === 'tool_use');
       if (j.stop_reason === 'tool_use' && uses.length) {
