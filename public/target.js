@@ -80,6 +80,14 @@
   // open order inclusi o esclusi dall'indicatore (scelta di chi guarda, per area, ricordata nel browser)
   const ooOn = area => { try { return localStorage.getItem('hp_tgOO_' + area) !== '0'; } catch (e) { return true; } };
   const setOO = (area, v) => { try { localStorage.setItem('hp_tgOO_' + area, v ? '1' : '0'); } catch (e) { } };
+  // scostamento dal caricamento di confronto (fatturato e, se inclusi, open order) in euro e in punti di target
+  function cmpLine(m, withOO) {
+    const C = window.hpCmp && window.hpCmp(); if (!C) return null;
+    const pv = +C.sales[m.A.own] || 0, po = +((C.F.oo || {})[m.A.oo]) || 0;
+    const now = m.ytd + (withOO ? m.oo : 0), was = pv + (withOO ? po : 0);
+    const pt = (now - was) / m.target * 100;
+    return el('span', { class: 's', style: 'font-size:.72rem', title: (withOO ? 'Fatturato + open order' : 'Fatturato') + ' ' + m.A.n + ': ' + eur0(was) + ' al ' + C.dataLabel + ' → ' + eur0(now) }, window.hpDelta(now, was, { noLab: true, what: m.A.n }), ' ', el('span', { class: 'hint', style: 'font-size:.7rem' }, (pt >= 0 ? '+' : '−') + Math.abs(pt).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' pt ' + C.lab));
+  }
   window.hpTargetTile = function (area) {
     const m = window.hpTargetModel(area); if (!m) return null; const N = m.A.n; const withOO = ooOn(m.area);
     const v = m.ytd + m.pat, r = v / m.target, vo = v + (withOO ? m.oo : 0), ro = vo / m.target;
@@ -91,7 +99,7 @@
     const tile = el('div', { class: 'kpi hp-tg hp-tg-' + m.area, role: 'button', tabindex: '0', title: 'Raggiungimento del target ' + N + ' ' + m.Y + (withOO ? ' contando fatturato e ordini aperti (parte chiara dell\'arco)' : ' sul solo fatturato') + '. La tacca nera indica il ritmo atteso a oggi (' + pc(exp) + ' dell\'anno trascorso). Clic per il dettaglio e la proiezione a fine anno.', onclick: () => detail(m), onkeydown: e => { if (e.key === 'Enter') detail(m); } },
       el('div', { class: 'row between', style: 'gap:6px;flex-wrap:nowrap' }, el('span', { class: 'eyebrow' }, 'Target ' + N + ' ' + m.Y), tog),
       el('div', { class: 'hp-tg-row' }, gaugeAch(r, exp, color, withOO ? ro : null), el('div', { class: 'stack', style: 'gap:0' }, el('div', { class: 'hp-tg-num', style: { color } }, pc(ro)), el('small', { class: 'hint', style: 'font-size:.68rem;white-space:nowrap' }, withOO ? 'incl. open order' : 'solo fatturato'))),
-      el('span', { class: 's' }, M(vo) + ' di ' + M(m.target)), el('span', { class: 's', style: 'font-size:.72rem' }, withOO ? 'Fatturato ' + pc(r) + ' + open order ' + M(m.oo) : 'Con open order sarebbe ' + pc((v + m.oo) / m.target)), note);
+      el('span', { class: 's' }, M(vo) + ' di ' + M(m.target)), el('span', { class: 's', style: 'font-size:.72rem' }, withOO ? 'Fatturato ' + pc(r) + ' + open order ' + M(m.oo) : 'Con open order sarebbe ' + pc((v + m.oo) / m.target)), note, cmpLine(m, withOO));
     return tile;
   };
 
