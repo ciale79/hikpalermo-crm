@@ -143,16 +143,20 @@
     if (!/^[A-Z0-9]{16}$/.test(cf)) { toast('Inserisci il tuo codice fiscale (16 caratteri) per generare il file.', 'bad'); document.getElementById('bpCf')?.focus(); return; }
     await loadScript(XLSXLIB);
     const [y, m1] = mk.split('-').map(Number);
-    // data come numero seriale di Excel (giorno intero, senza ore), formato m/d/yyyy come nel file di esempio
+    // data come numero seriale di Excel (giorno intero, senza ore), formato gg/mm/aaaa
     const serial = d => Math.round((Date.UTC(y, m1 - 1, d) - Date.UTC(1899, 11, 30)) / 864e5);
     const rows = days.filter(x => x.bp).map(x => [cf, 'BP', serial(x.d), 1]);
     if (!rows.length) { toast('Nessun giorno con diritto al buono pasto in questo mese.', 'bad'); return; }
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    for (let r = 0; r < rows.length; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 2 })]; if (c) { c.t = 'n'; c.z = 'm/d/yyyy'; } }
+    for (let r = 0; r < rows.length; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 2 })]; if (c) { c.t = 'n'; c.z = 'dd/mm/yyyy'; } }
     ws['!cols'] = [{ wch: 22 }, { wch: 5 }, { wch: 11 }, { wch: 5 }];
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Foglio1');
-    const cogn = String(D.cognome || nm(S.me).split(' ').pop() || 'Utente').trim().replace(/[^\wÀ-ÿ'-]+/g, '_');
-    XLSX.writeFile(wb, 'Buoni_Pasto_' + y + '_' + MESI[m1 - 1] + '_' + cogn + '.xls', { bookType: 'xls' });
+    const cogn = String(D.cognome || nm(S.me).split(' ').pop() || 'Utente').trim().replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ');
+    // carattere Arial 10: SheetJS scrive un solo FONT (Arial 12) nel file BIFF8; ne correggiamo l'altezza (in ventesimi di punto)
+    const u8 = new Uint8Array(XLSX.write(wb, { bookType: 'xls', type: 'array' }));
+    for (let i = 0; i < u8.length - 12; i++) if (u8[i] === 0x31 && u8[i + 1] === 0 && u8[i + 4] === 0xF0 && u8[i + 5] === 0 && u8[i + 10] === 0x90 && u8[i + 11] === 0x01) { u8[i + 4] = 200; u8[i + 5] = 0; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([u8], { type: 'application/vnd.ms-excel' }));
+    a.download = 'Buoni Pasto ' + y + ' ' + MESI[m1 - 1] + ' ' + cogn + '.xls'; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     toast('File con ' + rows.length + ' buoni pasto scaricato');
   }
 
@@ -181,7 +185,7 @@
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Buoni pasto'), el('span', { class: 'v', style: 'color:var(--ok)' }, String(nBP)), el('span', { class: 's' }, 'su ' + nLav + ' giorni lavorativi')),
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Pasti con la carta'), el('span', { class: 'v' }, String(new Set(M.voci.filter(v => v.inc).map(v => v.d)).size)), el('span', { class: 's' }, M.voci.filter(v => v.inc).length + ' voci · ' + eur(M.voci.filter(v => v.inc).reduce((a, v) => a + v.imp, 0)))),
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Ferie, fiere e chiusure'), el('span', { class: 'v' }, String(days.filter(x => x.wd !== 0 && x.wd !== 6 && x.why.some(w => ['ferie', 'malattia', 'fiera', 'trasferta', 'chiusura'].includes(w.k))).length)), el('span', { class: 's' }, 'giorni lavorativi dal calendario')),
-        el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Dati per il file'), el('div', { class: 'stack', style: 'gap:6px' }, cf, cg), el('span', { class: 's', style: 'font-size:.72rem;overflow-wrap:anywhere' }, 'Buoni_Pasto_' + y + '_' + MESI[m1 - 1] + '_' + (D.cognome || nm(S.me).split(' ').pop()) + '.xls')));
+        el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Dati per il file'), el('div', { class: 'stack', style: 'gap:6px' }, cf, cg), el('span', { class: 's', style: 'font-size:.72rem;overflow-wrap:anywhere' }, 'Buoni Pasto ' + y + ' ' + MESI[m1 - 1] + ' ' + (D.cognome || nm(S.me).split(' ').pop()) + '.xls')));
       // voci dell'estratto
       const vRows = M.voci.slice().sort((a, b) => a.d.localeCompare(b.d));
       const voci = el('section', { class: 'panel stack' }, el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', {}, 'Estratto conto della carta'), el('span', { class: 'hint' }, 'Carica il PDF dei movimenti: le spese per pasti (ristoranti, Glovo, delivery…) tolgono il buono di quel giorno. Togli la spunta alle voci che non sono pasti.')),
