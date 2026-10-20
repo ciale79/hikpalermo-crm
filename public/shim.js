@@ -178,13 +178,15 @@
       const content = j.content || [];
       const uses = content.filter(b => b.type === 'tool_use');
       if (j.stop_reason === 'tool_use' && uses.length) {
-        messages.push({ role: 'assistant', content });
+        // si rimanda indietro solo ciò che l'API accetta: niente blocchi di testo vuoti
+        messages.push({ role: 'assistant', content: content.filter(b => !(b.type === 'text' && !String(b.text || '').trim())) });
         const results = [];
         for (const u of uses) {
           const t = tools.find(x => x.name === u.name);
           let out, isErr = false;
           try { out = t ? await t.execute(u.input || {}) : 'Strumento sconosciuto'; } catch (e) { out = 'Errore: ' + (e && e.message || e); isErr = true; }
-          results.push({ type: 'tool_result', tool_use_id: u.id, content: typeof out === 'string' ? out : JSON.stringify(out), is_error: isErr || undefined });
+          let txt = typeof out === 'string' ? out : JSON.stringify(out); if (!txt || !String(txt).trim()) txt = 'Nessun risultato'; if (txt.length > 60000) txt = txt.slice(0, 60000);
+          results.push({ type: 'tool_result', tool_use_id: u.id, content: txt, ...(isErr ? { is_error: true } : {}) });
         }
         messages.push({ role: 'user', content: results });
         continue;

@@ -541,6 +541,16 @@ async function claudeProxy(req, env) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body)
   });
+  if (!r.ok) {
+    // errore dell'API: lo registro (tipo, messaggio, dimensione e struttura della richiesta) per poterlo diagnosticare
+    const t = await r.text();
+    try {
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS ai_errors(at INTEGER, status INTEGER, msg TEXT, info TEXT)').run();
+      const shape = (body.messages || []).map(m => m.role + ':' + (Array.isArray(m.content) ? m.content.map(c => c.type + (c.type === 'text' ? '(' + String(c.text || '').length + ')' : c.type === 'tool_result' ? '(' + String(c.content || '').length + ')' : '')).join(',') : 'str(' + String(m.content || '').length + ')')).join(' | ');
+      await env.DB.prepare('INSERT INTO ai_errors(at,status,msg,info) VALUES(?,?,?,?)').bind(Date.now(), r.status, t.slice(0, 1500), ('model=' + body.model + ' max_tokens=' + body.max_tokens + ' tools=' + (body.tools || []).length + ' tool_choice=' + JSON.stringify(body.tool_choice || null) + ' bytes=' + JSON.stringify(body).length + ' msgs=' + shape).slice(0, 3000)).run();
+    } catch (e) { console.log('ai_errors', e); }
+    return new Response(t, { status: r.status, headers: { 'content-type': 'application/json' } });
+  }
   return new Response(r.body, { status: r.status, headers: { 'content-type': 'application/json' } });
 }
 

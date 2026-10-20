@@ -1556,7 +1556,7 @@ Rispondi SOLO con un oggetto JSON:
           Object.assign(upd,{righe,sintesi:out.sintesi||c.sintesi||'',note:(Array.isArray(out.note)?out.note:c.note||[]).concat(unk.length?['Codici proposti non trovati nei listini: '+unk.join(', ')]:[]),prev});}}
       msgs.push({r:'a',t:out.risposta+(upd.righe?'':out.modifica?' (non ho potuto applicare la modifica: nessun codice valido)':''),at:Date.now(),mod:!!upd.righe});upd.chat=msgs.slice(-40);upd.upd=Date.now();
       if(await patch('capitolati',c.id,upd)){S.capRes={...c,...upd};VIEWS.cap.update();}
-    }catch(e){const code=e&&e.code;toast(code==='cancelled'?'Richiesta interrotta.':code==='rate_limited'?'Limite di utilizzo raggiunto: riprova tra qualche minuto.':code==='invalid_json'?'La risposta non era nel formato atteso. Riprova.':'Richiesta non riuscita ('+(code||e?.message||'errore')+').',code==='cancelled'?'':'bad');ta.disabled=false;busy.hidden=true;sendB.disabled=false;}
+    }catch(e){const code=e&&e.code;toast(code==='cancelled'?'Richiesta interrotta.':code==='rate_limited'?'Limite di utilizzo raggiunto: riprova tra qualche minuto.':code==='invalid_json'?'La risposta non era nel formato atteso. Riprova.':'Richiesta non riuscita ('+(code||'errore')+(e&&e.message&&e.message!==code?': '+String(e.message).slice(0,160):'')+').',code==='cancelled'?'':'bad');ta.disabled=false;busy.hidden=true;sendB.disabled=false;}
   };
   const sendB=btn('Invia a 800AI',()=>send(),'pri','spark');
   ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();send();}});
