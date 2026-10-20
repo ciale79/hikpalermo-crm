@@ -325,6 +325,24 @@ const appUrlFor = (env, col) => isPavCol(col) ? String(env.APP_URL || 'https://h
 async function bcast(env, msg) { if (isPavCol(msg.col)) { for (const id of await pavUids(env)) await broadcast(env, msg, id); } else await broadcast(env, msg); }
 const pavDenied = () => new Response(`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HIK PALERMO · ProAV</title><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#15123A;color:#E9E6FF}.b{max-width:420px;padding:24px;text-align:center}h1{font-size:1.3rem}a{color:#C4B5FD}</style></head><body><div class="b"><h1>Area riservata ProAV</h1><p>Il tuo account non è abilitato a quest'area.</p><p><a href="https://hikpalermo.com/">Vai al CRM HIK PALERMO</a> · <a href="/api/auth/logout" onclick="fetch('/api/auth/logout',{method:'POST',headers:{'x-hp':'1'}}).then(()=>location.href='/login');return false">Esci</a></p></div></body></html>`, { status: 403, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 
+/* ---------------- backup ---------------- */
+// copia dei dati: tutti i documenti (commesse, clienti, calendario, magazzino, ProAV, impostazioni…) e gli utenti (senza password né sessioni)
+async function dbDump(env) {
+  const docs = (await env.DB.prepare('SELECT col,id,data,version,updated FROM docs ORDER BY col,id').all()).results.map(r => ({ col: r.col, id: r.id, v: r.version, updated: r.updated, data: parse(r.data) }));
+  const users = (await env.DB.prepare('SELECT id,email,name,status,created,last_login FROM users').all()).results;
+  return { app: 'HIK PALERMO CRM', at: new Date().toISOString(), counts: { docs: docs.length, users: users.length }, users, docs };
+}
+// ogni domenica (passaggio delle 06:00 UTC) una copia dei dati va in R2 (backup/AAAA-MM-GG.json); si tengono le ultime 8
+async function weeklyBackup(env, t) {
+  const d = new Date(t); if (d.getUTCDay() !== 0) return;
+  const key = 'backup/db-' + d.toISOString().slice(0, 10) + '.json';
+  if (await env.FILES.head(key)) return;
+  await env.FILES.put(key, JSON.stringify(await dbDump(env)), { httpMetadata: { contentType: 'application/json' }, customMetadata: { name: key.slice(7) } });
+  const l = await env.FILES.list({ prefix: 'backup/' });
+  const old = l.objects.map(o => o.key).sort().reverse().slice(8);
+  for (const k of old) await env.FILES.delete(k);
+}
+
 /* ---------------- permessi ---------------- */
 function validPath(col, id) {
   if (!col || !id || typeof col !== 'string' || typeof id !== 'string') return false;
@@ -820,6 +838,18 @@ async function api(req, env, ctx, url, u) {
   if (p === '/api/fetch' && m === 'GET') return fetchExternal(url.searchParams.get('u') || '');
   if (p === '/api/hikpage' && m === 'GET') return json(await hikPage(env, url.searchParams.get('code'), url.searchParams.get('force') === '1'));
   if (p === '/api/auth/password' && m === 'POST') return setPassword(req, env, u);
+  // ——— backup completo (solo proprietario): dati del database, elenco e contenuto dei file su R2, backup automatici settimanali
+  if (p.startsWith('/api/backup/')) {
+    if (!(await isOwnerU(env, u))) return err('permission_denied', 'Solo il proprietario del CRM può fare il backup', 403);
+    if (p === '/api/backup/db' && m === 'GET') return new Response(JSON.stringify(await dbDump(env)), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+    if (p === '/api/backup/files' && m === 'GET') {
+      const out = []; let cursor;
+      do { const l = await env.FILES.list({ cursor, limit: 1000, include: ['customMetadata', 'httpMetadata'] }); for (const o of l.objects) out.push({ key: o.key, size: o.size, type: o.httpMetadata?.contentType || '', name: o.customMetadata?.name || '', at: o.uploaded }); cursor = l.truncated ? l.cursor : null; } while (cursor);
+      return json({ files: out });
+    }
+    if (p === '/api/backup/file' && m === 'GET') { const o = await env.FILES.get(url.searchParams.get('key') || ''); if (!o) return err('not_found', 'File non trovato', 404); const h = new Headers(); o.writeHttpMetadata(h); h.set('cache-control', 'no-store'); return new Response(o.body, { headers: h }); }
+    return err('not_found', 'Endpoint inesistente', 404);
+  }
   // listini ProAV: file JSON su R2, accessibili solo ai membri ProAV
   if (p === '/api/proav/blob') {
     if (!(await isPav(env, u))) return err('permission_denied', 'Area riservata ProAV', 403);
@@ -873,7 +903,7 @@ export default {
       if (p === '/go/hik') return new Response(goHikHtml(url.searchParams.get('code')), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
       if (p.startsWith('/_blob/')) {
         const id = p.slice(7);
-        if (/^proav/i.test(id)) return new Response('File non trovato', { status: 404 });
+        if (/^(proav|backup)/i.test(id)) return new Response('File non trovato', { status: 404 });
         const o = await env.FILES.get(id);
         if (!o) return new Response('File non trovato', { status: 404 });
         const h = new Headers(); o.writeHttpMetadata(h); h.set('etag', o.httpEtag); h.set('cache-control', 'private, max-age=31536000, immutable');
@@ -922,6 +952,7 @@ export default {
       });
     }
     try { await demoReminders(env, t); } catch (e) { console.log('demo', e && e.stack || e); }
+    try { await weeklyBackup(env, t); } catch (e) { console.log('backup', e && e.stack || e); }
     await env.DB.prepare('DELETE FROM reminders WHERE at<?').bind(t - 90 * 864e5).run();
   }
 };
