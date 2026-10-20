@@ -557,6 +557,9 @@ th.r .hp-sb{flex-direction:row-reverse}
 .btn.hp-wa{background:#25D366;border-color:#25D366;color:#fff}.btn.hp-tg{background:#229ED9;border-color:#229ED9;color:#fff}
 .hp-prog{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}.hp-prog i{display:block;height:100%;background:var(--accent);transition:width .4s}
 .hp-salesbar{margin-bottom:12px}
+.hp-clisum{font-size:.95rem;color:var(--ink-2);margin-bottom:10px;min-height:1.4em}
+.hp-clisum b{color:var(--ink);font-size:1.05rem}
+.hp-clisum a{font-weight:600}
 /* ---------- buoni pasto ---------- */
 .hp-bpcal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 .hp-bpcal .dh{font-size:.72rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;padding:0 4px}
@@ -995,7 +998,7 @@ const STP=['In preparazione','Progetto inviato','Confermato','Il Cliente ha ordi
 
 /* ============ navigazione ============ */
 const NAV=[['dash','Cruscotto','home'],['fatt','Fatturato','chart'],['commesse','Commesse','brief'],['clienti','Clienti','users'],['cal','Calendario','cal'],['art','Articoli','box'],['naming','Naming rule','code'],['cap','Capitolato','spark'],['set','Gruppo e impostazioni','gear']];
-function go(v,sel,tab){S.view=v;S.sel=sel||null;S.tab=tab||null;closeGs();$('#view').replaceChildren();VIEWS[v].mount();renderNav();window.scrollTo(0,0);}
+function go(v,sel,tab){S.view=v;S.sel=sel||null;S.tab=tab||null;try{const h='#'+v+(S.sel?'/'+encodeURIComponent(S.sel):'');if(location.hash!==h)history.replaceState(null,'',h);}catch(e){}closeGs();$('#view').replaceChildren();VIEWS[v].mount();renderNav();window.scrollTo(0,0);}
 function renderNav(){renderSides();const mt=S.team.get(S.me);if(mt&&mt.foto){const a=$('#meAv');if(a.getAttribute('src')!=='/_blob/'+mt.foto)a.src='/_blob/'+mt.foto;a.hidden=false;}const n=$('#nav');n.replaceChildren(...NAV.map(([k,l,i])=>{let cnt=null;if(k==='cal'){const c=upcoming(1).length;if(c)cnt=el('span',{class:'cnt',title:'Eventi nelle prossime 24 ore'},c);}return el('button',{class:S.view===k?'on':'',type:'button',onclick:()=>go(k),title:l},ic(i),el('span',{class:'lbl'},l),cnt);}));$('#vtitle').textContent=VIEWS[S.view]?.title?.()||'';}
 function unread(){const seen=S.state.seenAt||0;return S.feed.filter(f=>f.by!==S.me&&f.at>seen);}
 function renderBell(){const b=$('#bell');const u=unread().length;b.replaceChildren(ic('bell',20),u?el('span',{class:'dot'},u>99?'99+':u):null);}
@@ -1249,16 +1252,19 @@ VIEWS.clienti={title:()=>S.sel?'Cliente':'Clienti',mount(){if(S.sel)return cliDe
   const sol=selectEl('flSol',[['','Status Solution: tutti'],...TIERS.map(t=>[t,'Solution · '+TLAB[t]])],f.sol,{onchange:e=>{f.sol=e.target.value;this.update();}});
   const grp=el('label',{class:'row',style:'gap:6px'},el('input',{type:'checkbox',id:'flGrp',checked:f.group,onchange:e=>{f.group=e.target.checked;this.update();}}),'Raggruppa per categoria');
   this.body=el('div',{class:'stack'});
-  r.append(el('div',{class:'row between'},el('div',{class:'filters'},q,this.catSel,pro,sol,grp),el('div',{class:'row'},btn('Categorie',()=>window.hpCatManager&&hpCatManager(),'','gear'),btn('Nuovo cliente',()=>clienteForm({}),'pri','plus'))),this.body);this.update();},
+  this.sumEl=el('div',{class:'hp-clisum'});r.append(this.sumEl,el('div',{class:'row between'},el('div',{class:'filters'},q,this.catSel,pro,sol,grp),el('div',{class:'row'},btn('Categorie',()=>window.hpCatManager&&hpCatManager(),'','gear'),btn('Nuovo cliente',()=>clienteForm({}),'pri','plus'))),this.body);this.update();},
  update(){if(S.sel)return cliDetail.update();const f=S.fCli;{const cn=new Map();for(const c of S.clienti.values())cn.set(c.categoria||'',(cn.get(c.categoria||'')||0)+1);const cs=cfg().categorie;const ex=[...cn.keys()].filter(k=>k&&!cs.includes(k));fillSel(this.catSel,[['','Tutte le categorie'],...cs.concat(ex).map(c=>[c,c+' ('+(cn.get(c)||0)+')']),['__none','Senza categoria ('+(cn.get('')||0)+')']],f.cat);}
   const ql=f.q.toLowerCase();let rows=[...S.clienti.values()].filter(c=>(!f.cat||(f.cat==='__none'?!c.categoria:c.categoria===f.cat))&&(!f.pro||c.statusPro===f.pro)&&(!f.sol||c.statusSol===f.sol)&&(!ql||(c.nome+' '+(c.citta||'')+' '+(c.piva||'')+' '+(c.referente||'')).toLowerCase().includes(ql))).sort(byName);
   const gate=[dbGate(),loading()].filter(Boolean);
-  if(!rows.length){this.body.replaceChildren(...gate,S.clienti.size?emptyBox('Nessun cliente con questi filtri','Cambia i filtri di categoria o di status.'):emptyBox('Nessun cliente','Aggiungi i clienti con categoria, status Pro e Solution e i loro sconti: le offerte li applicano in automatico.',btn('Nuovo cliente',()=>clienteForm({}),'pri','plus')));return;}
+  if(!rows.length){this.sumEl&&this.sumEl.replaceChildren(el('b',{},'0 clienti'));this.body.replaceChildren(...gate,S.clienti.size?emptyBox('Nessun cliente con questi filtri','Cambia i filtri di categoria o di status.'):emptyBox('Nessun cliente','Aggiungi i clienti con categoria, status Pro e Solution e i loro sconti: le offerte li applicano in automatico.',btn('Nuovo cliente',()=>clienteForm({}),'pri','plus')));return;}
   const comBy=new Map();S.commesse.forEach(c=>{if(!c.clienteId)return;const a=comBy.get(c.clienteId)||{n:0,N:0};a.n++;a.N+=comVal(c.id).N;comBy.set(c.clienteId,a);});
   const rowEl=c=>{const a=comBy.get(c.id)||{n:0,N:0};return el('tr',{class:'click',onclick:()=>go('clienti',c.id)},el('td',{},el('div',{class:'cell-t'},el('b',{},c.nome),el('small',{},[c.referente,c.piva?'P.IVA '+c.piva:''].filter(Boolean).join(' · ')))),el('td',{'data-sort':c.categoria||'',onclick:e=>e.stopPropagation()},catSel(c)),el('td',{},tierChip(c.statusPro)),el('td',{},tierChip(c.statusSol)),el('td',{},c.citta||'—'),el('td',{class:'r num'},a.n),el('td',{class:'r num'},a.N?eur0(a.N):'—'));};
   const tb=el('tbody');
   if(f.group){const g=new Map();rows.forEach(c=>{const k=c.categoria||'Senza categoria';if(!g.has(k))g.set(k,[]);g.get(k).push(c);});for(const [k,a] of [...g.entries()].sort((x,y)=>x[0].localeCompare(y[0],'it'))){tb.append(el('tr',{},el('td',{colspan:7,style:'background:var(--surface-2)'},el('b',{},k),el('span',{class:'muted'},' · '+a.length))));a.forEach(c=>tb.append(rowEl(c)));}}
   else rows.forEach(c=>tb.append(rowEl(c)));
+  const nP=rows.filter(c=>c.partner).length,nPro=rows.filter(c=>c.partner&&String(c.partner.catalogo||'').includes('PRO')).length,nSol=rows.filter(c=>c.partner&&String(c.partner.catalogo||'').includes('SOLUTION')).length;
+  const toP=cat=>e=>{e.preventDefault();S.fPar={...(S.fPar||{q:'',cat:'',tier:''}),cat,q:'',tier:''};go('partner');};
+  this.sumEl.replaceChildren(el('b',{},rows.length.toLocaleString('it-IT')+(rows.length===1?' cliente':' clienti')),' · di cui ',el('a',{href:'#partner',title:'Apri la pagina dei partner',onclick:toP('')},nP+' Partner'),' (',el('a',{href:'#partner',title:'Partner con catalogo Pro',onclick:toP('PRO')},'PRO '+nPro),' · ',el('a',{href:'#partner',title:'Partner con catalogo Solution',onclick:toP('SOLUTION')},'Solution '+nSol),')');
   this.body.replaceChildren(...gate,el('div',{class:'tbl-wrap'},el('table',{},el('thead',{},el('tr',{},['Cliente','Categoria','Status Pro','Status Solution','Città','Commesse','Valore netto'].map((h,i)=>el('th',{class:i>=5?'r':''},h)))),tb)),el('p',{class:'hint'},rows.length+' clienti'));
  }};
 const cliDetail={mount(){this.root=$('#view');this.update();},update(){const c=S.clienti.get(S.sel);const r=this.root;
@@ -1960,7 +1966,9 @@ VIEWS.fatt={title:()=>'Fatturato',mount(){this.root=$('#view');if(this.q==null)t
 
 /* router leave hooks */
 const _go=go;go=function(v,sel,tab){if(S.view==='commesse'&&VIEWS.commesse.leave&&!(v==='commesse'&&sel===S.sel))VIEWS.commesse.leave();VIEWS.set.editing=false;_go(v,sel,tab);renderTray();};
-const startHash=(location.hash||'').slice(1);if(NAV.some(n=>n[0]===startHash))S.view=startHash;
+const startHash=(location.hash||'').slice(1).split('/')[0];if(NAV.some(n=>n[0]===startHash))S.view=startHash;
+/* dopo un aggiornamento della pagina si riparte dalla pagina (e dalla scheda) in cui ci si trovava: #vista/id */
+window.addEventListener('DOMContentLoaded',()=>{const [v,id]=(location.hash||'').slice(1).split('/');if(!v||!VIEWS[v])return;const sel=id?decodeURIComponent(id):null;if(S.view!==v||sel)go(v,sel);});
 boot();
 </script>
 <script src="/maps.js"></script>
