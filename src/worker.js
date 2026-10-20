@@ -13,7 +13,7 @@ import extraItx from '../seed/import-itx.json';
 const SESSION_DAYS = 60;
 const OTP_MIN = 10;
 const MAX_UPLOAD = 20 * 1024 * 1024;
-const PUBLIC_PATHS = new Set(['/login', '/login.html', '/favicon.svg', '/robots.txt', '/proav-logo.png', '/proav-favicon.png', '/proav-touch.png']);
+const PUBLIC_PATHS = new Set(['/login', '/login.html', '/favicon.svg', '/robots.txt', '/proav-logo.png', '/hik-palermo-logo.png', '/proav-favicon.png', '/proav-touch.png']);
 const TZ = 'Europe/Rome';
 
 /* ---------------- utility ---------------- */
