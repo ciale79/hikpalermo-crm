@@ -722,7 +722,21 @@
               el('td', { 'data-sort': d.rientro || '' }, d.rientro ? el('span', { style: overdue(d) ? 'color:var(--accent);font-weight:600' : '' }, fKs(d.rientro)) : '—'),
               el('td', { 'data-sort': nr || '' }, nr ? el('span', { class: 'row', style: 'gap:4px;flex-wrap:nowrap' }, ic('bell', 14), fKs(nr)) : '—'),
               el('td', {}, d.resp ? el('span', { class: 'row', style: 'gap:6px;flex-wrap:nowrap' }, av(d.resp), nm(d.resp)) : '—'),
-              el('td', {}, !isOpen(d) ? el('span', { class: 'pill', style: '--c:var(--ok)' }, 'Chiusa') : overdue(d) ? el('span', { class: 'pill', style: '--c:var(--accent)' }, 'Scaduta') : el('span', { class: 'pill', style: '--c:var(--warn)' }, 'Aperta')),
+              el('td', { onclick: e => e.stopPropagation() }, !isOpen(d) ? el('span', { class: 'pill', style: '--c:var(--ok)' }, 'Chiusa') : (() => {
+                // stato dal menu a tendina: chiudere la consegna registra il rientro (o la vendita) di tutti gli articoli ancora fuori
+                const pend = (d.items || []).filter(x => !x.rientratoAt && !x.esito).map(x => x.id);
+                const cur = overdue(d) ? 'scaduta' : 'aperta';
+                const s = el('select', { class: 'mg-dst ' + cur, 'aria-label': 'Stato della consegna ' + (d.n || ''), onchange: async e => {
+                  const v = e.target.value; if (v === cur) return;
+                  const lab = v === 'venduto' ? 'lasciati al cliente (venduti)' : 'rientrati in filiale';
+                  if (!pend.length || !await ask('Chiudere la consegna ' + (d.n || '') + ' di ' + cliName(d.clienteId) + ': ' + pend.length + (pend.length === 1 ? ' articolo segnato come ' : ' articoli segnati come ') + lab + ' oggi?', 'Chiudi consegna', 'pri')) { e.target.value = cur; return; }
+                  await returnItems(d, pend, v === 'venduto' ? 'venduto' : null); toast('Consegna ' + (d.n || '') + ' chiusa');
+                } },
+                  el('option', { value: cur, selected: true }, cur === 'scaduta' ? 'Scaduta (aperta)' : 'Aperta'),
+                  el('option', { value: 'rientro' }, 'Chiusa · rientrata in filiale'),
+                  el('option', { value: 'venduto' }, 'Chiusa · lasciata al cliente'));
+                return s;
+              })()),
               el('td', { onclick: e => e.stopPropagation() }, el('button', { type: 'button', class: 'icon-btn', title: 'Documento PDF', 'aria-label': 'Documento PDF', onclick: () => demoPdf(d) }, ic('pdf', 16))));
           }))))) : emptyBox('Nessuna consegna', f.dst === 'aperte' ? 'Non ci sono prodotti fuori in demo o POC.' : 'Nessuna consegna con questo filtro.', btn('Nuova demo / POC', () => demoForm(null), 'pri', 'ext'));
       }
