@@ -174,7 +174,13 @@
       if (defs.length) { body.tools = defs; if (round === maxRounds) body.tool_choice = { type: 'none' }; }
       const r = await fetch('/api/claude', { method: 'POST', credentials: 'same-origin', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: opt.signal });
       const j = await r.json().catch(() => null);
-      if (!r.ok) throw E((j && j.error && (j.error.code || j.error.type)) || 'http_' + r.status, (j && j.error && j.error.message) || 'Errore 800AI');
+      if (!r.ok) {
+        const msg = (j && j.error && j.error.message) || '';
+        // limite di spesa impostato nella Console Anthropic: messaggio chiaro in italiano
+        if (/usage limits/i.test(msg)) { const d = /on (\d{4}-\d{2}-\d{2})/.exec(msg); throw E('limite_api', 'limite di spesa mensile dell\'API raggiunto' + (d ? ', si sblocca il ' + d[1].split('-').reverse().join('/') : '') + ' oppure alzando il limite nella Console Anthropic'); }
+        if (/credit balance/i.test(msg)) throw E('credito_api', 'credito dell\'API esaurito: ricarica dalla Console Anthropic');
+        throw E((j && j.error && (j.error.code || j.error.type)) || 'http_' + r.status, msg || 'Errore 800AI');
+      }
       const content = j.content || [];
       const uses = content.filter(b => b.type === 'tool_use');
       if (j.stop_reason === 'tool_use' && uses.length) {
