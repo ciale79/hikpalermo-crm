@@ -6,7 +6,9 @@
   const LIB = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   const LAB = { i1100: 'Stock 1100 · magazzino interno', e1006: 'Stock 1006 · magazzino esterno', n1003: 'Stock 1003 · non lavorati', tot: 'Stock totale (1100+1006+1003)', po: 'PO · ordini acquisti', oc: 'OC · ordini vendita', fut: 'Disponibilità futura', ams: 'Stock AMS (Amsterdam)' };
   const NL = '<svg viewBox="0 0 9 6" width="14" height="10" aria-hidden="true"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#fff"/><rect y="4" width="9" height="2" fill="#21468B"/></svg>';
-  S.stock = null; S.stockInfo = null; let loadedBlob = null;
+  // bandiera della Sicilia con la trinacria: articoli presenti nel magazzino 1009 (filiale di Palermo)
+  const SIC = '<svg viewBox="0 0 30 20" width="15" height="10" aria-hidden="true"><path d="M0 0H30L0 20Z" fill="#D21034"/><path d="M30 0V20H0Z" fill="#FCDD09"/><g transform="translate(15 10)" fill="none" stroke="#3b2a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -1.8 L0 -6 L3 -7.5"/><path d="M1.6 0.9 L5.2 3 L5 6.4"/><path d="M-1.6 0.9 L-5.2 3 L-8 1.4"/></g><circle cx="15" cy="10" r="2.4" fill="#F2C19B" stroke="#3b2a1a" stroke-width=".8"/></svg>';
+  S.stock = null; S.stockInfo = null; let loadedBlob = null; S.mag1009 = null;
   const fmt = v => (+v || 0).toLocaleString('it-IT', { maximumFractionDigits: 2 });
 
   async function loadBlob(info) {
@@ -18,7 +20,21 @@
       S.stock = m; changed();
     } catch (e) { loadedBlob = null; console.warn('stock', e); }
   }
-  const t0 = setInterval(() => { if (typeof db === 'undefined' || !db || !S.me) return; clearInterval(t0); ref('stockInfo', 'current').onSnapshot(s => { S.stockInfo = s.exists ? s.data() : null; loadBlob(S.stockInfo); changed(); }, () => { }); }, 500);
+  const t0 = setInterval(() => {
+    if (typeof db === 'undefined' || !db || !S.me) return; clearInterval(t0);
+    ref('stockInfo', 'current').onSnapshot(s => { S.stockInfo = s.exists ? s.data() : null; loadBlob(S.stockInfo); changed(); }, () => { });
+    // magazzino di filiale (1009) del gruppo, anche su ProAV: indice per SAP e per codice
+    db.collection('!magazzino').onSnapshot(sn => {
+      const m = new Map(); const add = (k, x) => { if (!k) return; const o = m.get(k) || { sede: 0, demo: 0, n: 0 }; const q = +x.qty || 0; if ((x.stato || 'sede') === 'sede') o.sede += q; else if (x.stato === 'demo') o.demo += q || 1; o.n++; m.set(k, o); };
+      sn.docs.forEach(d => { const x = d.data(); if (!x) return; if (x.magSap && String(x.magSap) !== '1009') return; add('s:' + String(x.sap || '').trim(), x); if (x.code && !/^SAP /.test(x.code)) add('c:' + (typeof norm === 'function' ? norm(x.code) : x.code), x); });
+      S.mag1009 = m; changed();
+    }, () => { });
+  }, 500);
+  window.hpMag1009 = function (it) {
+    if (!S.mag1009 || !it) return null; if (typeof it === 'string') { const f = typeof findCode === 'function' ? findCode(it) : null; it = f || { c: it }; }
+    return S.mag1009.get('s:' + String(it.sap || '').trim()) || (it.cn ? S.mag1009.get('c:' + it.cn) : null) || (it.c && typeof norm === 'function' ? S.mag1009.get('c:' + norm(it.c)) : null) || null;
+  };
+  const sicFlag = () => { const f = el('span', { class: 'hp-flag-nl', role: 'img', 'aria-label': 'Sicilia · magazzino 1009' }); f.innerHTML = SIC; return f; };
 
   // record di stock di un articolo (dal SAP del listino; per un codice cerca l'articolo nel catalogo)
   window.hpStock = function (it) {
@@ -32,22 +48,26 @@
   const tip = s => Object.keys(LAB).map(k => LAB[k] + ': ' + fmt(s[k])).join('\n') + (S.stockInfo ? '\n— ' + (S.stockInfo.label || 'analisi stock') + ' del ' + fD(S.stockInfo.at) : '');
   // nelle liste: bandiera italiana = magazzini italiani (stock totale, con la disponibilità futura), bandiera olandese = AMS
   window.hpStockChip = function (it) {
-    const s = window.hpStock(it); if (!s) return null;
+    const s = window.hpStock(it), g = window.hpMag1009(it); if (!s && !g) return null;
+    const sic = g ? el('span', { class: 'hp-stk-i', title: 'Magazzino 1009 (filiale Palermo): ' + fmt(g.sede) + ' in sede' + (g.demo ? ' · ' + fmt(g.demo) + ' in demo' : '') }, sicFlag(), el('b', { class: g.sede > 0 ? 'ok' : '' }, fmt(g.sede)), g.demo ? el('small', {}, '+' + fmt(g.demo) + ' demo') : null) : null;
+    if (!s) return el('span', { class: 'hp-stk', onclick: e => e.stopPropagation() }, sic);
     const nl = el('span', { class: 'hp-flag-nl', role: 'img', 'aria-label': 'Amsterdam' }); nl.innerHTML = NL;
     return el('span', { class: 'hp-stk' + (s.tot > 0 || s.ams > 0 ? '' : ' zero'), title: tip(s), onclick: e => e.stopPropagation() },
       el('span', { class: 'hp-stk-i' }, el('span', { class: 'hp-flag-it', role: 'img', 'aria-label': 'Italia' }), el('b', { class: s.tot > 0 ? 'ok' : '' }, fmt(s.tot)), s.fut !== s.tot ? el('small', {}, '→ ' + fmt(s.fut)) : null),
-      el('span', { class: 'hp-stk-i' }, nl, el('b', { class: s.ams > 0 ? 'ok' : '' }, fmt(s.ams))));
+      el('span', { class: 'hp-stk-i' }, nl, el('b', { class: s.ams > 0 ? 'ok' : '' }, fmt(s.ams))), sic);
   };
   // nella scheda prodotto: tutte le colonne
   window.hpStockBox = function (it) {
-    const s = window.hpStock(it); if (!s) return null;
+    const s0 = window.hpStock(it), g = window.hpMag1009(it); if (!s0 && !g) return null;
+    const s = s0 || { i1100: 0, e1006: 0, n1003: 0, tot: 0, po: 0, oc: 0, fut: 0, ams: 0, none: true };
+    const sicRow = g ? el('div', { class: 'hp-stkams' }, sicFlag(), el('span', {}, 'Magazzino 1009 · filiale Palermo', g.demo ? el('small', { class: 'hint' }, ' · ' + fmt(g.demo) + ' in demo') : null), el('b', { class: 'num' + (g.sede > 0 ? ' pos' : '') }, fmt(g.sede))) : null;
     const nl = el('span', { class: 'hp-flag-nl', role: 'img', 'aria-label': 'Amsterdam' }); nl.innerHTML = NL;
     const cell = (k, cls) => el('div', { class: 'hp-stkc' + (cls ? ' ' + cls : '') }, el('span', { class: 'eyebrow' }, LAB[k]), el('b', { class: 'num' + ((+s[k]) < 0 ? ' neg' : (+s[k]) > 0 ? ' pos' : '') }, fmt(s[k])));
     return el('section', { class: 'panel stack hp-stkbox' },
       el('div', { class: 'panel-h' }, el('h4', { class: 'row', style: 'gap:6px;margin:0' }, el('span', { class: 'hp-flag-it', role: 'img', 'aria-label': 'Italia' }), 'Disponibilità', s.none ? el('span', { class: 'hint' }, ' · codice non presente nell\'analisi stock') : null),
         el('span', { class: 'hint' }, S.stockInfo ? (S.stockInfo.label || 'Analisi stock') + ' · caricata il ' + fD(S.stockInfo.at) : '')),
       el('div', { class: 'hp-stkgrid' }, cell('i1100'), cell('e1006'), cell('n1003'), cell('tot', 'tot'), cell('po'), cell('oc'), cell('fut', 'tot')),
-      el('div', { class: 'hp-stkams' }, nl, el('span', {}, LAB.ams), el('b', { class: 'num' + (s.ams > 0 ? ' pos' : s.ams < 0 ? ' neg' : '') }, fmt(s.ams))));
+      el('div', { class: 'hp-stkams' }, nl, el('span', {}, LAB.ams), el('b', { class: 'num' + (s.ams > 0 ? ' pos' : s.ams < 0 ? ' neg' : '') }, fmt(s.ams))), sicRow);
   };
 
   /* ---------- caricamento del file ---------- */
