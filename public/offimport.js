@@ -273,7 +273,7 @@
     const head = [['Offerta', o.numero || ''], ['Titolo', o.titolo || ''], ['Data', o.data || ''], ['Cliente', cli?.nome || ''], ['Commessa', com?.nome || ''], []];
     const H = ['Sezione', 'Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Prezzo listino'] : []), ...(sc ? ['Sconto %'] : []), 'Prezzo netto', 'Totale netto'];
     const aoa = [...head, H];
-    for (const r of o.righe || []) { const t = lineTot(r); aoa.push([r.sez || '', r.c, (r.b || '') + (r.net ? ' (prezzo netto)' : ''), +r.q || 0, ...(lst ? [r.noList ? '' : +r.p || 0] : []), ...(sc ? [r.noList ? '' : r2(+r.sc || 0)] : []), t.unit, t.netto]); }
+    for (const r of o.righe || []) { const t = lineTot(r); aoa.push([r.sez || '', r.c, (r.b || '') + (r.net ? ' (prezzo netto)' : ''), +r.q || 0, ...(lst ? [r.noList ? '' : +r.p || 0] : []), ...(sc ? [r.noList ? '' : (+r.sc2 ? (typeof scTxt === 'function' ? scTxt(r) : r2(+r.sc || 0)) : r2(+r.sc || 0))] : []), t.unit, t.netto]); }
     const T = offTot(o.righe), TL = offTot((o.righe || []).filter(r => !r.noList)); aoa.push([]); aoa.push(['', '', 'TOTALE', '', ...(lst ? [TL.L] : []), ...(sc ? [TL.sc] : []), '', T.N]);
     if (o.note) aoa.push([], ['Note', o.note]);
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = H.map((h, i) => ({ wch: i === 2 ? 60 : i === 1 ? 24 : 14 }));
@@ -301,7 +301,7 @@
     const body = [], rowImg = []; let sez = null;
     for (const r of o.righe || []) {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) { rowImg.push(null); body.push([{ content: sez, colSpan: head.length, styles: { fontStyle: 'bold', fillColor: [245, 246, 248] } }]); } }
-      const t = lineTot(r); rowImg.push(rimg[(o.righe || []).indexOf(r)] || null); body.push([...(withImg ? [''] : []), r.c, (r.b || '').slice(0, r.net ? 104 : 120) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList ? '—' : eur(r.p)] : []), ...(sc ? [r.noList ? '—' : fN.format(r2(+r.sc || 0)) + '%'] : []), eur(t.unit), eur(t.netto)]);
+      const t = lineTot(r); rowImg.push(rimg[(o.righe || []).indexOf(r)] || null); body.push([...(withImg ? [''] : []), r.c, (r.b || '').slice(0, r.net ? 104 : 120) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList ? '—' : eur(r.p)] : []), ...(sc ? [r.noList ? '—' : (typeof scTxt === 'function' ? scTxt(r) : fN.format(r2(+r.sc || 0)) + '%')] : []), eur(t.unit), eur(t.netto)]);
     }
     const ci = head.length, o0 = withImg ? 1 : 0; const right = {}; for (let i = 2 + o0; i < ci; i++) right[i] = { halign: 'right', cellWidth: i === 2 + o0 ? 10 : 21, overflow: 'visible' };
     doc.autoTable({ startY: 41 + cl.length * 4.6 + 6, head: [head], body, margin: { left: 14, right: 14 }, styles: { fontSize: 8, cellPadding: 1.8, textColor: [28, 36, 48], lineColor: [225, 228, 234], lineWidth: .1 }, headStyles: { fillColor: [28, 36, 48], textColor: 255 }, columnStyles: { ...(withImg ? { 0: { cellWidth: 15, minCellHeight: 13 } } : {}), [o0]: { cellWidth: withImg ? 38 : 44, fontStyle: 'bold', fontSize: 7.5 }, ...right }, didDrawCell: d => { if (!withImg || d.section !== 'body' || d.column.index !== 0) return; const im = rowImg[d.row.index]; if (!im) return; const sz = Math.min(d.cell.width - 2, d.cell.height - 2, 12); try { doc.addImage(im, 'JPEG', d.cell.x + (d.cell.width - sz) / 2, d.cell.y + (d.cell.height - sz) / 2, sz, sz); } catch (e) { } } });
