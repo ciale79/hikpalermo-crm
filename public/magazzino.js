@@ -669,7 +669,7 @@
         tile('Rientri scaduti', String(late.length), late.length ? late.map(d => cliName(d.clienteId)).slice(0, 3).join(', ') : 'nessuno', () => { f.tab = 'demo'; f.dst = 'scadute'; this.update(); }, late.length ? 'color:var(--accent)' : ''),
         tile('Promemoria entro 7 giorni', String(soon.length), soon.length ? 'il primo ' + fKs(soon.map(nextRem).sort()[0]) : '—', () => { f.tab = 'demo'; f.dst = 'aperte'; this.update(); }));
       const seg = el('div', { class: 'seg' }, el('button', { type: 'button', class: f.tab === 'art' ? 'on' : '', onclick: () => { f.tab = 'art'; this.update(); } }, ic('box', 16), 'Articoli'), el('button', { type: 'button', class: f.tab === 'demo' ? 'on' : '', onclick: () => { f.tab = 'demo'; this.update(); } }, ic('ext', 16), 'Demo e POC', od.length ? el('span', { class: 'n' }, String(od.length)) : null));
-      const acts = el('div', { class: 'row' }, btn('Importa inventario', () => window.hpInvImport(), 'ghost', 'up'), btn('Modulo vuoto PDF', blankPdf, 'ghost', 'pdf'), btn('Nuova demo / POC', () => demoForm(null), '', 'ext'), btn('Carica articoli', loadForm, 'pri', 'scan'));
+      const acts = el('div', { class: 'row' }, window.hpStockUpload ? btn('Carica analisi stock', () => window.hpStockUpload(), 'ghost', 'up') : null, btn('Importa inventario', () => window.hpInvImport(), 'ghost', 'up'), btn('Modulo vuoto PDF', blankPdf, 'ghost', 'pdf'), btn('Nuova demo / POC', () => demoForm(null), '', 'ext'), btn('Carica articoli', loadForm, 'pri', 'scan'));
       let filters, body;
       if (f.tab === 'art') {
         const ql = f.q.trim().toLowerCase(); const qn = norm(f.q);
