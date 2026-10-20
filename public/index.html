@@ -557,6 +557,23 @@ th.r .hp-sb{flex-direction:row-reverse}
 .btn.hp-wa{background:#25D366;border-color:#25D366;color:#fff}.btn.hp-tg{background:#229ED9;border-color:#229ED9;color:#fff}
 .hp-prog{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}.hp-prog i{display:block;height:100%;background:var(--accent);transition:width .4s}
 .hp-salesbar{margin-bottom:12px}
+/* ---------- buoni pasto ---------- */
+.hp-bpcal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.hp-bpcal .dh{font-size:.72rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;padding:0 4px}
+.hp-bpday{display:flex;flex-direction:column;gap:4px;min-height:92px;padding:6px 7px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface);cursor:pointer;min-width:0}
+.hp-bpday.out{background:transparent;border-style:dashed;cursor:default}
+.hp-bpday.ok{border-color:color-mix(in srgb,var(--ok) 45%,var(--line-2));background:color-mix(in srgb,var(--ok) 7%,var(--surface))}
+.hp-bpday.no{background:color-mix(in srgb,var(--ink-3) 7%,var(--surface))}
+.hp-bpday.no.we{opacity:.7}
+.hp-bpday.man{box-shadow:inset 0 0 0 2px var(--warn)}
+.hp-bpck{display:inline-flex;align-items:center;gap:3px;font-size:.66rem;color:var(--ink-3);white-space:nowrap}
+.hp-bpwhy{display:flex;flex-wrap:wrap;gap:3px;min-width:0}
+.hp-bpchip{font-size:.66rem;line-height:1.2;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c);font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-bpyes{font-size:.72rem;color:var(--ok);font-weight:700}
+.hp-bpst{margin-top:auto;display:flex;flex-direction:column;gap:2px}
+tr.hp-bpoff td{opacity:.55}
+@media (max-width:700px){.hp-bpcal{gap:3px}.hp-bpday{min-height:70px;padding:4px}.hp-bpchip{font-size:.58rem}.hp-bpck{font-size:0}.hp-bpck input{margin:0}.hp-bpyes{font-size:.62rem}}
+
 /* ---------- area ProAV (proav.hikpalermo.com) ---------- */
 html.pav{--accent:#5B3FD6;--accent-ink:#FFFFFF;--accent-soft:#E7E1FB;--side:#17123A;--side-hover:#241C55;--side-accent:#B39DFF;--side-ink-2:#A59CD6;--lcd:#120E2E}
 @media (prefers-color-scheme:dark){html.pav:not([data-theme="light"]){--accent:#9D86FF;--accent-ink:#140B38;--accent-soft:#2C2160;--side:#0E0B26;--side-hover:#1A1540;--side-accent:#B39DFF;--lcd:#08061A}}
@@ -1962,6 +1979,7 @@ boot();
 <script src="/kpitiles.js"></script>
 <script src="/confronto.js"></script>
 <script src="/proav.js"></script>
+<script src="/buonipasto.js"></script>
 <script src="/offimport.js"></script>
 <script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
