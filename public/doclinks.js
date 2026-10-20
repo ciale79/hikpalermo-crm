@@ -39,9 +39,11 @@
   const isModel = c => /^[A-Za-z]{1,8}-[A-Za-z0-9]/.test(String(c || '').trim());
   window.hpGlobalChip = function (code, cls) {
     if (!isModel(code)) return null;
-    const a = el('a', { class: cls || 'tag hp-gltag', href: '/go/hik?code=' + encodeURIComponent(code), target: '_blank', rel: 'noopener', title: 'Manuali, firmware e documentazione ufficiale su hikvision.com (in inglese)', onclick: e => e.stopPropagation() });
+    // «Cerca Datasheet»: lo stesso link della scheda articolo (salvato dal gruppo o ricerca su hikvision.com), senza usare l'AI
+    const dl = typeof docLinks === 'function' ? docLinks(code) : { ds: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet') };
+    const a = el('a', { class: cls || 'tag hp-gltag', href: dl.ds, target: '_blank', rel: 'noopener', title: dl.dsSaved ? 'Datasheet ufficiale (link salvato)' : 'Cerca il datasheet su hikvision.com (in inglese)', onclick: e => e.stopPropagation() });
     const f = el('span', { class: 'hp-flag-uk', role: 'img', 'aria-label': 'Documentazione in inglese' }); f.innerHTML = UK;
-    a.append(f, 'Documenti Global'); return a;
+    a.append(f, 'Cerca Datasheet'); return a;
   };
   // AcuSeek: dal listino (descrizione) o dalla pagina ufficiale trovata dal server
   S.hikpage = new Map();

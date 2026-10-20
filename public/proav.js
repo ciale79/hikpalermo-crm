@@ -90,7 +90,7 @@
       el('div', { class: 'row', style: 'gap:18px;flex-wrap:wrap' }, M.p != null && num(r[M.p]) != null ? el('div', { class: 'stack', style: 'gap:0' }, el('span', { class: 'eyebrow' }, 'Prezzo di listino'), el('b', { class: 'num', style: 'font-size:1.4rem' }, eur(num(r[M.p])))) : null,
         netsOf(m, r).map(([h, v]) => el('div', { class: 'stack', style: 'gap:0' }, el('span', { class: 'eyebrow' }, h), el('b', { class: 'num hp-net', style: 'font-size:1.2rem' }, eur(v)), el('small', { class: 'hp-net' }, 'PREZZO NETTO')))),
       el('dl', { class: 'dl' }, m.cols.map((h, i) => (r[i] === '' || r[i] == null) ? null : [el('dt', {}, h || 'Colonna ' + (i + 1)), el('dd', { style: 'white-space:pre-wrap' }, typeof r[i] === 'number' ? (/prez|price|list|nett|net|eur|€|cost|msrp|dealer|partner|distrib|install/i.test(h) ? eur(r[i]) : r[i].toLocaleString('it-IT', { maximumFractionDigits: 2 })) : String(r[i]))])));
-    const md = modal(code, body, [btn('Copia codice', () => copy(code), '', 'copy'), el('a', { class: 'btn', href: '/go/hik?code=' + encodeURIComponent(code), target: '_blank', rel: 'noopener' }, 'Pagina Hikvision'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())], { wide: true });
+    const md = modal(code, body, [btn('Copia codice', () => copy(code), '', 'copy'), (window.hpGlobalChip && window.hpGlobalChip(code, 'btn hp-glbtn')) || el('a', { class: 'btn', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet'), target: '_blank', rel: 'noopener' }, 'Cerca Datasheet'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())], { wide: true });
   }
 
   // ricerca globale in alto: anche nei listini ProAV
