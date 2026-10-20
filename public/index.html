@@ -47,7 +47,7 @@
   color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
 h1,h2,h3,h4{font-family:var(--font-display);font-stretch:88%;letter-spacing:-.01em;margin:0;text-wrap:balance;font-weight:700}
 h1{font-size:1.6rem}h2{font-size:1.2rem}h3{font-size:1rem}h4{font-size:.9rem}
 p{margin:0}
@@ -61,7 +61,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 
 /* shell */
 .app{display:grid;grid-template-columns:216px 1fr;min-height:100%}
-.side{background:var(--side);color:var(--side-ink);padding-block:18px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:12px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;height:100dvh}
+.side{background:var(--side);color:var(--side-ink);padding-block:10px 18px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:12px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;height:100dvh}
 .brand{display:flex;flex-direction:column;gap:2px;padding:0 8px}
 .brand b{font-family:var(--font-display);font-stretch:80%;font-size:1.3rem;letter-spacing:.01em;color:#fff;font-weight:800}
 .brand .hik{color:var(--side-accent)}
@@ -588,7 +588,7 @@ html.pav[data-theme="dark"]{--accent:#9D86FF;--accent-ink:#140B38;--accent-soft:
 .hp-pavlogo-img{display:block;width:100%;max-width:180px;height:auto;margin:2px 0 4px}
 .hp-brandlink{display:block;line-height:0;border-radius:6px}
 .hp-brandlink:focus-visible{outline:2px solid var(--side-accent);outline-offset:3px}
-.hp-brandimg{display:block;width:100%;max-width:190px;height:auto;margin:2px 0 4px}
+.hp-brandimg{display:block;width:100%;max-width:190px;height:auto;margin:0 0 4px}
 .hp-pavtag{display:inline-block;margin-left:6px;font-style:normal;font-size:.62rem;letter-spacing:.12em;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--side-accent);color:#17123A;vertical-align:4px}
 .hp-pavstrip{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:stretch;margin-bottom:12px;border-left:4px solid var(--accent);background:linear-gradient(100deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface) 60%)}
 .hp-pavhero{display:flex;align-items:center;gap:10px;min-width:200px}
