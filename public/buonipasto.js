@@ -8,6 +8,7 @@
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
   const PDFW = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const XLSXLIB = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  const BPV = 5.29; // valore di un buono pasto (€)
   const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
   ICONS.meal = 'M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 2-3 5v5h3M17 3v18';
   if (!NAV.some(n => n[0] === 'bp')) { const i = NAV.findIndex(n => n[0] === 'set'); NAV.splice(i < 0 ? NAV.length : i, 0, ['bp', 'Buoni pasto', 'meal']); }
@@ -182,7 +183,7 @@
       const cf = el('input', { id: 'bpCf', type: 'text', value: D.cf || '', maxlength: 16, placeholder: 'Codice fiscale', style: 'text-transform:uppercase;width:100%;max-width:220px', autocomplete: 'off', onchange: e => { D.cf = e.target.value.trim().toUpperCase(); save(); } });
       const cg = el('input', { type: 'text', value: D.cognome || nm(S.me).split(' ').pop() || '', placeholder: 'Cognome', style: 'width:100%;max-width:220px', onchange: e => { D.cognome = e.target.value.trim(); save(); this.update(); } });
       const kpi = el('div', { class: 'kpis' },
-        el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Buoni pasto'), el('span', { class: 'v', style: 'color:var(--ok)' }, String(nBP)), el('span', { class: 's' }, 'su ' + nLav + ' giorni lavorativi')),
+        el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Buoni pasto'), el('span', { class: 'v', style: 'color:var(--ok)' }, String(nBP)), el('span', { class: 's' }, 'per un valore di ' + eur(r2(nBP * BPV))), el('span', { class: 's' }, 'su ' + nLav + ' giorni lavorativi')),
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Pasti con la carta'), el('span', { class: 'v' }, String(new Set(M.voci.filter(v => v.inc).map(v => v.d)).size)), el('span', { class: 's' }, M.voci.filter(v => v.inc).length + ' voci · ' + eur(M.voci.filter(v => v.inc).reduce((a, v) => a + v.imp, 0)))),
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Ferie, fiere e chiusure'), el('span', { class: 'v' }, String(days.filter(x => x.wd !== 0 && x.wd !== 6 && x.why.some(w => ['ferie', 'malattia', 'fiera', 'trasferta', 'chiusura'].includes(w.k))).length)), el('span', { class: 's' }, 'giorni lavorativi dal calendario')),
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Dati per il file'), el('div', { class: 'stack', style: 'gap:6px' }, cf, cg), el('span', { class: 's', style: 'font-size:.72rem;overflow-wrap:anywhere' }, 'Buoni Pasto ' + y + ' ' + MESI[m1 - 1] + ' ' + (D.cognome || nm(S.me).split(' ').pop()) + '.xls')));
@@ -207,8 +208,8 @@
           el('div', { class: 'hp-bpwhy' }, x.why.map(w => el('span', { class: 'hp-bpchip', style: '--c:' + (CHIP[w.k] || 'var(--ink-3)'), title: w.t || w.l }, w.k === 'pasto' ? 'Pasto: ' + w.l : w.l))),
           el('div', { class: 'hp-bpst' }, x.bp ? el('span', { class: 'hp-bpyes' }, '✓ Buono pasto') : null, x.man ? el('a', { href: '#', class: 'hint', title: 'Torna alla scelta automatica', onclick: e => { e.preventDefault(); e.stopPropagation(); delete M.over[x.dk]; save(); this.update(); } }, 'modificato · ripristina') : null)));
       }
-      const cal = el('section', { class: 'panel stack' }, el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', {}, 'Revisione del mese'), el('span', { class: 'hint' }, 'Spuntato «No BP» = niente buono pasto. Già spuntati: weekend, festivi, chiusure aziendali, ferie, malattia, fiere e trasferte a calendario e i giorni con un pasto in carta. Cambia la spunta per correggere.')),
-        el('span', { class: 'pill', style: '--c:var(--ok)' }, nBP + ' buoni')), grid,
+      const cal = el('section', { class: 'panel stack' }, el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', {}, 'Revisione del mese di ' + MESI[m1 - 1] + ' ' + y), el('span', { class: 'hint' }, 'Spuntato «No BP» = niente buono pasto. Già spuntati: weekend, festivi, chiusure aziendali, ferie, malattia, fiere e trasferte a calendario e i giorni con un pasto in carta. Cambia la spunta per correggere.')),
+        el('span', { class: 'pill', style: '--c:var(--ok)' }, nBP + (nBP === 1 ? ' buono' : ' buoni') + ' per un valore di ' + eur(r2(nBP * BPV)))), grid,
         el('p', { class: 'hint' }, 'Ferie, malattia, fiere e trasferte vengono dagli appuntamenti del calendario in cui sei tra i partecipanti (o che hai creato tu), anche a giornata intera su più giorni; le chiusure aziendali valgono per tutti.'));
       r.replaceChildren(head, kpi, voci, cal);
     }
