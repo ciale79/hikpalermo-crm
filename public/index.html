@@ -998,7 +998,7 @@ const STP=['In preparazione','Progetto inviato','Confermato','Il Cliente ha ordi
 
 /* ============ navigazione ============ */
 const NAV=[['dash','Cruscotto','home'],['fatt','Fatturato','chart'],['commesse','Commesse','brief'],['clienti','Clienti','users'],['cal','Calendario','cal'],['art','Articoli','box'],['naming','Naming rule','code'],['cap','Capitolato','spark'],['set','Gruppo e impostazioni','gear']];
-function go(v,sel,tab){S.view=v;S.sel=sel||null;S.tab=tab||null;try{const h='#'+v+(S.sel?'/'+encodeURIComponent(S.sel):'');if(location.hash!==h)history.replaceState(null,'',h);}catch(e){}closeGs();$('#view').replaceChildren();VIEWS[v].mount();renderNav();window.scrollTo(0,0);}
+function go(v,sel,tab){S.view=v;S.sel=sel||null;S.tab=tab||null;try{const h='#'+v+(S.sel?'/'+encodeURIComponent(S.sel):'');if(location.hash!==h){if(window.hpNavPop)history.replaceState(null,'',h);else history.pushState(null,'',h);}}catch(e){}closeGs();$('#view').replaceChildren();VIEWS[v].mount();renderNav();window.scrollTo(0,0);}
 function renderNav(){renderSides();const mt=S.team.get(S.me);if(mt&&mt.foto){const a=$('#meAv');if(a.getAttribute('src')!=='/_blob/'+mt.foto)a.src='/_blob/'+mt.foto;a.hidden=false;}const n=$('#nav');n.replaceChildren(...NAV.map(([k,l,i])=>{let cnt=null;if(k==='cal'){const c=upcoming(1).length;if(c)cnt=el('span',{class:'cnt',title:'Eventi nelle prossime 24 ore'},c);}return el('button',{class:S.view===k?'on':'',type:'button',onclick:()=>go(k),title:l},ic(i),el('span',{class:'lbl'},l),cnt);}));$('#vtitle').textContent=VIEWS[S.view]?.title?.()||'';}
 function unread(){const seen=S.state.seenAt||0;return S.feed.filter(f=>f.by!==S.me&&f.at>seen);}
 function renderBell(){const b=$('#bell');const u=unread().length;b.replaceChildren(ic('bell',20),u?el('span',{class:'dot'},u>99?'99+':u):null);}
@@ -1968,7 +1968,9 @@ VIEWS.fatt={title:()=>'Fatturato',mount(){this.root=$('#view');if(this.q==null)t
 const _go=go;go=function(v,sel,tab){if(S.view==='commesse'&&VIEWS.commesse.leave&&!(v==='commesse'&&sel===S.sel))VIEWS.commesse.leave();VIEWS.set.editing=false;_go(v,sel,tab);renderTray();};
 const startHash=(location.hash||'').slice(1).split('/')[0];if(NAV.some(n=>n[0]===startHash))S.view=startHash;
 /* dopo un aggiornamento della pagina si riparte dalla pagina (e dalla scheda) in cui ci si trovava: #vista/id */
-window.addEventListener('DOMContentLoaded',()=>{const [v,id]=(location.hash||'').slice(1).split('/');if(!v||!VIEWS[v])return;const sel=id?decodeURIComponent(id):null;if(S.view!==v||sel)go(v,sel);});
+/* tasto «indietro» del browser: torna alla pagina precedente del CRM invece di uscire dal sito */
+window.addEventListener('popstate',()=>{const [v,id]=(location.hash||'').slice(1).split('/');const vv=v&&VIEWS[v]?v:'dash';const sel=id?decodeURIComponent(id):null;if(vv===S.view&&sel===S.sel)return;document.querySelectorAll('.ov').forEach(o=>o.remove());window.hpNavPop=true;try{go(vv,sel);}finally{window.hpNavPop=false;}});
+window.addEventListener('DOMContentLoaded',()=>{const [v,id]=(location.hash||'').slice(1).split('/');if(!v||!VIEWS[v]){try{history.replaceState(null,'','#'+S.view+(S.sel?'/'+encodeURIComponent(S.sel):''));}catch(e){}return;}const sel=id?decodeURIComponent(id):null;if(S.view!==v||sel)go(v,sel);});
 boot();
 </script>
 <script src="/maps.js"></script>
