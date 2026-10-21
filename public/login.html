@@ -65,8 +65,9 @@ input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:tra
         <input id="email" type="email" autocomplete="username" inputmode="email" required>
         <label for="pw">Password</label>
         <input id="pw" type="password" autocomplete="current-password" required>
+        <button class="link" id="forgot" type="button" style="justify-self:end;margin-top:-4px">Password dimenticata?</button>
         <button class="btn" id="bLogin" type="submit">Accedi</button>
-        <button class="link" id="toCode" type="button">Primo accesso o password dimenticata? Ricevi un codice via email</button>
+        <button class="link" id="toCode" type="button">Primo accesso? Ricevi un codice via email per creare la password</button>
       </form>
       <form id="fCode" novalidate hidden>
         <div id="nameBox" hidden><label for="name">Nome e cognome</label><input id="name" autocomplete="name" maxlength="80"></div>
@@ -120,7 +121,9 @@ function setMode(m){mode=m;$('#tLogin').setAttribute('aria-selected',m!=='regist
   $('#codeHint').textContent=m==='register'?'I colleghi già inseriti nel gruppo entrano subito; per gli altri un amministratore approva la richiesta.':'Ti mandiamo un codice a 6 cifre: dopo averlo inserito scegli la tua password.';
   if(m!=='login')$('#email2').value=$('#email').value||$('#email2').value;else $('#email').value=$('#email2').value||$('#email').value;show('');}
 $('#tLogin').onclick=()=>setMode('login');$('#tReg').onclick=()=>setMode('register');
-$('#toCode').onclick=()=>{reset=true;setMode('code');$('#email2').focus();};$('#toLogin').onclick=()=>setMode('login');
+$('#toCode').onclick=()=>{reset=false;setMode('code');$('#email2').focus();};
+function goReset(){reset=true;setMode('code');$('#sub1').textContent='Recupera la password: inserisci la tua email, ti mandiamo un codice a 6 cifre e poi scegli una nuova password.';$('#codeHint').textContent='Il codice scade dopo 10 minuti. Le sessioni aperte su altri dispositivi verranno chiuse.';$('#b1').textContent='Invia codice di recupero';$('#email2').focus();}
+$('#forgot').onclick=goReset;$('#toLogin').onclick=()=>setMode('login');
 try{const e=localStorage.getItem('hp_email');if(e){$('#email').value=e;$('#email2').value=e;}}catch(e){}
 async function post(p,b){const r=await fetch(p,{method:'POST',headers:{'content-type':'application/json','x-hp':'1'},body:JSON.stringify(b),credentials:'same-origin'});const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error&&j.error.message||'Errore '+r.status);e.code=j.error&&j.error.code;throw e;}return j;}
 const remember=e=>{try{localStorage.setItem('hp_email',e);}catch(x){}};
@@ -131,12 +134,12 @@ $('#fLogin').onsubmit=async ev=>{ev.preventDefault();const email=$('#email').val
 async function request(){const email=$('#email2').value.trim();if(!email){show('Inserisci la tua email.');return;}
   if(mode==='register'&&!$('#name').value.trim()){show('Inserisci nome e cognome.');return;}
   $('#b1').disabled=true;$('#b1').textContent='Invio in corso…';
-  try{await post('/api/auth/request',{email,name:$('#name').value.trim(),mode:mode==='register'?'register':'login'});remember(email);$('#em').textContent=email;$('#emailHid').value=email;step(2);$('#code').value='';}
+  try{await post('/api/auth/request',{email,name:$('#name').value.trim(),mode:mode==='register'?'register':'login',reset});remember(email);$('#em').textContent=email;$('#emailHid').value=email;step(2);$('#code').value='';}
   catch(e){if(e.code==='not_registered'){setMode('register');}show(e.message);}
-  finally{$('#b1').disabled=false;$('#b1').textContent='Invia codice';}}
+  finally{$('#b1').disabled=false;$('#b1').textContent=reset?'Invia codice di recupero':'Invia codice';}}
 $('#fCode').onsubmit=e=>{e.preventDefault();request();};
 $('#f2').onsubmit=async e=>{e.preventDefault();const code=$('#code').value.replace(/\D/g,'');if(code.length!==6){show('Il codice ha 6 cifre.');return;}
-  $('#b2').disabled=true;try{const j=await post('/api/auth/verify',{email:$('#email2').value.trim(),code,reset});if(j.pending){step(3);return;}if(j.needPassword){step(4);return;}location.href='/';}
+  $('#b2').disabled=true;try{const j=await post('/api/auth/verify',{email:$('#email2').value.trim(),code,reset});if(j.pending){step(3);return;}if(j.needPassword){if(reset){$('#s4 h1').textContent='Scegli la nuova password';}step(4);return;}location.href='/';}
   catch(e){show(e.message);}finally{$('#b2').disabled=false;}};
 $('#code').addEventListener('input',()=>{if($('#code').value.replace(/\D/g,'').length===6)$('#f2').requestSubmit();});
 function score(p){let s=0;if(p.length>=8)s++;if(p.length>=12)s++;if(/[a-z]/.test(p)&&/[A-Z]/.test(p))s++;if(/\d/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;return s;}
@@ -145,10 +148,11 @@ $('#show').onchange=e=>{$('#np1').type=$('#np2').type=e.target.checked?'text':'p
 $('#f4').onsubmit=async e=>{e.preventDefault();const a=$('#np1').value,b=$('#np2').value;
   if(a.length<8){show('La password deve avere almeno 8 caratteri.');return;}if(!/[A-Za-z]/.test(a)||!/\d/.test(a)){show('Usa almeno una lettera e un numero.');return;}if(a!==b){show('Le due password non coincidono.');$('#np2').focus();return;}
   $('#b4').disabled=true;try{await post('/api/auth/password',{password:a,confirm:b});location.href='/';}catch(x){show(x.message);}finally{$('#b4').disabled=false;}};
-$('#again').onclick=async()=>{try{await post('/api/auth/request',{email:$('#email2').value.trim(),name:$('#name').value.trim(),mode:mode==='register'?'register':'login'});show('Nuovo codice inviato.','ok');}catch(e){show(e.message);}};
+$('#again').onclick=async()=>{try{await post('/api/auth/request',{email:$('#email2').value.trim(),name:$('#name').value.trim(),mode:mode==='register'?'register':'login',reset});show('Nuovo codice inviato.','ok');}catch(e){show(e.message);}};
 $('#back').onclick=()=>step(1);$('#back2').onclick=()=>{setMode('login');step(1);};
 (async()=>{const q=new URLSearchParams(location.search);if(q.get('step')==='pwd'){try{const r=await fetch('/api/me',{credentials:'same-origin'});if(r.ok){const m=await r.json();$('#emailHid').value=m.email;step(4);return;}}catch(e){}}
-  if(q.get('reset')){reset=true;setMode('code');}})();
+  if(q.get('email')){$('#email').value=$('#email2').value=q.get('email');}
+  if(q.get('reset'))goReset();})();
 </script>
 <script>
 /* area riservata ProAV: stesso accesso, grafica dedicata */

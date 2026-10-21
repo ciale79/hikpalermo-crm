@@ -37,9 +37,9 @@
     loading = false; if (S.view === 'set') VIEWS.set.update();
   }
   async function act(u, action) {
-    const lab = { approve: 'approvare', reject: 'rifiutare', disable: 'disattivare', enable: 'riattivare', delete: 'eliminare', resetpwd: 'reimpostare la password e' }[action];
-    if (action !== 'approve' && action !== 'enable' && !(await ask('Vuoi ' + lab + ' l\'accesso di ' + u.name + ' (' + u.email + ')?', 'Conferma'))) return;
-    try { await HIK_CF.postJ('/api/users', { id: u.id, action }); toast(action === 'approve' ? u.name + ' approvato: riceverà un\'email.' : action === 'resetpwd' ? 'Password azzerata: ' + u.name + ' ne creerà una nuova con un codice via email.' : 'Fatto'); }
+    const lab = { approve: 'approvare', reject: 'rifiutare', disable: 'disattivare', enable: 'riattivare', delete: 'eliminare', resetpwd: 'reimpostare la password di' }[action];
+    if (action !== 'approve' && action !== 'enable' && !(await ask(action === 'resetpwd' ? 'Vuoi reimpostare la password di ' + u.name + ' (' + u.email + ')? La password attuale smette di funzionare, le sue sessioni si chiudono e riceve un\'email per crearne una nuova.' : 'Vuoi ' + lab + ' l\'accesso di ' + u.name + ' (' + u.email + ')?', 'Conferma'))) return;
+    try { await HIK_CF.postJ('/api/users', { id: u.id, action }); toast(action === 'approve' ? u.name + ' approvato: riceverà un\'email.' : action === 'resetpwd' ? 'Password reimpostata: ' + u.name + ' ha ricevuto un\'email per crearne una nuova.' : 'Fatto'); }
     catch (e) { toast(e.message, 'bad'); }
     loadUsers();
   }
@@ -52,7 +52,7 @@
     const rows = users.map(u => {
       const st = ST[u.status] || [u.status, ''];
       const acts = u.status === 'pending' ? [btn('Approva', () => act(u, 'approve'), 'sm pri'), btn('Rifiuta', () => act(u, 'reject'), 'sm ghost')]
-        : u.status === 'active' ? (u.id === S.me ? [] : [u.has_pwd ? btn('Reimposta password', () => act(u, 'resetpwd'), 'sm ghost') : null, btn('Disattiva', () => act(u, 'disable'), 'sm ghost')])
+        : u.status === 'active' ? (u.id === S.me || u.owner ? (u.owner ? [el('span', { class: 'hint' }, 'Proprietario')] : []) : [btn('Reimposta password', () => act(u, 'resetpwd'), 'sm ghost', 'lock'), btn('Disattiva', () => act(u, 'disable'), 'sm ghost')])
           : [btn('Riattiva', () => act(u, 'enable'), 'sm'), btn('Elimina', () => act(u, 'delete'), 'sm ghost')];
       return el('tr', {}, el('td', {}, el('b', {}, u.name || '—'), el('div', { class: 'hint' }, u.email)), el('td', {}, el('span', { class: 'pill', style: '--c:var(--' + st[1] + ')' }, st[0]), u.status === 'active' && !u.has_pwd ? el('div', { class: 'hint' }, 'Password da creare') : null), el('td', { class: 'hint' }, fmt(u.last_login)), el('td', {}, el('div', { class: 'row', style: 'justify-content:flex-end;gap:6px' }, ...acts)));
     });

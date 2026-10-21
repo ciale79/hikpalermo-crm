@@ -421,6 +421,7 @@ async function authRequest(req, env) {
   const b = await req.json().catch(() => ({}));
   const email = normEmail(b.email);
   const mode = b.mode === 'register' ? 'register' : 'login';
+  const isReset = !!b.reset;
   const name = String(b.name || '').trim().slice(0, 80);
   if (!validEmail(email)) return err('invalid_email', 'Indirizzo email non valido.');
   const user = await env.DB.prepare('SELECT id,status FROM users WHERE email=?').bind(email).first();
@@ -435,8 +436,8 @@ async function authRequest(req, env) {
   await env.DB.prepare('INSERT INTO otp(email,code_hash,expires,tries,sent,name) VALUES(?,?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash, expires=excluded.expires, tries=0, sent=excluded.sent, name=excluded.name')
     .bind(email, await sha256(email + ':' + code), now() + OTP_MIN * 60e3, 0, now(), name || null).run();
   const ok = await sendMail(env, {
-    to: email, kind: 'otp', subject: 'Codice di accesso HIK PALERMO: ' + code,
-    html: mailShell('Il tuo codice di accesso', `<p>Usa questo codice per entrare nel CRM:</p>
+    to: email, kind: 'otp', subject: (isReset ? 'Recupero password HIK PALERMO: ' : 'Codice di accesso HIK PALERMO: ') + code,
+    html: mailShell(isReset ? 'Recupera la password' : 'Il tuo codice di accesso', `<p>${isReset ? 'Usa questo codice per scegliere una nuova password:' : 'Usa questo codice per entrare nel CRM:'}</p>
 <p style="font-family:Consolas,monospace;font-size:32px;letter-spacing:8px;font-weight:700;color:#C8102E;margin:16px 0">${code}</p>
 <p style="font-size:13px;color:#45576A">Scade tra ${OTP_MIN} minuti. Se non l'hai richiesto, ignora questa email.</p>`),
     text: 'Codice di accesso HIK PALERMO: ' + code + ' (scade tra ' + OTP_MIN + ' minuti)'
@@ -834,13 +835,15 @@ async function api(req, env, ctx, url, u) {
     if (!(await isAdmin(env, u))) return err('permission_denied', 'Solo per amministratori', 403);
     if (m === 'GET') {
       const { results } = await env.DB.prepare('SELECT id,email,name,status,created,last_login,(pwd_hash IS NOT NULL) AS has_pwd FROM users ORDER BY created DESC').all();
-      return json(results);
+      const r0 = await ruoli(env); const oe = normEmail(env.OWNER_EMAIL);
+      return json(results.map(x => ({ ...x, owner: x.email === oe || x.id === r0.owner })));
     }
     if (m === 'POST') {
       const b = await req.json().catch(() => ({}));
       const t = await env.DB.prepare('SELECT * FROM users WHERE id=?').bind(String(b.id || '')).first();
       if (!t) return err('not_found', 'Utente non trovato', 404);
-      if (t.email === normEmail(env.OWNER_EMAIL)) return err('permission_denied', 'Il proprietario non si può modificare', 403);
+      if (t.email === normEmail(env.OWNER_EMAIL) || (await isOwnerU(env, t))) return err('permission_denied', 'Il proprietario non si può modificare', 403);
+      if (t.id === u.id && b.action !== 'enable') return err('permission_denied', 'Per la tua password usa «Cambia password»', 403);
       if (b.action === 'approve' || b.action === 'enable') {
         await env.DB.prepare("UPDATE users SET status='active' WHERE id=?").bind(t.id).run();
         if (b.action === 'approve') await sendMail(env, { to: t.email, kind: 'approved', subject: 'Accesso al CRM HIK PALERMO approvato', html: mailShell('Benvenuto in HIK PALERMO', `<p>Ciao ${esc(t.name)}, il tuo accesso è stato approvato. Entra con la tua email: ti invieremo un codice.</p>`, ['Entra nel CRM', env.APP_URL + '/login']) });
@@ -848,6 +851,11 @@ async function api(req, env, ctx, url, u) {
         await env.DB.batch([env.DB.prepare("UPDATE users SET status='disabled' WHERE id=?").bind(t.id), env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id)]);
       } else if (b.action === 'resetpwd') {
         await env.DB.batch([env.DB.prepare('UPDATE users SET pwd_hash=NULL, pwd_salt=NULL WHERE id=?').bind(t.id), env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id)]);
+        // avviso all'utente con il link per crearne una nuova (codice via email: l'amministratore non vede mai la password)
+        const base = (env.APP_URL || 'https://hikpalermo.com').replace(/\/$/, '');
+        await sendMail(env, { to: t.email, kind: 'resetpwd', subject: 'Password HIK PALERMO reimpostata',
+          html: mailShell('Crea una nuova password', `<p>Ciao ${esc(t.name || '')}, ${esc(u.name || 'un amministratore')} ha reimpostato la tua password del CRM HIK PALERMO e le sessioni aperte sono state chiuse.</p><p>Apri il link, inserisci la tua email e ricevi un codice per sceglierne una nuova.</p>`, ['Crea la nuova password', base + '/login?reset=1&email=' + encodeURIComponent(t.email)]),
+          text: 'La tua password del CRM HIK PALERMO è stata reimpostata da un amministratore. Creane una nuova: ' + base + '/login?reset=1' });
       } else if (b.action === 'delete') {
         await env.DB.batch([env.DB.prepare('DELETE FROM users WHERE id=?').bind(t.id), env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(t.id)]);
       } else return err('invalid_argument', 'Azione non valida');
