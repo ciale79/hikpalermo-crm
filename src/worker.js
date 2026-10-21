@@ -530,11 +530,35 @@ async function setPassword(req, env, u) {
 }
 
 /* ---------------- Claude ---------------- */
+// registro dei consumi dell'API (token e ricerche web) per funzione, per vedere dove vanno i soldi
+async function logAi(env, feat, model, j) {
+  try {
+    const us = (j && j.usage) || {};
+    const srch = (us.server_tool_use && us.server_tool_use.web_search_requests) || 0;
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS ai_usage(at INTEGER, feat TEXT, model TEXT, inp INTEGER, out INTEGER, cr INTEGER, cw INTEGER, srch INTEGER)').run();
+    await env.DB.prepare('INSERT INTO ai_usage VALUES(?,?,?,?,?,?,?,?)').bind(Date.now(), feat, model, us.input_tokens || 0, us.output_tokens || 0, us.cache_read_input_tokens || 0, us.cache_creation_input_tokens || 0, srch).run();
+  } catch (e) { console.log('ai_usage', e); }
+}
+// prompt caching: segno l'ultimo blocco dell'ultimo messaggio, così nei giri successivi del dialogo con gli strumenti
+// il testo già inviato (capitolato, risultati delle ricerche) si paga il 5% invece del 100%
+function withCache(messages) {
+  const ms = messages.map(m => ({ ...m }));
+  const last = ms[ms.length - 1];
+  if (last) {
+    let c = typeof last.content === 'string' ? [{ type: 'text', text: last.content }] : (Array.isArray(last.content) ? last.content.map(b => ({ ...b })) : null);
+    if (c && c.length) {
+      const i = c.length - 1;
+      if (['text', 'tool_result', 'image', 'document'].includes(c[i].type)) c[i].cache_control = { type: 'ephemeral' };
+      last.content = c;
+    }
+  }
+  return ms;
+}
 async function claudeProxy(req, env) {
   if (!env.ANTHROPIC_API_KEY) return err('not_configured', 'Chiave Anthropic non configurata sul server.', 503);
   const b = await req.json().catch(() => null);
   if (!b || !Array.isArray(b.messages)) return err('invalid_argument', 'Richiesta non valida');
-  const body = { model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: Math.min(+b.max_tokens || 16000, 32000), messages: b.messages };
+  const body = { model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: Math.min(+b.max_tokens || 16000, 32000), messages: Array.isArray(b.tools) && b.tools.length ? withCache(b.messages) : b.messages };
   if (b.system) body.system = b.system;
   if (Array.isArray(b.tools) && b.tools.length) body.tools = b.tools;
   if (b.tool_choice) body.tool_choice = b.tool_choice;
@@ -551,7 +575,9 @@ async function claudeProxy(req, env) {
     } catch (e) { console.log('ai_errors', e); }
     return new Response(t, { status: r.status, headers: { 'content-type': 'application/json' } });
   }
-  return new Response(r.body, { status: r.status, headers: { 'content-type': 'application/json' } });
+  const j = await r.json();
+  await logAi(env, String(b.feat || '800AI').slice(0, 30), body.model, j);
+  return json(j);
 }
 
 /* ---------------- immagini prodotto dal web ---------------- */
@@ -602,11 +628,12 @@ async function pageCheck(u, model) {
 async function askLinks(env, prompt, domains) {
   const urls = [];
   try {
-    const tool = { type: 'web_search_20250305', name: 'web_search', max_uses: 4 }; if (domains) tool.allowed_domains = domains;
+    const tool = { type: 'web_search_20250305', name: 'web_search', max_uses: 2 }; if (domains) tool.allowed_domains = domains;
+    const model = env.SEARCH_MODEL || 'claude-sonnet-5-5';
     const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: 700, tools: [tool], messages: [{ role: 'user', content: prompt }] }) });
+      body: JSON.stringify({ model, max_tokens: 700, tools: [tool], messages: [{ role: 'user', content: prompt }] }) });
     if (!r.ok) return urls;
-    const j = await r.json();
+    const j = await r.json(); await logAi(env, 'Pagina prodotto', model, j);
     const t = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(' ');
     try { const m = /\{[\s\S]*\}/.exec(t); const o = JSON.parse(m[0]); for (const u of [].concat(o.urls || [], o.url || [])) if (u) urls.push(String(u)); } catch { }
     for (const c of j.content || []) if (c.type === 'web_search_tool_result' && Array.isArray(c.content)) for (const x of c.content) if (x.url) urls.push(x.url);
@@ -620,7 +647,7 @@ async function hikPage(env, code, force) {
   const cached = await getDoc(env, 'hikpage', key);
   if (cached && !force) {
     if (cached.data.url) { const c = await pageCheck(cached.data.url, model); if (c.ok) return { ...cached.data, found: true }; }   // la pagina salvata è sparita: cerco di nuovo
-    else if (now() - (cached.data.at || 0) < 7 * 864e5) return { ...cached.data, url: fallback, found: false };
+    else if (now() - (cached.data.at || 0) < 90 * 864e5) return { ...cached.data, url: fallback, found: false };
   }
   if (!env.ANTHROPIC_API_KEY) return { url: fallback, found: false };
   const slug = model.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -644,18 +671,20 @@ const goHikHtml = code => `<!doctype html><html lang="it"><head><meta charset="u
 async function findProductImage(env, model, desc, force) {
   const key = imgKey(model);
   const cached = await getDoc(env, 'imgweb', key);
-  if (cached && !force && (cached.data.blob || now() - (cached.data.at || 0) < 7 * 864e5)) return cached.data;
+  // anche quando l'immagine non si trova si tiene la risposta per 90 giorni: non si ripaga la stessa ricerca a ogni clic
+  if (cached && !force && (cached.data.blob || now() - (cached.data.at || 0) < 90 * 864e5)) return cached.data;
+  const smodel = env.SEARCH_MODEL || 'claude-sonnet-5-5';
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: 800,
-      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+      model: smodel, max_tokens: 800,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }],
       messages: [{ role: 'user', content: `Trova la pagina web del prodotto Hikvision (o Hikmicro / Hiwatch / Ezviz) con codice modello "${model}"${desc && desc !== model ? ' (descrizione: ' + desc + ')' : ''}. Preferisci il sito ufficiale hikvision.com, poi siti di distributori o rivenditori che mostrano la foto del prodotto esatto. Rispondi SOLO con JSON: {"pages":["url pagina 1","url pagina 2","url pagina 3"],"images":["url diretto di un'immagine del prodotto, se lo conosci dai risultati"]}` }]
     })
   });
   const out = { model, at: now(), blob: null, src: null, page: null };
   if (!r.ok) { out.err = 'api ' + r.status; return out; }
-  const j = await r.json();
+  const j = await r.json(); await logAi(env, 'Immagini dal web', smodel, j);
   const text = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
   let pages = [], images = [];
   try { const m = /\{[\s\S]*\}/.exec(text); const o = JSON.parse(m[0]); pages = o.pages || []; images = o.images || []; } catch { }
@@ -848,6 +877,13 @@ async function api(req, env, ctx, url, u) {
   if (p === '/api/fetch' && m === 'GET') return fetchExternal(url.searchParams.get('u') || '');
   if (p === '/api/hikpage' && m === 'GET') return json(await hikPage(env, url.searchParams.get('code'), url.searchParams.get('force') === '1'));
   if (p === '/api/auth/password' && m === 'POST') return setPassword(req, env, u);
+  if (p === '/api/ai/usage' && m === 'GET') {
+    if (!(await isOwnerU(env, u))) return err('permission_denied', 'Solo il proprietario', 403);
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS ai_usage(at INTEGER, feat TEXT, model TEXT, inp INTEGER, out INTEGER, cr INTEGER, cw INTEGER, srch INTEGER)').run();
+    const since = +url.searchParams.get('since') || 0;
+    const r = await env.DB.prepare('SELECT feat, model, COUNT(*) n, SUM(inp) inp, SUM(out) out, SUM(cr) cr, SUM(cw) cw, SUM(srch) srch FROM ai_usage WHERE at>=? GROUP BY feat, model ORDER BY feat').bind(since).all();
+    return json({ rows: r.results || [] });
+  }
   // ——— backup completo (solo proprietario): dati del database, elenco e contenuto dei file su R2, backup automatici settimanali
   if (p.startsWith('/api/backup/')) {
     if (!(await isOwnerU(env, u))) return err('permission_denied', 'Solo il proprietario del CRM può fare il backup', 403);

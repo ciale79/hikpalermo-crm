@@ -170,7 +170,7 @@
     const maxRounds = opt.maxRounds || 8;
     for (let round = 0; round <= maxRounds; round++) {
       if (opt.signal && opt.signal.aborted) throw E('aborted', 'Annullato');
-      const body = { messages, max_tokens: opt.maxTokens || 16000 };
+      const body = { messages, max_tokens: opt.maxTokens || 16000, feat: opt.feat || '800AI' };
       if (defs.length) { body.tools = defs; if (round === maxRounds) body.tool_choice = { type: 'none' }; }
       const r = await fetch('/api/claude', { method: 'POST', credentials: 'same-origin', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: opt.signal });
       const j = await r.json().catch(() => null);

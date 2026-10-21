@@ -1541,7 +1541,7 @@ CAPITOLATO «${name}»:
 ${text}
 >>>`;
     setS('800AI sta leggendo il capitolato…');say('Analisi avviata con 800AI (può richiedere 1-3 minuti).');
-    const out=await sampleFn.json(prompt,{tools,modelTier:'complex',signal:capCtl.signal});
+    const out=await sampleFn.json(prompt,{tools,modelTier:'complex',feat:'Analisi capitolato',signal:capCtl.signal});
     if(!out||!Array.isArray(out.proposta))throw {code:'invalid_json'};
     const cliO=S.clienti.get(o.cli);const righe=[];const unk=[];
     for(const p of out.proposta){const it=inS(p.codice)||capFind(p.codice,SS)||findCode(p.codice,Lf);if(!it){unk.push(p.codice);continue;}const l=lineFrom(it,Math.max(1,Math.round(+p.quantita||1)),cliO);l.req=p.requisito||'';l.conf=p.conformita||'da verificare';l.mot=p.motivazione||'';l.alt=(p.alternative||[]).slice(0,3).join(', ');righe.push(l);}
@@ -1592,7 +1592,7 @@ NUOVA RICHIESTA DEL COMMERCIALE: ${txt}
 Se la richiesta comporta cambiamenti, restituisci la proposta COMPLETA aggiornata (tutte le righe, anche quelle invariate), con codici esatti restituiti dagli strumenti o già presenti nella proposta. Se è solo una domanda, rispondi senza modificare.
 Rispondi SOLO con un oggetto JSON:
 {"risposta":"spiegazione breve in italiano di cosa hai fatto o la risposta alla domanda","modifica":true|false,"sintesi":"sintesi aggiornata (solo se modifica)","proposta":[{"requisito":"R1","codice":"...","quantita":1,"conformita":"piena|parziale|da verificare","motivazione":"...","alternative":["codice"]}],"note":["..."]}`;
-      const out=await sampleFn.json(prompt,{tools,modelTier:'complex',signal:capChatCtl.signal});
+      const out=await sampleFn.json(prompt,{tools,modelTier:'complex',feat:'Dialogo capitolato',signal:capChatCtl.signal});
       if(!out||typeof out.risposta!=='string')throw {code:'invalid_json'};
       const now=Date.now();const msgs=[...(c.chat||[]),{r:'u',t:txt,at:now,by:S.me,att:att.names}];let upd={};if(att.text){let ex=(c.extra||[]).concat([{name:att.names.join(', '),text:att.text.slice(0,30000),at:now}]);while(ex.reduce((n,x)=>n+x.text.length,0)>60000&&ex.length>1)ex=ex.slice(1);upd.extra=ex;}
       if(out.modifica&&Array.isArray(out.proposta)&&out.proposta.length){const cliO=S.clienti.get(c.clienteId);const inS=x=>capFind(x,SS)||(S.byCode?.get(norm(x))||[])[0]||null;const righe=[],unk=[];

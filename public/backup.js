@@ -74,6 +74,31 @@
         : el('p', { class: 'hint' }, 'Ogni domenica mattina il CRM salva da solo una copia dei dati nello spazio file del sito (si tengono le ultime 8 settimane). La prima comparirà qui domenica.'));
   }
 
+  /* ——— consumo dell'API Anthropic (800AI, immagini e pagine prodotto dal web) ——— */
+  // prezzi indicativi in dollari per milione di token: [input, output, scrittura cache, lettura cache]
+  const PR = { opus: [4, 20, 5, 0.2], sonnet: [2, 10, 2.5, 0.2], haiku: [1, 5, 1.25, 0.1] };
+  const usd = n => '$ ' + n.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const tk = n => n >= 1e6 ? (n / 1e6).toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' k' : String(n);
+  let ubox = null, urows = null;
+  async function loadUsage() {
+    const d = new Date(); const since = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    try { urows = (await get('/api/ai/usage?since=' + since)).rows; } catch (e) { urows = []; }
+    drawUsage();
+  }
+  function drawUsage() {
+    if (!ubox) return;
+    const rows = (urows || []).map(r => { const k = /opus/.test(r.model) ? 'opus' : /haiku/.test(r.model) ? 'haiku' : 'sonnet'; const p = PR[k];
+      const c = (r.inp * p[0] + r.out * p[1] + r.cw * p[2] + r.cr * p[3]) / 1e6 + (r.srch || 0) * 0.01; return { ...r, k, c }; });
+    const tot = rows.reduce((a, r) => a + r.c, 0);
+    const mese = new Date().toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+    ubox.replaceChildren(
+      el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', {}, 'Consumo API Anthropic · ' + mese), el('span', { class: 'hint' }, 'Quanto spendono 800AI e le ricerche sul web dal 21/10/2026 in poi. Costo stimato con i prezzi di listino: il dato esatto è nella Console Anthropic.'))),
+      urows == null ? el('p', { class: 'hint' }, 'Carico…') : !rows.length ? el('p', { class: 'hint' }, 'Nessun consumo registrato questo mese.') :
+        el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Funzione', 'Modello', 'Chiamate', 'Ricerche web', 'Token letti', 'Token scritti', 'Costo stimato'].map((h, i) => el('th', { class: i >= 2 ? 'r' : '' }, h)))),
+          el('tbody', {}, rows.map(r => el('tr', {}, el('td', {}, r.feat), el('td', {}, r.k), el('td', { class: 'r num' }, r.n), el('td', { class: 'r num' }, r.srch || 0), el('td', { class: 'r num' }, tk(r.inp + r.cr + r.cw)), el('td', { class: 'r num' }, tk(r.out)), el('td', { class: 'r num' }, usd(r.c)))),
+            el('tr', {}, el('td', { colspan: 6 }, el('b', {}, 'Totale')), el('td', { class: 'r num' }, el('b', {}, usd(tot))))))));
+  }
+
   const orig = VIEWS.set.update;
   VIEWS.set.update = function () {
     const r = orig.apply(this, arguments);
@@ -84,6 +109,8 @@
         const feedP = this.root.querySelector('#cfFeed');
         if (feedP) feedP.before(box); else this.root.append(box);
         draw(); if (weekly == null) loadWeekly();
+        this.root.querySelector('#hpAiUse')?.remove();
+        ubox = el('section', { class: 'panel stack', id: 'hpAiUse' }); box.after(ubox); drawUsage(); loadUsage();
       }
     } catch (e) { console.error(e); }
     return r;
