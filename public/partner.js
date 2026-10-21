@@ -149,7 +149,7 @@
           el('div', { class: 'seg' }, segB('fatt', 'Per fatturato'), segB('com', 'Per commesse'))),
         el('div', { class: 'pa-rank' }, el('div', { class: 'pa-rh' }, el('span', {}, 'Cliente'), el('span', {}, 'Fatturato'), el('span', {}, 'Commesse')),
           rkData.map(x => el('div', { class: 'pa-rr2 hp-click', onclick: () => partnerForm(x.c), title: x.c.nome },
-            el('span', { class: 'pa-rn' }, x.c.nome),
+            el('span', { class: 'pa-rn' }, x.c.nome, ' ', pcodeChip(x.c)),
             el('div', { class: 'pa-bar' }, el('i', { style: { width: (x.so / mxSo * 100) + '%' } }), el('b', {}, x.so ? eurShort(x.so) : '—')),
             el('div', { class: 'pa-bar n' }, el('i', { style: { width: (x.n / mxN * 100) + '%' } }), el('b', { title: x.n ? 'Valore commesse ' + eur0(x.val) : '' }, x.n ? String(x.n) : '—'))))));
 
@@ -161,7 +161,7 @@
         const q = k => { const v = (p.so || [])[k]; return el('td', { class: 'r num' + (v == null ? ' muted' : '') }, v == null ? '—' : eur0(v)); };
         return el('tr', { class: 'click', onclick: () => partnerForm(c) },
           el('td', { style: 'min-width:150px' }, el('b', {}, c.nome, mark)),
-          el('td', { class: 'mono' }, p.codice || '—'), el('td', {}, p.regione || '—'), el('td', { 'data-sort': String(ORD[p.tier] ?? 9) }, tierChip(p.tier)), el('td', {}, p.programma || p.catalogo || '—'), el('td', {}, accChip(p.accordo)),
+          el('td', { 'data-sort': p.codice || '' }, pcodeChip(c) || el('span', { class: 'muted' }, '—')), el('td', {}, p.regione || '—'), el('td', { 'data-sort': String(ORD[p.tier] ?? 9) }, tierChip(p.tier)), el('td', {}, p.programma || p.catalogo || '—'), el('td', {}, accChip(p.accordo)),
           el('td', { class: 'r num' }, p.target ? eur0(p.target) : '—'), q(0), q(1), q(2), q(3),
           el('td', { class: 'r num' }, el('b', {}, eur0(so))), el('td', { 'data-sort': r == null ? '-1' : String(r) }, achBar(r)),
           el('td', { class: 'r num' }, p.target ? el('span', { style: { color: so >= p.target ? 'var(--ok)' : '' } }, eur0(p.target - so)) : '—'),
@@ -214,7 +214,7 @@
       const box = el('section', { class: 'panel', id: 'hpPartnerBox' },
         el('div', { class: 'panel-h' }, el('h3', { text: p ? 'Partner ' + (p.anno || '') : 'Anagrafica aggiuntiva' }), el('div', { class: 'row' }, btn('Anagrafica', () => extraForm(c), 'sm', 'edit'), p ? btn('Target e sell-out', () => partnerForm(c), 'sm', 'edit') : null)),
         el('dl', { class: 'dl' },
-          p ? [dd('Codice partner', p.codice ? el('b', { class: 'mono' }, p.codice) : null), dd('Programma', p.programma || p.catalogo), dd('Livello', tierChip(p.tier)), dd('Accordo ' + (p.anno || ''), accChip(p.accordo)), dd('Contratto', p.statoContratto), dd('Target', p.target ? eur0(p.target) : null), dd('Sell-out', eur0(so) + (p.target ? ' · ' + Math.round(so / p.target * 100) + '%' : ''))] : null,
+          p ? [dd('Codice partner', p.codice ? pcodeChip(c) : null), dd('Programma', p.programma || p.catalogo), dd('Livello', tierChip(p.tier)), dd('Accordo ' + (p.anno || ''), accChip(p.accordo)), dd('Contratto', p.statoContratto), dd('Target', p.target ? eur0(p.target) : null), dd('Sell-out', eur0(so) + (p.target ? ' · ' + Math.round(so / p.target * 100) + '%' : ''))] : null,
           EXTRA.map(([k, l]) => dd(l, c[k])).filter(Boolean)));
       const head = r.firstElementChild;
       if (head && head.nextSibling) r.insertBefore(box, head.nextSibling); else r.appendChild(box);
