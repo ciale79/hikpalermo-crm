@@ -150,7 +150,57 @@
     }
     return out;
   }
-  const findBySn = s => { const n = snNorm(s); if (!n) return null; for (const it of S.mag.values()) if (it.seriale && (snNorm(it.seriale) === n || (it.snFull && snNorm(it.snFull) === n))) return it; return null; };
+  // una riga può avere più seriali (dopo l'unione dei doppioni): «AB123, AB124»
+  const snList = x => String(x.seriale || '').split(/\s*[,;]\s*/).filter(Boolean);
+  const findBySn = s => { const n = snNorm(s); if (!n) return null; for (const it of S.mag.values()) if (it.seriale && (snList(it).some(z => snNorm(z) === n) || (it.snFull && snNorm(it.snFull) === n))) return it; return null; };
+
+  /* ---------------- unione dei doppioni con lo stesso SAP ----------------
+     Si uniscono solo le righe IN FILIALE: chi è in demo, venduto, mancante o dismesso resta a parte.
+     Resta la riga con il SAP e presente in magazzino (quella dell'inventario, se c'è); seriali, foto e note confluiscono lì.
+     Quantità: se la riga che resta viene dall'inventario, i pezzi registrati a mano sono di norma già contati → si tiene il massimo; altrimenti si sommano. */
+  function dupGroups() {
+    const all = [...S.mag.values()];
+    const sapByCode = new Map(); for (const x of all) if (x.sap && x.code && !/^SAP /.test(x.code)) sapByCode.set(norm(x.code), String(x.sap).trim());
+    const key = x => { const sp = x.sap ? String(x.sap).trim() : sapByCode.get(norm(x.code || '')); return sp ? sp : null; };
+    const g = new Map();
+    for (const x of all) { if ((x.stato || 'sede') !== 'sede' || x.demoId) continue; const k = key(x); if (!k) continue; if (!g.has(k)) g.set(k, []); g.get(k).push(x); }
+    const out = [];
+    for (const [sap, rows] of g) {
+      if (rows.length < 2) continue;
+      const rank = x => (x.sap ? 0 : 4) + (/^inv_/.test(x.id) || x.pz != null ? 0 : 2) + ((+x.qty || 0) > 0 ? 0 : 1);
+      const keep = rows.slice().sort((a, b) => rank(a) - rank(b))[0];
+      const others = rows.filter(x => x !== keep);
+      const inv = /^inv_/.test(keep.id) || keep.pz != null;
+      const sumO = others.reduce((a, x) => a + (+x.qty || 1), 0);
+      const qty = inv ? Math.max(+keep.qty || 0, sumO) : (+keep.qty || 1) + sumO;
+      out.push({ sap, keep, others, qty });
+    }
+    return out.sort((a, b) => String(a.keep.code).localeCompare(String(b.keep.code)));
+  }
+  async function mergeDups() {
+    const gs = dupGroups(); if (!gs.length) { toast('Nessun doppione da unire.'); return; }
+    const rows = gs.map(g => el('tr', {}, el('td', {}, el('b', { class: 'mono' }, g.keep.code), el('div', { class: 'hint mono' }, 'SAP ' + g.sap)),
+      el('td', {}, [g.keep, ...g.others].map(x => el('div', { class: 'hint' }, (x === g.keep ? '✔ ' : '+ ') + (/^inv_/.test(x.id) ? 'inventario' : 'registrato a mano') + ' · ' + (+x.qty || 0) + ' pz' + (x.seriale ? ' · SN ' + x.seriale : '')))),
+      el('td', { class: 'r num' }, String(+g.keep.qty || 0) + ' → ', el('b', {}, String(g.qty)))));
+    const m = modal('Unisci i doppioni dello stesso SAP', el('div', { class: 'stack' },
+      el('p', { class: 'hint' }, 'Per ogni SAP resta una sola riga in filiale: quella con il SAP e presente in magazzino (✔). Seriali, foto e note delle altre righe confluiscono lì. Le righe in demo, vendute, mancanti o dismesse non si toccano. Se la riga che resta è dell\'inventario, i pezzi registrati a mano si considerano già contati e la quantità diventa il valore più alto; altrimenti le quantità si sommano.'),
+      el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, el('th', {}, 'Articolo'), el('th', {}, 'Righe unite'), el('th', { class: 'r' }, 'Quantità'))), el('tbody', {}, rows)))),
+      [btn('Annulla', () => m.close(), 'ghost'), btn('Unisci ' + gs.length + (gs.length === 1 ? ' articolo' : ' articoli'), async () => {
+        m.close(); let ok = 0; const now = Date.now();
+        for (const g of gs) {
+          const k = g.keep, all = [k, ...g.others];
+          const sn = [...new Set(all.flatMap(snList))].join(', ');
+          const note = [...new Set(all.map(x => String(x.note || '').trim()).filter(Boolean))].join(' · ');
+          const foto = [...new Set(all.flatMap(x => x.foto || []))];
+          const up = { qty: g.qty, seriale: sn, note, foto, upd: now, uniti: (k.uniti || []).concat(g.others.map(x => ({ id: x.id, code: x.code, seriale: x.seriale || '', qty: +x.qty || 0, at: x.at || null }))) };
+          if (k.pz != null || /^inv_/.test(k.id)) up.qRil = Math.max(+k.qRil || 0, g.qty);
+          if (!k.ean) { const e = all.find(x => x.ean); if (e) up.ean = e.ean; }
+          if (!k.imgWeb) { const w = all.find(x => x.imgWeb); if (w) up.imgWeb = w.imgWeb; }
+          if (await patch('magazzino', k.id, up)) { for (const x of g.others) await remove('magazzino', x.id); ok++; }
+        }
+        toast('Uniti ' + ok + (ok === 1 ? ' articolo' : ' articoli') + ' con lo stesso SAP');
+      }, 'pri', 'check')]);
+  }
 
   /* ---------------- fotocamera ---------------- */
   const ZX = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
@@ -681,6 +731,7 @@
           (() => { const sl = el('select', { id: 'mgSt', 'aria-label': 'Filtra per stato', onchange: e => { f.st = e.target.value; this.update(); } }, el('option', { value: '' }, 'Tutti gli stati (' + items.length + ')'),
             el('optgroup', { label: 'Stato articolo' }, ...Object.entries(ST).map(([k, v]) => el('option', { value: k }, v[0] + ' (' + items.filter(x => (x.stato || 'sede') === k).length + ')'))),
             el('optgroup', { label: 'Inventario' }, ...FILTRI.map(([k, l, fn]) => el('option', { value: k }, l + ' (' + items.filter(fn).length + ')')))); sl.value = f.st; return sl; })(),
+          (() => { const n = dupGroups().length; return n ? btn('Unisci doppioni SAP (' + n + ')', mergeDups, 'ghost', 'list') : null; })(),
           (() => { const noImg = items.filter(FILTRI[4][2]).length; return noImg ? btn('Immagini dal web (' + new Set(items.filter(FILTRI[4][2]).map(x => norm(x.code))).size + ')', webImgAll, 'ghost', 'search') : null; })());
         const sel = [...S.mgSel];
         const bar = sel.length ? el('div', { class: 'banner row between' }, el('span', {}, sel.length + (sel.length === 1 ? ' articolo selezionato' : ' articoli selezionati')), el('div', { class: 'row' }, btn('Deseleziona', () => { S.mgSel.clear(); this.update(); }, 'sm ghost'), btn('Consegna in demo', () => demoForm(null, { items: sel }), 'sm pri', 'ext'))) : null;
