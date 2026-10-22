@@ -734,7 +734,14 @@
           (() => { const n = dupGroups().length; return n ? btn('Unisci doppioni SAP (' + n + ')', mergeDups, 'ghost', 'list') : null; })(),
           (() => { const noImg = items.filter(FILTRI[4][2]).length; return noImg ? btn('Immagini dal web (' + new Set(items.filter(FILTRI[4][2]).map(x => norm(x.code))).size + ')', webImgAll, 'ghost', 'search') : null; })());
         const sel = [...S.mgSel];
-        const bar = sel.length ? el('div', { class: 'banner row between' }, el('span', {}, sel.length + (sel.length === 1 ? ' articolo selezionato' : ' articoli selezionati')), el('div', { class: 'row' }, btn('Deseleziona', () => { S.mgSel.clear(); this.update(); }, 'sm ghost'), btn('Consegna in demo', () => demoForm(null, { items: sel }), 'sm pri', 'ext'))) : null;
+        const bar = sel.length ? el('div', { class: 'banner row between' }, el('span', {}, sel.length + (sel.length === 1 ? ' articolo selezionato' : ' articoli selezionati')), el('div', { class: 'row' }, btn('Deseleziona', () => { S.mgSel.clear(); this.update(); }, 'sm ghost'), btn('Elimina', async () => {
+          const ids = [...S.mgSel].filter(id => S.mag.has(id) && (S.mag.get(id).stato || 'sede') !== 'demo');
+          if (!ids.length) return;
+          const lab = ids.length === 1 ? '«' + S.mag.get(ids[0]).code + '»' : ids.length + ' articoli';
+          if (!(await ask('Eliminare ' + lab + ' dal magazzino per tutto il gruppo? L\'operazione non si può annullare.', 'Elimina'))) return;
+          let ok = 0; for (const id of ids) if (await remove('magazzino', id)) { ok++; S.mgSel.delete(id); }
+          toast(ok === 1 ? 'Articolo eliminato' : ok + ' articoli eliminati'); this.update();
+        }, 'sm danger', 'trash'), btn('Consegna in demo', () => demoForm(null, { items: sel }), 'sm pri', 'ext'))) : null;
         const sedeRows = rows.filter(x => (x.stato || 'sede') === 'sede');
         const ckAll = el('input', { type: 'checkbox', 'aria-label': 'Seleziona tutti in filiale', checked: sedeRows.length > 0 && sedeRows.every(x => S.mgSel.has(x.id)), onchange: e => { sedeRows.forEach(x => e.target.checked ? S.mgSel.add(x.id) : S.mgSel.delete(x.id)); this.update(); } });
         body = rows.length ? el('section', { class: 'panel stack' }, bar, el('div', { class: 'tbl-wrap' }, el('table', {},
