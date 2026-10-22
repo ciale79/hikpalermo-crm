@@ -44,6 +44,9 @@
     const txt = () => el('span', { class: 'hp-brand-t' }, name);
     return el('span', { class: 'hp-brand', title: 'Marchio: ' + name }, el('img', { src: '/brand-' + b + '.png', alt: name, onerror: e => e.currentTarget.replaceWith(txt()) }));
   }
+  // logo del marchio più grande (scheda articolo)
+  window.hpBrandLogo = function (it, h) { const b = brandOf(it), name = BRAND[b];
+    return el('span', { class: 'hp-brand-l', title: 'Marchio: ' + name }, el('img', { src: '/brand-' + b + '.png', alt: name, style: 'height:' + (h || 26) + 'px', onerror: e => e.currentTarget.replaceWith(el('span', { class: 'hp-brand-t' }, name)) })); };
   window.hpPillTile = function () {
     const d = new Date(); const P = pick();
     const date = el('div', { class: 'hp-pill-d' }, el('b', {}, d.getDate() + ' ' + d.toLocaleDateString('it-IT', { month: 'long' })), el('small', {}, d.toLocaleDateString('it-IT', { weekday: 'long' })));
