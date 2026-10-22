@@ -30,10 +30,11 @@
     return { it: news[(hash(key) + shift) % news.length], n: news.length };
   }
   // marchio dell'articolo: logo ufficiale in /brand-<marchio>.png; se il file non c'è, il nome del marchio in piccolo
-  const BRAND = { hikvision: 'Hikvision', hiwatch: 'HiWatch', hikmicro: 'HIKMICRO', hilook: 'HiLook', hikauto: 'Hikauto' };
+  const BRAND = { hikvision: 'Hikvision', hiwatch: 'HiWatch', hikmicro: 'HIKMICRO', hilook: 'HiLook', hikauto: 'Hikauto', ezviz: 'EZVIZ' };
   // prima il codice (DS- Hikvision, HW HiWatch, IPC-/NVR-/THC- HiLook…), poi il listino da cui viene l'articolo
   const brandOf = it => { const c = String(it.c || '').toUpperCase();
     if (/^DS-|^IDS-|^AE-/.test(c)) return 'hikvision';
+    if (/^CS-|^EZVIZ|^BC\d|^CB\d/.test(c)) return 'ezviz';
     if (/^HW[A-Z]-|^HWI|^HWN|^HWT|^HWP|^HWD|^HWK/.test(c)) return 'hiwatch';
     if (/^(IPC|NVR|DVR|THC|TVI|PTZ|HL|HBS)-/.test(c) || /^HILOOK/.test(c)) return 'hilook';
     if (/^HM-|^HIKMICRO|^SP\d|^HM\d/.test(c)) return 'hikmicro';
