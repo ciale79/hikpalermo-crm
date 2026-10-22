@@ -1062,7 +1062,16 @@ $('#lockBtn').addEventListener('click',()=>{setUnlocked(false);showLock();});
 async function markRead(){if(!db||!S.me)return;try{await db.doc('data/users/'+S.me+'/state').set({...S.state,seenAt:Date.now()});}catch(e){toast(errMsg(e),'bad');}}
 function feedList(items,after){const seen=S.state.seenAt||0;if(!items.length)return el('div',{class:'empty',style:'margin:10px 0'},el('b',{text:'Nessun avviso'}),'Qui compaiono gli eventi in calendario, le nuove commesse e le offerte inserite dai colleghi.');
   return el('div',{class:'feed'},items.map(f=>el('div',{class:'feed-it'+(f.by!==S.me&&f.at>seen?' unread':''),onclick:()=>{after&&after();openRef(f.ref);}},el('span',{class:'u'}),av(f.by),el('div',{class:'b'},el('div',{},el('b',{text:nm(f.by)}),' ',f.msg),el('div',{class:'w'},ago(f.at),(f.to||[]).includes(S.me)?' · ti riguarda':'')))));}
-function openRef(r){if(!r)return;if(r.k==='commessa'&&S.commesse.has(r.id))go('commesse',r.id);else if(r.k==='cliente'&&S.clienti.has(r.id))go('clienti',r.id);else if(r.k==='evento'&&S.eventi.has(r.id)){const e=S.eventi.get(r.id);S.calMonth=new Date(e.start);S.calSel=dayKey(e.start);go('cal');eventDetail(e);}else if(r.k==='offerta'&&S.offerte.has(r.id)){const o=S.offerte.get(r.id);go('commesse',o.commessaId,'off');offerEditor(o);}else if(r.k==='capitolato'){const c=S.capitolati.find(x=>x.id===r.id);if(c){S.capRes=c;go('cap');}}}
+/* apre l'elemento di un avviso; se i dati non sono ancora arrivati aspetta qualche secondo, se non esiste più porta comunque alla sezione */
+function refFound(r){if(!r)return true;const k=r.k;return k==='commessa'?S.commesse.has(r.id):k==='cliente'?S.clienti.has(r.id):k==='evento'?S.eventi.has(r.id):k==='offerta'?S.offerte.has(r.id):k==='capitolato'?S.capitolati.some(x=>x.id===r.id):k==='demo'?!!(S.demo&&S.demo.get&&S.demo.get(r.id)):true;}
+async function openRef(r){if(!r){go('set');return;}for(let i=0;i<20&&!refFound(r);i++)await new Promise(ok=>setTimeout(ok,200));
+  const miss=t=>toast(t+' non è più disponibile: forse è stato eliminato.','bad');
+  if(r.k==='commessa'){if(S.commesse.has(r.id))go('commesse',r.id);else{go('commesse');miss('La commessa');}}
+  else if(r.k==='cliente'){if(S.clienti.has(r.id))go('clienti',r.id);else{go('clienti');miss('Il cliente');}}
+  else if(r.k==='evento'){const e=S.eventi.get(r.id);if(e){S.calMonth=new Date(e.start);S.calSel=dayKey(e.start);go('cal');setTimeout(()=>eventDetail(e),0);}else{go('cal');miss('L\'evento');}}
+  else if(r.k==='offerta'){const o=S.offerte.get(r.id);if(o){go('commesse',o.commessaId,'off');setTimeout(()=>offerEditor(o),0);}else{go('commesse');miss('L\'offerta');}}
+  else if(r.k==='capitolato'){const c=S.capitolati.find(x=>x.id===r.id);if(c)S.capRes=c;go('cap');if(!c)miss('L\'analisi');}
+  else if(window.hpOpenRefX)window.hpOpenRefX(r);}
 function upcoming(days){const now=Date.now(),lim=now+days*864e5;return [...S.eventi.values()].filter(e=>e.end>=now&&e.start<=lim).sort((a,b)=>a.start-b.start);}
 
 /* ============ ricerca globale ============ */

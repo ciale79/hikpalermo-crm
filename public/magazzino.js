@@ -782,11 +782,10 @@
     } catch (e) { console.error(e); }
     return out;
   };
-  const or0 = window.openRef;
-  window.openRef = function (ref) {
-    if (ref && ref.k === 'demo') { go('magazzino'); S.fMag.tab = 'demo'; VIEWS.magazzino.update(); const d = S.demo.get(ref.id); if (d) demoDetail(d); return; }
+  // avvisi di demo e magazzino (chiamato da openRef dopo aver atteso che i dati siano arrivati)
+  window.hpOpenRefX = function (ref) {
+    if (ref && ref.k === 'demo') { go('magazzino'); S.fMag.tab = 'demo'; VIEWS.magazzino.update(); const d = S.demo.get(ref.id); if (d) setTimeout(() => demoDetail(d), 0); else toast('La consegna non è più disponibile.', 'bad'); return; }
     if (ref && ref.k === 'magazzino') { go('magazzino'); return; }
-    return or0(ref);
   };
   const rn0 = window.renderNav;
   window.renderNav = function () {
