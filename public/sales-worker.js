@@ -44,6 +44,8 @@ function compute(wb, name, kamName) {
   const r2 = v => Math.round(v * 100) / 100;
   const add = (o, k, v) => { o[k] = (o[k] || 0) + v; };
   const z4 = () => [0, 0, 0, 0], z12 = () => Array(12).fill(0);
+  // area ProExpert: canale PRO più T&D, HiLook ed EZVIZ
+  const PROX = new Set(['PRO', 'T&D', 'HILOOK', 'EZVIZ']); let proSp = 0;
   const T = { it: z4(), itO: z4(), si: z4(), siO: z4(), itNR: 0, siNR: 0, itSp: 0, siSp: 0,
     siCh: { PRO: z4(), SOLUTION: z4(), COMUNI: z4() },
     m: { it_m26: z12(), it_m25: z12(), si_m26: z12(), si_m25: z12(), si_pro_m26: z12(), si_sol_m26: z12(), si_pro_m25: z12(), si_sol_m25: z12() } };
@@ -58,7 +60,9 @@ function compute(wb, name, kamName) {
     const area = String(r[I.area] || '').trim().toUpperCase();
     const sic = area === 'SICILIA';
     const nr = ch !== 'REBATE';
-    const own = nr && ch !== 'EZVIZ' && String(I.um >= 0 ? r[I.um] : '').trim().toLowerCase() !== 'outdoor';
+    const outd = String(I.um >= 0 ? r[I.um] : '').trim().toLowerCase() === 'outdoor';
+    const own = nr && ch !== 'EZVIZ' && !outd;
+    const isPro = nr && !outd && PROX.has(ch);
     const is26 = y === Y;
     const isSp = y === PY && ts(r[I.dd]) <= cut25;
     const q = Math.floor((mo - 1) / 3);
@@ -66,19 +70,19 @@ function compute(wb, name, kamName) {
       T.itNR += a; if (sic) T.siNR += a;
       if (nr) { T.it[q] += a; if (sic) T.si[q] += a; }
     }
+    if (isPro && sic) { if (is26) { T.siCh.PRO[q] += a; T.m.si_pro_m26[mo - 1] += a; add(famPro, r[I.fam] || '—', a); } else if (y === PY) T.m.si_pro_m25[mo - 1] += a; if (isSp) proSp += a; }
     if (!own) continue;
     if (is26) {
       T.itO[q] += a; T.m.it_m26[mo - 1] += a;
       if (sic) {
         T.siO[q] += a; T.m.si_m26[mo - 1] += a;
-        if (T.siCh[ch]) T.siCh[ch][q] += a;
-        if (ch === 'PRO') { T.m.si_pro_m26[mo - 1] += a; add(famPro, r[I.fam] || '—', a); }
+        if (!isPro && T.siCh[ch]) T.siCh[ch][q] += a;
         if (ch === 'SOLUTION') { T.m.si_sol_m26[mo - 1] += a; add(famSol, r[I.fam] || '—', a); }
         add(tipi, r[I.type] || '—', a);
       }
     } else if (y === PY) {
       T.m.it_m25[mo - 1] += a;
-      if (sic) { T.m.si_m25[mo - 1] += a; if (ch === 'PRO') T.m.si_pro_m25[mo - 1] += a; if (ch === 'SOLUTION') T.m.si_sol_m25[mo - 1] += a; }
+      if (sic) { T.m.si_m25[mo - 1] += a; if (ch === 'SOLUTION') T.m.si_sol_m25[mo - 1] += a; }
     }
     if (isSp) { T.itSp += a; if (sic) T.siSp += a; }
     if (!is26 && !isSp) continue;
@@ -89,26 +93,28 @@ function compute(wb, name, kamName) {
       if (kamName) pair(kam, area)[k] += a;
       const cn = String(r[I.cust] || '—').trim(); const key = area + '|' + cn;
       const c = kamCli[key] || (kamCli[key] = { n: cn, ar: area, t: r[I.type] || '', a: 0, b: 0, p: 0, s: 0 });
-      if (is26) { c.a += a; if (ch === 'PRO') c.p += a; if (ch === 'SOLUTION') c.s += a; } else c.b += a;
+      if (is26) { c.a += a; if (isPro) c.p += a; if (ch === 'SOLUTION') c.s += a; } else c.b += a;
     }
     if (sic) {
       pair(canali, ch)[k] += a;
       pair(macro, r[I.macro] || '—')[k] += a;
       const cn = String(r[I.cust] || '—').trim();
       const c = clienti[cn] || (clienti[cn] = { t: r[I.type] || '', a: 0, b: 0, p: 0, s: 0 });
-      if (is26) { c.a += a; if (ch === 'PRO') c.p += a; if (ch === 'SOLUTION') c.s += a; } else c.b += a;
+      if (is26) { c.a += a; if (isPro) c.p += a; if (ch === 'SOLUTION') c.s += a; } else c.b += a;
     }
   }
 
   // ordini aperti (esclusi EZVIZ e Rebate)
-  const oo = { italia: 0, sicilia: 0, siCanali: {}, siClienti: {} }; const ooKam = {}; const kamAreas = new Set(Object.values(kamCli).map(c => c.ar));
+  const oo = { italia: 0, sicilia: 0, siCanali: {}, siClienti: {}, siPro: 0 }; const ooKam = {}; const kamAreas = new Set(Object.values(kamCli).map(c => c.ar));
   if (O) {
     const orows = XLSX.utils.sheet_to_json(O, { header: 1, raw: true, defval: null, blankrows: false });
     const OH = orows[0].map(norm); const oc = n => OH.indexOf(norm(n));
     const J = { ch: oc('Channel'), area: oc('Area'), cust: oc('Customer_1'), amt: OH.findIndex(h => h.startsWith('total amount') && h.includes('€')) };
     for (let i = 1; i < orows.length; i++) {
       const r = orows[i]; const a = +r[J.amt] || 0; if (!a) continue;
-      const ch = String(r[J.ch] || '').trim().toUpperCase(); if (ch === 'EZVIZ' || ch === 'REBATE') continue;
+      const ch = String(r[J.ch] || '').trim().toUpperCase();
+      if (PROX.has(ch) && String(r[J.area] || '').trim().toUpperCase() === 'SICILIA') oo.siPro += a;
+      if (ch === 'EZVIZ' || ch === 'REBATE') continue;
       oo.italia += a;
       const oar = String(r[J.area] || '').trim().toUpperCase();
       if (kamAreas.has(oar)) { const cn = String(r[J.cust] || '—').trim(); add(ooKam, oar + '|' + cn, a); }
@@ -130,7 +136,8 @@ function compute(wb, name, kamName) {
     macro: pairs(macro), canali: pairs(canali), siQ: mapR(T.siCh), tipiCliente: top(tipi, 20),
     famPro: top(famPro, 8), famSol: top(famSol, 8),
     ooKam: Object.entries(ooKam).map(([k, v]) => [k.split('|').slice(1).join('|'), k.split('|')[0], r2(v)]).sort((x, y) => y[2] - x[2]),
-    oo: { italia: r2(oo.italia), sicilia: r2(oo.sicilia), siCanali: mapR(oo.siCanali), siClienti: top(oo.siClienti, 50) }
+    oo: { italia: r2(oo.italia), sicilia: r2(oo.sicilia), siCanali: mapR(oo.siCanali), siClienti: top(oo.siClienti, 50), siPro: r2(oo.siPro) },
+    proSp: r2(proSp), proIncl: 'PRO + T&D + HILOOK + EZVIZ'
   };
   const sales = {
     anno: Y, data: iso(cut), dataLabel: lab(cut), file: String(name || '').replace(/\.(xlsb|xlsx|xlsm|xls)$/i, ''),
