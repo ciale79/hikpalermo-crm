@@ -95,7 +95,7 @@
     return { tot: out.length, list: out.slice(0, limit) };
   }
   const netsOf = (m, r) => (r.n || []).filter(x => x[1] != null);
-  const pimg = (id, size) => id ? el('img', { class: 'hp-pavimg', src: '/_blob/' + id, alt: '', loading: 'lazy', style: { width: size + 'px', height: size + 'px' } }) : el('span', { class: 'hp-pavimg none', style: { width: size + 'px', height: size + 'px' } });
+  const pimg = (id, size) => id ? el('img', { class: 'hp-pavimg', src: String(id).startsWith('/') ? id : '/_blob/' + id, alt: '', loading: 'lazy', style: { width: size + 'px', height: size + 'px' } }) : el('span', { class: 'hp-pavimg none', style: { width: size + 'px', height: size + 'px' } });
   const FL = { sap: 'Codice SAP', ean: 'EAN', cat: 'Categoria', tip: 'Tipologia / serie', gar: 'Garanzia', moq: 'MOQ', var: 'Variazione di prezzo', note: 'Note', d2: 'Descrizione tecnica / breve' };
 
   function rowDetail(m, r) {

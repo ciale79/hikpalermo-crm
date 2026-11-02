@@ -3,6 +3,7 @@
 // promemoria giornalieri con Cron, proxy verso Claude per l'analisi dei capitolati.
 import seed from '../seed/data.json';
 import mag1009 from '../seed/magazzino-1009.json';
+import pavTD from '../seed/proav-listino-td.json';
 import extraImport from '../seed/import-bolle.json';
 import extraLinks from '../seed/import-links.json';
 import extraKam from '../seed/import-kam.json';
@@ -706,6 +707,23 @@ async function findProductImage(env, model, desc, force) {
   await env.DB.prepare('INSERT INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?) ON CONFLICT(col,id) DO UPDATE SET data=excluded.data, version=excluded.version, updated=excluded.updated').bind('imgweb', key, JSON.stringify(out), now(), now()).run();
   return out;
 }
+// Import una tantum del listino ProAV «Listino TD Nino» (8 fogli, kit da celle unite, foto in /pavimg): solo se non c'è già un listino con quel nome
+async function migratePavTD(env) {
+  if (await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id='mig_pav_td'").first()) return;
+  const t = now();
+  const dup = await env.DB.prepare("SELECT 1 FROM docs WHERE col='proavListini' AND lower(json_extract(data,'$.nome')) LIKE 'listino td nino%'").first();
+  if (!dup) {
+    const nino = await env.DB.prepare('SELECT id FROM users WHERE email=?').bind('antonino.pumilia@hikvision.com').first();
+    const owner = await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(normEmail(env.OWNER_EMAIL)).first();
+    const id = 'pl' + rndHex(7), blob = id + '_' + t.toString(36);
+    const payload = JSON.stringify({ v: 2, items: pavTD.items, at: t });
+    await env.FILES.put('proav/' + blob, payload, { httpMetadata: { contentType: 'application/json' }, customMetadata: { by: 'import' } });
+    const meta = { v: 2, nome: 'Listino TD Nino', periodo: '2026-11', righe: pavTD.items.length, kit: pavTD.kit, fogli: pavTD.fogli, fields: pavTD.fields, mapK: pavTD.mapK, file: 'Listino_TD_Nino.xlsx', size: payload.length, blob, imgs: [], by: (nino || owner || {}).id || null, at: t, map: { n: [0] } };
+    await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('proavListini', id, JSON.stringify(meta), t, t).run();
+    const ids = await pavUids(env); await Promise.all(ids.map(uid => broadcast(env, { col: 'proavListini', id, v: t, data: meta, by: 'server' }, uid)));
+  }
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', 'mig_pav_td', JSON.stringify({ at: t, skipped: !!dup }), t, t).run();
+}
 // Import una tantum dell'inventario del magazzino 1009 (Sicilia e T&D): non sovrascrive righe già presenti
 async function migrateMag(env) {
   if (await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id='mig_mag1009'").first()) return;
@@ -796,7 +814,7 @@ async function api(req, env, ctx, url, u) {
   if (m !== 'GET' && req.headers.get('x-hp') !== '1') return err('csrf', 'Richiesta non valida', 403);
 
   if (p === '/api/me') {
-    ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).catch(e => console.log('mig', e && e.stack || e)));
+    ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).catch(e => console.log('mig', e && e.stack || e)));
     const r = await ruoli(env);
     const team = await getDoc(env, 'team', u.id);
     return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd, proav: await isPav(env, u) });
@@ -980,7 +998,7 @@ export default {
     // (promemoria di domani e pulizia) girano nel primo passaggio delle 06:00 UTC; i promemoria non si duplicano (tabella reminders)
     const st = new Date((ev && ev.scheduledTime) || Date.now());
     const daily = !ev || !ev.cron || ev.cron === '0 6 * * *' || (st.getUTCHours() === 6 && st.getUTCMinutes() < 10);
-    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).catch(e => console.log('mig', e && e.stack || e)); await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); if (!daily) return; }
+    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).catch(e => console.log('mig', e && e.stack || e)); await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); if (!daily) return; }
     const t = now();
     await env.DB.batch([env.DB.prepare('DELETE FROM otp WHERE expires<?').bind(t - 864e5), env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(t)]);
     const tomorrow = romeDay(t + 864e5);
