@@ -254,18 +254,47 @@
     }, 'pri', 'check')], { full: true, sticky: true });
   }
 
+  /* ---------- opzioni comuni della finestra «Esporta»: cosa mostrare, data, validità, pagamento, tempi ---------- */
+  const PAGS = ['Bonifico bancario anticipato', 'Bonifico bancario 30 gg d.f.', 'Bonifico bancario 60 gg d.f.f.m.', 'Ri.Ba. 30 gg d.f.f.m.', 'Ri.Ba. 60 gg d.f.f.m.', 'Ri.Ba. 30/60 gg d.f.f.m.', 'Come da accordi commerciali in essere'];
+  const TEMPI = ['Merce disponibile a magazzino, salvo venduto', '1-2 settimane dalla conferma d\'ordine', '2-3 settimane dalla conferma d\'ordine', '4-6 settimane dalla conferma d\'ordine', '6-8 settimane dalla conferma d\'ordine', 'Da confermare all\'ordine'];
+  const lsG = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, lsS = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
+  window.hpExportOpts = function (o, extraShow) {
+    const cond = (o.pdf && o.pdf.cond) || {}; const pick = rx => { for (const [k, v] of Object.entries(cond)) if (rx.test(k)) return String(v).trim(); return ''; };
+    const ck = (on, t, h) => { const i = el('input', { type: 'checkbox', checked: on }); return { i, n: el('label', { class: 'row', style: 'gap:8px;align-items:flex-start' }, i, el('span', {}, el('b', {}, t), h ? el('div', { class: 'hint' }, h) : null)) }; };
+    const anyNc = (o.righe || []).some(r => r.nc);
+    const cL = ck(S.state.exL !== false, 'Prezzo di listino', 'Togliendolo, il cliente vede solo i prezzi netti');
+    const cS = ck(S.state.exSc !== false, 'Sconto %', anyNc ? 'Le righe con «netto cliente» mostrano comunque solo il netto' : 'Le colonne di sconto vuote non compaiono comunque');
+    const cN = ck(true, 'Note aggiuntive', o.note ? '' : 'L\'offerta non ha note');
+    const dl = (id, arr) => el('datalist', { id }, arr.map(v => el('option', { value: v })));
+    const fData = el('input', { type: 'date', value: o.data || new Date().toISOString().slice(0, 10) });
+    const fValid = el('input', { type: 'number', min: 1, step: 1, value: o.valid || 30, style: 'width:90px' });
+    const fPag = el('input', { type: 'text', list: 'hpPagL', value: o.pagamento || pick(/pagament/i) || lsG('hp_exPag'), placeholder: 'es. Bonifico bancario 30 gg d.f.' });
+    const fTmp = el('input', { type: 'text', list: 'hpTmpL', value: o.consegna || pick(/consegn/i) || lsG('hp_exTmp'), placeholder: 'es. 4-6 settimane dalla conferma d\'ordine' });
+    const scad = el('span', { class: 'hint' }); const upd = () => { const d = new Date(fData.value + 'T12:00'); d.setDate(d.getDate() + (+fValid.value || 0)); scad.textContent = isNaN(d) ? '' : 'valida fino al ' + d.toLocaleDateString('it-IT'); }; fData.oninput = fValid.oninput = upd; upd();
+    const F = (t, n, w) => el('label', { class: 'fld', style: w ? 'grid-column:1/-1' : '' }, el('span', {}, t), n);
+    const node = el('div', { class: 'stack' },
+      el('h4', { style: 'margin:0' }, 'Cosa mostrare'), el('div', { class: 'stack', style: 'gap:6px' }, cL.n, cS.n, cN.n, ...(extraShow || [])),
+      el('h4', { style: 'margin:6px 0 0' }, 'Dati dell\'offerta'),
+      el('div', { class: 'fgrid', style: 'grid-template-columns:repeat(auto-fit,minmax(180px,1fr))' }, F('Data dell\'offerta', fData), F('Validità (giorni)', el('div', { class: 'row', style: 'gap:8px' }, fValid, scad)),
+        F('Metodo di pagamento', fPag, true), F('Tempi di approvvigionamento', fTmp, true)), dl('hpPagL', PAGS), dl('hpTmpL', TEMPI));
+    const read = () => {
+      S.state.exSc = cS.i.checked; S.state.exL = cL.i.checked; lsS('hp_exPag', fPag.value.trim()); lsS('hp_exTmp', fTmp.value.trim());
+      // righe «netto cliente»: nel documento solo il netto, senza listino e senza sconto
+      const righe = (o.righe || []).map(r => r.nc ? { ...r, noList: true, ncHide: true } : r);
+      return { o: { ...o, righe, data: fData.value || o.data, valid: +fValid.value || o.valid || 30, pagamento: fPag.value.trim(), consegna: fTmp.value.trim(), note: cN.i.checked ? o.note : '' }, sc: cS.i.checked, lst: cL.i.checked };
+    };
+    return { node, read };
+  };
+  window.hpValidTxt = o => { let t = 'La presente Offerta ha validità ' + (o.valid || 30) + ' giorni'; if (o.data) { const d = new Date(o.data + 'T12:00'); d.setDate(d.getDate() + (+o.valid || 30)); if (!isNaN(d)) t += ' (fino al ' + d.toLocaleDateString('it-IT') + ')'; } return t + '.'; };
+
   /* ---------------- esportazione offerta: con o senza sconto ---------------- */
   const origExport = window.exportOffer;
   window.exportOffer = function (o) {
-    const showSc = el('input', { type: 'checkbox', id: 'exSc', checked: S.state.exSc !== false });
-    const showL = el('input', { type: 'checkbox', id: 'exL', checked: S.state.exL !== false });
-    const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' },
-      el('label', { class: 'row', style: 'gap:8px' }, showSc, el('span', {}, el('b', {}, 'Mostra lo sconto %'), el('div', { class: 'hint' }, 'Colonna sconto per riga e sconto medio nel totale'))),
-      el('label', { class: 'row', style: 'gap:8px' }, showL, el('span', {}, el('b', {}, 'Mostra il prezzo di listino'), el('div', { class: 'hint' }, 'Togliendolo, il cliente vede solo i prezzi netti'))),
-      el('p', { class: 'hint' }, 'La scelta viene ricordata per le prossime esportazioni.')),
+    const X = window.hpExportOpts(o);
+    const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node, el('p', { class: 'hint', style: 'margin:0' }, 'Data, validità, pagamento e tempi valgono per questo documento; pagamento e tempi si ricordano per le prossime esportazioni.')),
       [el('span', { class: 'grow' }), btn('Annulla', () => m.close()),
-        btn('Excel', () => { S.state.exSc = showSc.checked; S.state.exL = showL.checked; m.close(); xlsxOut(o, showSc.checked, showL.checked); }, '', 'dl'),
-        btn('PDF', () => { S.state.exSc = showSc.checked; S.state.exL = showL.checked; m.close(); pdfOut(o, showSc.checked, showL.checked); }, 'pri', 'doc')]);
+        btn('Excel', () => { const R = X.read(); m.close(); xlsxOut(R.o, R.sc, R.lst); }, '', 'dl'),
+        btn('PDF', () => { const R = X.read(); m.close(); pdfOut(R.o, R.sc, R.lst); }, 'pri', 'doc')], { wide: true });
   };
   async function xlsxOut(o, sc, lst) {
     if (sc && lst && !(o.righe || []).some(r => r.noList || r.sez)) return origExport(o);
@@ -333,7 +362,7 @@
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: head.length, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]); }
       const t = lineTot(r); const net = r.net || r.noList || r.noSc && !(+r.sc);
       const s1 = r.sc1 ?? r.sc, s2 = +r.sc2 || 0;
-      body.push([r.c, longD(r) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList || net ? '' : eur(r.p)] : []), ...(sc ? [net ? 'NETTO' : fN.format(round2(+(s2 ? s1 : r.sc) || 0)), net ? '-' : s2 ? fN.format(round2(s2)) : '-'] : []), eur(t.unit), eur(t.netto)]);
+      body.push([r.c, longD(r) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList || net ? '' : eur(r.p)] : []), ...(sc ? [r.ncHide ? '' : net ? 'NETTO' : fN.format(round2(+(s2 ? s1 : r.sc) || 0)), r.ncHide ? '' : net ? '-' : s2 ? fN.format(round2(s2)) : '-'] : []), eur(t.unit), eur(t.netto)]);
     }
     const nC = head.length; const cs = { 0: { cellWidth: 22 }, 2: { cellWidth: 9, halign: 'center' } };
     let k = 3; if (lst) cs[k++] = { cellWidth: 18, halign: 'right' }; if (sc) { cs[k++] = { cellWidth: 13, halign: 'center' }; cs[k++] = { cellWidth: 11, halign: 'center' }; } cs[k++] = { cellWidth: 19, halign: 'right' }; cs[k] = { cellWidth: 21, halign: 'right', textColor: RED };
@@ -363,7 +392,7 @@
     const pick = rx => { for (const [kk, v] of Object.entries(cond)) if (rx.test(kk)) return String(v).trim(); return ''; };
     const block = (title, lines) => { T(title, 14, y, { s: 7.5, b: true, c: RED }); y += 8; lines.forEach(l => { const ls = doc.splitTextToSize(String(l), W - 28); ls.forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; }); }); y += 9; };
     block('TEMPI DI CONSEGNA', [o.consegna || pick(/consegn/i) || '---']);
-    block('VALIDITÀ DELL\'OFFERTA', ['La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.', 'Sono esclusi i costi di spedizione se non indicati.']);
+    block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt(o), 'Sono esclusi i costi di spedizione se non indicati.']);
     block('CONDIZIONI DI PAGAMENTO', [o.pagamento || pick(/pagament/i) || '-', 'Tutti i prezzi indicati si intendono IVA esclusa.']);
     block('COORDINATE BANCARIE', ['Banca: ' + (cf.banca || pick(/^banca/i) || ''), 'IBAN: ' + (cf.iban || pick(/iban/i) || ''), 'Beneficiario: ' + (cf.beneficiario || pick(/benefic/i) || '')]);
     T('NOTE AGGIUNTIVE', 14, y, { s: 7.5, b: true, c: RED }); y += 6;

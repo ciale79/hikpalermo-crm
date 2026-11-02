@@ -196,7 +196,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     for (const r of lines) {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) sb.push([{ content: sez, colSpan: nC, styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }]); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
-      sb.push([r.c, String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(showL ? [net ? '' : eur(r.p)] : []), ...(showSc ? [net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [net ? '-' : s2 ? fN.format(s2) : '-'] : []), eur(t.unit), eur(t.netto)]);
+      sb.push([r.c, String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(showL ? [net ? '' : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), eur(t.unit), eur(t.netto)]);
     }
     const lab = (t, extra) => ({ content: t, colSpan: nC - 1, styles: { halign: 'right', fontStyle: 'normal', textColor: [80, 80, 80], ...(extra || {}) } });
     const foot = [[lab('Subtotale'), { content: eur(Tt.N), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }], [lab('IVA (22%)'), { content: eur(iva), styles: { halign: 'right', fontStyle: 'bold' } }],
@@ -218,7 +218,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const pick = rx => { for (const [kk, v] of Object.entries(cond)) if (rx.test(kk)) return String(v).trim(); return ''; };
     const block = (title, ls) => { T(title, 14, y, { s: 7.5, b: true, c: RED }); y += 8; ls.forEach(l => doc.splitTextToSize(String(l), W - 28).forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; })); y += 9; };
     block('TEMPI DI CONSEGNA', [o.consegna || pick(/consegn/i) || '---']);
-    block('VALIDITÀ DELL\'OFFERTA', ['La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.', 'Sono esclusi i costi di spedizione se non indicati.']);
+    block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt ? hpValidTxt(o) : 'La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.', 'Sono esclusi i costi di spedizione se non indicati.']);
     block('CONDIZIONI DI PAGAMENTO', [o.pagamento || pick(/pagament/i) || '-', 'Tutti i prezzi indicati si intendono IVA esclusa.']);
     T('NOTE AGGIUNTIVE', 14, y, { s: 7.5, b: true, c: RED }); y += 4;
     const note = String(o.note || '').replace(/^(tempi di consegna|validit[aà][^:]*|condizioni di pagamento|banca|iban|beneficiario)\s*:.*$/gim, '').trim();
@@ -249,7 +249,6 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
 
   /* ---------- finestra di esportazione (ProAV) ---------- */
   window.exportOffer = function (o) {
-    const showSc = el('input', { type: 'checkbox', checked: S.state.exSc !== false }); const showL = el('input', { type: 'checkbox', checked: S.state.exL !== false });
     const dsBox = el('div', { class: 'stack', style: 'gap:6px' }), atBox = el('div', { class: 'stack', style: 'gap:6px' });
     const prog = el('div', { class: 'row', style: 'gap:8px', hidden: true }, el('span', { class: 'spin' }), el('span', {}));
     const say = t => { prog.hidden = false; prog.lastChild.textContent = t; };
@@ -285,17 +284,16 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     };
     drawAt([]);
     if (o.commessaId && typeof db !== 'undefined' && db) { try { const un = db.collection('commesse/' + o.commessaId + '/allegati').onSnapshot(s => { drawAt(s.docs.map(d => ({ id: d.id, ...d.data() }))); }, () => { }); setTimeout(() => { try { un && un(); } catch (e) { } }, 4000); } catch (e) { } }
-    const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' },
-      el('label', { class: 'row', style: 'gap:8px' }, showSc, el('span', {}, el('b', {}, 'Mostra lo sconto %'), el('div', { class: 'hint' }, 'Nel modulo d\'ordine; le colonne di sconto vuote non compaiono comunque'))),
-      el('label', { class: 'row', style: 'gap:8px' }, showL, el('span', {}, el('b', {}, 'Mostra il prezzo di listino'))),
+    const X = window.hpExportOpts(o);
+    const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node,
       el('h4', { style: 'margin:6px 0 0' }, 'Schede tecniche in coda'), dsBox,
       el('h4', { style: 'margin:6px 0 0' }, 'Disegni, simulazioni e report HiTools Designer'), atBox, prog),
       [el('span', { class: 'grow' }), btn('Annulla', () => m.close()),
-        btn('Excel', () => { S.state.exSc = showSc.checked; S.state.exL = showL.checked; m.close(); window.hpOffXlsx && hpOffXlsx(o, showSc.checked, showL.checked); }, '', 'dl'),
+        btn('Excel', () => { const R = X.read(); m.close(); window.hpOffXlsx && hpOffXlsx(R.o, R.sc, R.lst); }, '', 'dl'),
         btn('PDF', async () => {
-          S.state.exSc = showSc.checked; S.state.exL = showL.checked;
+          const R = X.read();
           const attach = [...ds.filter(x => x.on && (x.url || x.file)).map(x => ({ label: 'scheda ' + x.c, url: x.url, file: x.file })), ...(atBox._files || []).filter(f => f.on).map(f => ({ label: f.name, url: '/_blob/' + f.id })), ...extra.filter(x => x.on)];
-          try { await build(o, { sc: showSc.checked, lst: showL.checked, attach }, say); m.close(); toast('Offerta PDF pronta'); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; }
+          try { await build(R.o, { sc: R.sc, lst: R.lst, attach }, say); m.close(); toast('Offerta PDF pronta'); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; }
         }, 'pri', 'doc')], { wide: true });
   };
   window.hpPavOfferBuild = build; window.hpPavProdImg = productImage;
