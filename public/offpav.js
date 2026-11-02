@@ -115,11 +115,13 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     };
     const fitCaps = (txt, cx, y, size, color, bold, maxW) => { let s = size; doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(s); while (doc.getTextWidth(String(txt).toUpperCase()) * 0.9 > maxW && s > 8) { s -= 0.5; doc.setFontSize(s); } smallCaps(txt, cx, y, s, color, bold); };
     const lines = o.righe || [];
+    // logo Hikvision con sotto il logo ProAV, largo dalla «K» alla «I» di «sion» (22,8% → 69,3% della larghezza del logo Hikvision)
+    const K0 = 0.228, I1 = 0.693;
+    const lockup = (x, y0, w) => { let yy = y0; if (hik) { doc.addImage(hik.d, 'PNG', x, yy, w, w * hik.r); yy += w * hik.r + w * 0.03; } if (pav) { const pw = w * (I1 - K0); doc.addImage(pav.d, 'PNG', x + w * K0, yy, pw, pw * pav.r); yy += pw * pav.r; } return yy; };
 
     /* 1 · copertina */
     let y = 16;
-    if (hik) { const w = 46; doc.addImage(hik.d, 'PNG', (W - w) / 2, y, w, w * hik.r); y += w * hik.r + 10; }
-    if (pav) { const w = 92; doc.addImage(pav.d, 'PNG', (W - w) / 2, y, w, w * pav.r); y += w * pav.r + 14; }
+    { const w = 96; y = lockup((W - w) / 2, y, w) + 14; }
     T('Offerta riservata per', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 8;
     fitCaps(cliName, W / 2, y, 15, DARK, true, W - 40); y += 11;
     if (rif) { T('Riferimento', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 50); rl.slice(0, 2).forEach(l => { fitCaps(l, W / 2, y, 11.5, DARK, false, W - 40); y += 6.5; }); y += 1; }
@@ -138,7 +140,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
 
     /* 2 · offerta con anteprime */
     doc.addPage(); y = 16;
-    if (hik) doc.addImage(hik.d, 'PNG', 14, 12, 42, 42 * hik.r); if (pav) doc.addImage(pav.d, 'PNG', W - 14 - 50, 12, 50, 50 * pav.r);
+    lockup(W - 14 - 52, 10, 52);
     T('Offerta', 14, 34, { s: 13, c: RED }); T(num + ' del ' + dt + (rif ? ' · ' + rif : ''), 14, 40, { s: 8, c: GREY });
     say('Preparo le anteprime…');
     const thumbs = await Promise.all(lines.map(r => productImage({ ...r, c: mainC(r.c) }, false)));
@@ -164,8 +166,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
 
     /* 3 · copertina «Modulo Conferma d'ordine» */
     doc.addPage(); y = 70;
-    if (hik) { const w = 62; doc.addImage(hik.d, 'PNG', (W - w) / 2, y, w, w * hik.r); y += w * hik.r + 12; }
-    if (pav) { const w = 80; doc.addImage(pav.d, 'PNG', (W - w) / 2, y, w, w * pav.r); y += w * pav.r + 30; }
+    { const w = 110; y = lockup((W - w) / 2, y, w) + 30; }
     T('Modulo Conferma d\'ordine', W / 2, y, { a: 'center', s: 24, b: true, c: DARK }); y += 12;
     fitCaps(cliName, W / 2, y, 12, GREY, false, W - 40); y += 7; T('Offerta ' + num + ' del ' + dt, W / 2, y, { a: 'center', s: 9, c: GREY });
 
