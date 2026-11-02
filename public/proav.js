@@ -51,7 +51,7 @@
     const miss = S.pavList.filter(m => !S.pavRows.has(m.id));
     if (!miss.length) return Promise.resolve();
     if (loadingAll) return loadingAll;
-    loadingAll = Promise.all(miss.map(m => loadRows(m).catch(e => { toast(e.message, 'bad'); }))).finally(() => { loadingAll = null; if (S.view === 'pav') VIEWS.pav.update(); });
+    loadingAll = Promise.all(miss.map(m => loadRows(m).catch(e => { toast(e.message, 'bad'); }))).finally(() => { loadingAll = null; try { injectPav(); } catch (e) { console.error(e); } if (S.view === 'pav') VIEWS.pav.update(); });
     return loadingAll;
   }
   const t0 = setInterval(() => {
@@ -116,6 +116,35 @@
             el('td', {}, el('div', { class: 'hp-pavdesc', title: k.d || '' }, k.d || k.d2 || '')), el('td', { class: 'r num hp-net', style: 'font-size:.82rem' }, (k.p != null ? 'Listino ' + eur(k.p) + ' ' : '') + (k.n || []).map(([h, v]) => h + ' ' + eur(v)).join(' · ') || '—'))))))) : null);
     const md = modal(code, body, [btn('Copia codice', () => copy(code), '', 'copy'), (window.hpGlobalChip && window.hpGlobalChip(code, 'btn hp-glbtn')) || el('a', { class: 'btn', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet'), target: '_blank', rel: 'noopener' }, 'Cerca datasheet'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())], { wide: true });
   }
+
+  /* ---------- listini ProAV anche in «Articoli» (e quindi in ricerca, offerte e capitolati di questa area) ---------- */
+  LIST.pav = 'Listino ProAV · riservato';
+  const SRC0 = SRC.filter(x => x.L !== 'pav').length;
+  window.hpPavDetail = rowDetail;
+  let injKey = '';
+  function injectPav() {
+    if (!S.cat || !S.cat.length || !S.pavList) return;
+    const ready = S.pavList.filter(m => S.pavRows.has(m.id));
+    const key = ready.map(m => m.id + ':' + (S.pavRows.get(m.id).at || 0)).join('|') + '#' + S.cat.length;
+    if (key === injKey) return;
+    S.cat = S.cat.filter(x => x.L !== 'pav'); SRC.length = SRC0;
+    let i0 = S.cat.length ? Math.max(...S.cat.map(x => x.i)) + 1 : 0;
+    for (const m of ready) {
+      const s = SRC.length; SRC.push({ L: 'pav', tag: 'PROAV', name: m.nome, per: fmtP(m.periodo), key: 'pav:' + m.id });
+      for (const r of itemsOf(m)) {
+        const nets = {}; for (const [h, v] of r.n || []) { if (/1 ?pz/i.test(h)) continue; if (/distribut/i.test(h) && nets.dist == null) nets.dist = v; else if (/dealer/i.test(h) && nets.dealer == null) nets.dealer = v; else if (/install|\bsi\b|system/i.test(h) && nets.si == null) nets.si = v; }
+        const c = r.c, b = r.kit ? 'KIT: ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ') : (r.d2 || r.tip || String(r.d || '').slice(0, 110));
+        const d = r.kit ? (r.kit.map(k => k.q + '× ' + k.c + ' — ' + (k.d || k.d2 || '')).join('\n')) : (r.d || r.d2 || '');
+        S.cat.push({ i: i0++, s, sap: r.kit ? (r.kit[0].sap || '') : (r.sap || ''), c, sz: r.cat || 'PROAV', fm: r.tip || '', b, d, p: r.p != null ? r.p : 0, noPrice: r.p == null, inf: /new/i.test(r.var || '') ? 'NEW' : '', st: '', m: r.moq || '', n: r.note || '', im: (im => im ? (String(im).startsWith('/') ? im : '/_blob/' + im) : -1)(r.img || (r.kit && (r.kit.find(k => k.img) || {}).img)),
+          nets: Object.keys(nets).length ? nets : null, url: r.url || '', isNet: false, L: 'pav', cn: norm(c), hay: [c, r._h].join(' | ').toLowerCase(), pavRef: { m, r } });
+      }
+    }
+    S.byCode = new Map(); for (const it of S.cat) { if (!S.byCode.has(it.cn)) S.byCode.set(it.cn, []); S.byCode.get(it.cn).push(it); }
+    S.catSap = null; injKey = key; changed();
+  }
+  const ad0 = window.artDetail || artDetail;
+  window.artDetail = function (it) { if (it && it.pavRef) return rowDetail(it.pavRef.m, it.pavRef.r); return ad0.apply(this, arguments); };
+  const tInj = setInterval(() => { if (S.cat && S.cat.length && S.pavList) { if (S.pavList.every(m => S.pavRows.has(m.id))) { injectPav(); } else loadAll().then(injectPav); } }, 1500);
 
   // ricerca globale in alto: anche nei listini ProAV
   window.hpGsExtra = (q, grp) => {
