@@ -279,38 +279,98 @@
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = H.map((h, i) => ({ wch: i === 2 ? 60 : i === 1 ? 24 : 14 }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Offerta'); await saveXlsx(wb, (o.numero || 'Offerta') + (com ? ' ' + com.nome : ''));
   }
+  /* ---------- PDF dell'offerta: modello standard Hikvision (copertina, offerta commerciale, dettaglio SAP, condizioni) ---------- */
+  const HQ = 'HIKVISION ITALY Srl - Viale Fulvio Testi, 113 - 20092 Cinisello Balsamo (MI) - P.IVA 07757250969';
+  const imgData = (src, w) => new Promise(res => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * i.naturalHeight / i.naturalWidth); c.getContext('2d').drawImage(i, 0, 0, c.width, c.height); res({ d: c.toDataURL('image/png'), r: i.naturalHeight / i.naturalWidth }); }; i.onerror = () => res(null); i.src = src; });
   async function pdfOut(o, sc, lst) {
+    const eur = v => '€ ' + (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); // come nel modello: «€ 1.200,00»
     try {
       if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
       if (!window.jspdf.jsPDF.API.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
     } catch (e) { toast('Non riesco a caricare il generatore PDF.', 'bad'); return; }
-    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth();
-    const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {};
-    doc.setFillColor(200, 16, 46); doc.rect(0, 0, W, 4, 'F');
-    try { const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = '/hik-logo.png'; }); const c = document.createElement('canvas'); c.width = 900; c.height = Math.round(900 * im.naturalHeight / im.naturalWidth); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); const h = 52 * c.height / c.width; doc.addImage(c.toDataURL('image/png'), 'PNG', 14, 19.5 - h, 52, h, 'logo', 'FAST'); } catch (e) { doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(200, 16, 46); doc.text('HIKVISION', 14, 18); }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(110, 122, 138); doc.text('Filiale di Palermo - Viale Lazio 30/B - Palermo', 14, 25);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5); doc.setTextColor(28, 36, 48); doc.text('OFFERTA ' + (o.numero || ''), W - 14, 15, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.text('Data ' + (o.data ? o.data.split('-').reverse().join('/') : ''), W - 14, 21, { align: 'right' }); if (o.titolo) doc.text(String(o.titolo).slice(0, 60), W - 14, 26, { align: 'right' });
-    doc.setFontSize(9); doc.setTextColor(28, 36, 48);
-    const cl = [cli.nome, [cli.indirizzo, [cli.cap, cli.citta].filter(Boolean).join(' '), cli.prov].filter(Boolean).join(', '), cli.piva ? 'P. IVA ' + cli.piva : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
-    doc.setFont('helvetica', 'bold'); doc.text('Spett.le', 120, 36); doc.setFont('helvetica', 'normal'); cl.forEach((s, i) => doc.text(doc.splitTextToSize(s, W - 134)[0], 120, 41 + i * 4.6));
-    if (com) { doc.setFont('helvetica', 'bold'); doc.text('Commessa', 14, 36); doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize(com.nome, 90)[0], 14, 41); }
-    const rimg = window.hpImgData ? await Promise.all((o.righe || []).map(r => { try { const n = window.artThumbC ? artThumbC(r.c, r.im, 48) : thumb(r.im, 48); return n && !n.classList.contains('none') ? window.hpImgData(n) : null; } catch (e) { return null; } })) : [];
-    const withImg = rimg.some(Boolean);
-    const head = [...(withImg ? [''] : []), 'Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Listino'] : []), ...(sc ? ['Sc. %'] : []), 'Prezzo', 'Totale'];
-    const body = [], rowImg = []; let sez = null;
+    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
+    const RED = [200, 16, 46], INK = [64, 64, 64], GREY = [128, 128, 128];
+    const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P = o.pdf || {}; const M = P.meta || {}; const C = P.cliente || {};
+    const logo = await imgData('/brand-hikvision.png', 1200) || await imgData('/hik-logo.png', 1200);
+    const num = o.numero || '—'; const dt = o.data ? o.data.split('-').reverse().join('/') : new Date().toLocaleDateString('it-IT');
+    const cliName = cli.nome || C.nome || 'Cliente'; const rif = o.titolo || M.riferimento || (com ? com.nome : '');
+    const me = (S.team && S.team.get(o.by || S.me)) || {}; const red = { n: M.redatto || nm(o.by || S.me), e: M.redattoEmail || me.email || (typeof mailOf === 'function' ? mailOf(o.by || S.me) : '') || '', t: M.redattoTel || me.tel || '' };
+    const T = (txt, x, y, opt = {}) => { doc.setFont('helvetica', opt.b ? 'bold' : opt.i ? 'italic' : 'normal'); doc.setFontSize(opt.s || 9); doc.setTextColor(...(opt.c || INK)); doc.text(String(txt ?? ''), x, y, opt.a ? { align: opt.a } : undefined); };
+    // 1 · copertina
+    if (logo) { const w = 120; doc.addImage(logo.d, 'PNG', (W - w) / 2, 22, w, w * logo.r); }
+    { const parts = ['TVCC', 'INTRUSIONE', 'INTERCOM', 'CONTROLLO ACCESSI']; doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); const sep = ' | '; const tw = doc.getTextWidth(parts.join(sep)); let x = (W - tw) / 2; const y = 22 + 120 * (logo ? logo.r : .14) + 7;
+      parts.forEach((p, k) => { doc.setTextColor(...GREY); doc.text(p, x, y); x += doc.getTextWidth(p); if (k < parts.length - 1) { doc.setTextColor(...RED); doc.text(sep, x, y); x += doc.getTextWidth(sep); } }); }
+    T('Offerta riservata per', W / 2, 75, { a: 'center', s: 8.5 });
+    T(cliName.toUpperCase(), W / 2, 86, { a: 'center', s: 19, b: true, c: [85, 85, 85] });
+    if (rif) { T('Riferimento', W / 2, 101, { a: 'center', s: 8 }); doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(85, 85, 85); doc.text(doc.splitTextToSize(rif, W - 50), W / 2, 109, { align: 'center' }); }
+    T(num + ' del ' + dt, W / 2, rif ? 124 : 104, { a: 'center', s: 8 });
+    // 2 · offerta commerciale
+    doc.addPage();
+    if (logo) doc.addImage(logo.d, 'PNG', 14, 12, 80, 80 * logo.r);
+    let y = 38;
+    T('Partner contrattuale:', 16, y, { i: true, s: 8 }); T('HIKVISION ITALY Srl', 16, y + 5.5, { s: 8.5 }); T('Sede legale:', 16, y + 11, { s: 8 }); T('Viale Fulvio Testi, 113', 16, y + 16, { s: 8 }); T('20092 Cinisello Balsamo (MI)', 16, y + 21, { s: 8 });
+    T('Spett.Le', 125, y, { s: 8 });
+    const cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
+    cl.forEach((t, k) => T(doc.splitTextToSize(t, W - 140)[0], 125, y + 5.5 + k * 5, { s: 8.5 }));
+    y = 78; T('Offerta commerciale', 14, y, { s: 12, c: RED });
+    y += 10; T('Offerta numero:', 14, y, { s: 7.5 }); T(num + ' del ' + dt, 40, y, { s: 7.5 });
+    y += 6.5; T('Redatta da:', 14, y, { s: 7.5 }); [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean).forEach((t, k) => T(t, 40, y + k * 5, { s: 7.5 })); y += 5 * Math.max(1, [red.n, red.e, red.t].filter(Boolean).length) + 1.5;
+    if (rif) { T('Riferimento:', 14, y, { s: 7.5 }); T(doc.splitTextToSize(rif, W - 60)[0], 40, y, { s: 7.5 }); y += 6; }
+    y += 8; T('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', 14, y, { s: 7.5 });
+    const longD = r => { const it = typeof findCode === 'function' ? findCode(r.c, r.L) : null; return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
+    const head = ['Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Listino Cad.'] : []), ...(sc ? ['Sc %', 'Ex %'] : []), 'Prezzo Cad.', 'Prezzo Tot.'];
+    const body = []; let sez = null;
     for (const r of o.righe || []) {
-      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) { rowImg.push(null); body.push([{ content: sez, colSpan: head.length, styles: { fontStyle: 'bold', fillColor: [245, 246, 248] } }]); } }
-      const t = lineTot(r); rowImg.push(rimg[(o.righe || []).indexOf(r)] || null); body.push([...(withImg ? [''] : []), r.c, (r.b || '').slice(0, r.net ? 104 : 120) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList ? '—' : eur(r.p)] : []), ...(sc ? [r.noList ? '—' : (typeof scTxt === 'function' ? scTxt(r) : fN.format(r2(+r.sc || 0)) + '%')] : []), eur(t.unit), eur(t.netto)]);
+      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: head.length, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]); }
+      const t = lineTot(r); const net = r.net || r.noList || r.noSc && !(+r.sc);
+      const s1 = r.sc1 ?? r.sc, s2 = +r.sc2 || 0;
+      body.push([r.c, longD(r) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList || net ? '' : eur(r.p)] : []), ...(sc ? [net ? 'NETTO' : fN.format(round2(+(s2 ? s1 : r.sc) || 0)), net ? '-' : s2 ? fN.format(round2(s2)) : '-'] : []), eur(t.unit), eur(t.netto)]);
     }
-    const ci = head.length, o0 = withImg ? 1 : 0; const right = {}; for (let i = 2 + o0; i < ci; i++) right[i] = { halign: 'right', cellWidth: i === 2 + o0 ? 10 : 21, overflow: 'visible' };
-    doc.autoTable({ startY: 41 + cl.length * 4.6 + 6, head: [head], body, margin: { left: 14, right: 14 }, styles: { fontSize: 8, cellPadding: 1.8, textColor: [28, 36, 48], lineColor: [225, 228, 234], lineWidth: .1 }, headStyles: { fillColor: [28, 36, 48], textColor: 255 }, columnStyles: { ...(withImg ? { 0: { cellWidth: 15, minCellHeight: 13 } } : {}), [o0]: { cellWidth: withImg ? 38 : 44, fontStyle: 'bold', fontSize: 7.5 }, ...right }, didDrawCell: d => { if (!withImg || d.section !== 'body' || d.column.index !== 0) return; const im = rowImg[d.row.index]; if (!im) return; const sz = Math.min(d.cell.width - 2, d.cell.height - 2, 12); try { doc.addImage(im, 'JPEG', d.cell.x + (d.cell.width - sz) / 2, d.cell.y + (d.cell.height - sz) / 2, sz, sz); } catch (e) { } } });
-    const T = offTot(o.righe), TL = offTot((o.righe || []).filter(r => !r.noList)); let y = doc.lastAutoTable.finalY + 6;
-    const tl = (l, v, b) => { doc.setFont('helvetica', b ? 'bold' : 'normal'); doc.setFontSize(b ? 11 : 9.5); doc.text(l, W - 50, y, { align: 'right' }); doc.text(v, W - 14, y, { align: 'right' }); y += b ? 7 : 5.5; };
-    if (lst) tl('Totale a listino' + (TL.L !== T.L ? ' (righe con listino)' : ''), eur(TL.L)); if (sc) tl('Sconto medio' + (TL.L !== T.L ? ' sulle righe a listino' : ''), fN.format(TL.sc) + '%'); tl('Totale offerta (IVA esclusa)', eur(T.N), true);
-    if (o.note) { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(110, 122, 138); const t = doc.splitTextToSize(o.note, W - 28); if (y + t.length * 3.6 > 285) { doc.addPage(); y = 20; } doc.text(t, 14, y + 4); }
-    const n = doc.internal.getNumberOfPages(); for (let p = 1; p <= n; p++) { doc.setPage(p); doc.setFontSize(7.5); doc.setTextColor(110, 122, 138); doc.text('Offerta ' + (o.numero || '') + ' - pagina ' + p + ' di ' + n, W / 2, 290, { align: 'center' }); }
-    doc.save(((o.numero || 'Offerta') + (com ? ' ' + com.nome : '')).replace(/[\\/:*?"<>|]+/g, '-') + '.pdf');
+    const nC = head.length; const cs = { 0: { cellWidth: 22 }, 2: { cellWidth: 9, halign: 'center' } };
+    let k = 3; if (lst) cs[k++] = { cellWidth: 18, halign: 'right' }; if (sc) { cs[k++] = { cellWidth: 13, halign: 'center' }; cs[k++] = { cellWidth: 11, halign: 'center' }; } cs[k++] = { cellWidth: 19, halign: 'right' }; cs[k] = { cellWidth: 21, halign: 'right', textColor: RED };
+    const foot = () => { };
+    doc.autoTable({ startY: y + 8, head: [head], body, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 7, cellPadding: 1.6, textColor: [60, 60, 60], lineColor: [90, 90, 90], lineWidth: .15, valign: 'top' },
+      headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 }, columnStyles: cs, didDrawPage: foot });
+    const Tt = offTot(o.righe); const iva = round2(Tt.N * 0.22);
+    y = doc.lastAutoTable.finalY + 9; if (y > PH - 75) { doc.addPage(); y = 25; }
+    const tot = (l, v, b, vr) => { T(l, W - 48, y, { a: 'right', s: b ? 10.5 : 9.5, c: [80, 80, 80] }); T(v, W - 16, y, { a: 'right', s: b ? 10.5 : 9.5, b: true, c: vr ? RED : [64, 64, 64] }); y += 8; };
+    tot('Subtotale', eur(Tt.N), false, true); tot('IVA (22%)', eur(iva)); tot('Totale offerta', eur(round2(Tt.N + iva)), true);
+    y += 8; if (y > PH - 40) { doc.addPage(); y = 30; }
+    if (logo) doc.addImage(logo.d, 'PNG', 32, y, 40, 40 * logo.r); y += 40 * (logo ? logo.r : .14) + 6;
+    T('HIKVISION ITALY SRL', 52, y, { a: 'center', s: 7 });
+    doc.setLineDashPattern([0.6, 0.8], 0); doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(85, y - 4, 128, y - 4); doc.line(130, y - 4, 196, y - 4); doc.setLineDashPattern([], 0);
+    T('Luogo e data', 106, y, { a: 'center', s: 7 }); T('Il committente (timbro/firma)', 163, y, { a: 'center', s: 7 });
+    // 3 · dettaglio con i codici SAP
+    doc.addPage(); T('Dettaglio', 14, 22, { s: 11, c: RED });
+    const dBody = []; for (const r of o.righe || []) { const it = typeof findCode === 'function' ? findCode(r.c, r.L) : null; const t = lineTot(r); dBody.push([(it && it.sap) || r.sap || '', r.c, String(r.q), eur(t.unit), eur(t.netto)]); }
+    doc.autoTable({ startY: 27, head: [['SAP', 'Codice / Descrizione', 'Q.tà', 'Prezzo Cad.', 'Totale']], body: dBody, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 1.8, textColor: [60, 60, 60], lineColor: [90, 90, 90], lineWidth: .15 },
+      headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 },
+      columnStyles: { 0: { cellWidth: 26 }, 2: { cellWidth: 10, halign: 'center' }, 3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 24, halign: 'right', textColor: RED } } });
+    // 4 · condizioni
+    doc.addPage(); y = 22;
+    const cond = P.cond || {}; const cf = (typeof cfg === 'function' ? cfg() : {}) || {};
+    const pick = rx => { for (const [kk, v] of Object.entries(cond)) if (rx.test(kk)) return String(v).trim(); return ''; };
+    const block = (title, lines) => { T(title, 14, y, { s: 7.5, b: true, c: RED }); y += 8; lines.forEach(l => { const ls = doc.splitTextToSize(String(l), W - 28); ls.forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; }); }); y += 9; };
+    block('TEMPI DI CONSEGNA', [o.consegna || pick(/consegn/i) || '---']);
+    block('VALIDITÀ DELL\'OFFERTA', ['La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.', 'Sono esclusi i costi di spedizione se non indicati.']);
+    block('CONDIZIONI DI PAGAMENTO', [o.pagamento || pick(/pagament/i) || '-', 'Tutti i prezzi indicati si intendono IVA esclusa.']);
+    block('COORDINATE BANCARIE', ['Banca: ' + (cf.banca || pick(/^banca/i) || ''), 'IBAN: ' + (cf.iban || pick(/iban/i) || ''), 'Beneficiario: ' + (cf.beneficiario || pick(/benefic/i) || '')]);
+    T('NOTE AGGIUNTIVE', 14, y, { s: 7.5, b: true, c: RED }); y += 6;
+    const note = String(o.note || '').replace(/^(tempi di consegna|validit[aà][^:]*|condizioni di pagamento|banca|iban|beneficiario)\s*:.*$/gim, '').trim();
+    if (note) { doc.splitTextToSize(note, W - 28).forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; }); y += 3; }
+    else { doc.setDrawColor(60, 60, 60); doc.setLineDashPattern([1.2, 0.6], 0); for (let q = 0; q < 5; q++) { doc.line(14, y, W - 14, y); y += 3.4; } doc.setLineDashPattern([], 0); y += 3; }
+    ['Immagini e descrizioni dei prodotti presenti nell\'offerta sono indicativi e potrebbero contenere inesattezze.', 'Per maggiori dettagli, vi preghiamo di consultare le schede tecniche dei prodotti sui siti web ufficiali o di contattare il personale Hikvision e i partner di distribuzione autorizzati.'].forEach(l => doc.splitTextToSize(l, W - 28).forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; }));
+    // piè di pagina (tranne la copertina)
+    const n = doc.internal.getNumberOfPages();
+    for (let p = 2; p <= n; p++) {
+      doc.setPage(p); const fy = PH - 10;
+      T('Prev. ', 4, fy, { s: 6.5 }); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(num, 4 + doc.getTextWidth('Prev. '), fy);
+      T(HQ, W / 2, fy - 1.5, { a: 'center', s: 6 });
+      const pg = p + '/' + n; doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); const wPg = doc.getTextWidth(pg); T('Pag. ', W - 4 - wPg, fy, { a: 'right', s: 6.5 }); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(String(p), W - 4 - wPg, fy); doc.setFont('helvetica', 'normal'); doc.setTextColor(...INK); doc.text('/' + n, W - 4 - wPg + doc.getTextWidth(String(p)), fy);
+    }
+    doc.save(('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision.pdf');
   }
   window.hpParseOfferPdf = async buf => parseGest(await pdfPages(buf));
 })();
