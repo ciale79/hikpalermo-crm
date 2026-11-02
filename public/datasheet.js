@@ -246,5 +246,6 @@ ${(D.sezioni || []).map(s => '<h2>' + esc(s.titolo) + '</h2><table>' + (s.righe 
     else box.replaceChildren(el('p', { style: 'margin:0' }, 'Per ' + code + ' il listino non ha il link alla scheda prodotto.'), chooser(code, '', box, m));
   }
   window.hpTradOpen = open;
+  window.hpFindDsPdf = findPdf; window.hpDsKey = nk;
   window.hpTradBytes = (code, buf) => { const box = el('div', { class: 'stack' }); const m = modal('Datasheet in italiano · ' + code, box, [el('span', { class: 'grow' }), btn('Chiudi', () => m.close())], { wide: true }); run(code, '', async () => buf, box, m); };
 })();

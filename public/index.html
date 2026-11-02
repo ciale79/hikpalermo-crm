@@ -1418,7 +1418,7 @@ function offerEditor(o){const isNew=!o.id;const D=JSON.parse(JSON.stringify(o));
       a2.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();apply();}});a1.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();apply();}});
       return el('div',{class:'ln-all',title:'Sconto in cascata su tutte le righe: es. 50 + 10 = 55%. Lascia vuoto il primo campo per tenere lo sconto di ogni riga e aggiungere solo l\'ulteriore sconto.'},el('span',{class:'hint'},'Sconto a tutte le righe'),a1,el('span',{class:'ln-plus'},'+'),a2,btn('Applica',apply,'sm'));})());tools.append(srcPanel);
   const table=el('div',{class:'tbl-wrap'},el('table',{},el('thead',{},el('tr',{},['','Codice','Descrizione','Q.tà','Listino unit.','Sconto %','Netto unit.','Tot. listino','Tot. netto',''].map((h,i)=>el('th',{class:i>=3&&i<=8?'r':''},h)))),tbody));
-  const body=el('div',{class:'stack'},el('div',{class:'fgrid',style:'grid-template-columns:repeat(auto-fit,minmax(160px,1fr))'},fld('Titolo',f.tit),fld('Numero',f.num),fld('Data',f.data),fld('Stato',f.stato),fld('Validità (giorni)',f.valid),fld('Cliente (sconti)',cliSel)),cliInfo,tools,table,totBox,fld('Note e condizioni',f.note));
+  const body=el('div',{class:'stack'},el('div',{class:'fgrid',style:'grid-template-columns:repeat(auto-fit,minmax(160px,1fr))'},fld('Titolo',f.tit),fld('Numero',f.num),fld('Data',f.data),fld('Stato',f.stato),fld('Validità (giorni)',f.valid),fld('Cliente (sconti)',cliSel)),cliInfo,tools,table,totBox,fld('Note e condizioni',f.note),window.hpOffIntroBox?hpOffIntroBox(D):null);
   drawCli();drawLines();
   const m=modal((isNew?'Nuova offerta':'Offerta '+(D.numero||''))+(com?' · '+com.nome:''),body,[!isNew?btn('Elimina',async()=>{if(!await ask('Eliminare l\'offerta '+D.numero+'?'))return;if(await remove('offerte',o.id))m.close();},'danger','trash'):null,el('span',{class:'grow'}),downloads?btn('Esporta / stampa',()=>exportOffer(collect()),'','dl'):null,btn('Chiudi',()=>m.close()),btn('Salva offerta',async()=>{if(await save())m.close();},'pri','check')].filter(Boolean),{full:true,sticky:true});
   function collect(){const t=offTot(D.righe);return {...D,titolo:f.tit.value.trim(),numero:f.num.value.trim(),data:f.data.value,stato:f.stato.value,valid:+f.valid.value||0,note:f.note.value,clienteId:cliSel.value||null,totL:t.L,totN:t.N};}
@@ -2117,6 +2117,7 @@ boot();
 <script src="/backup.js"></script>
 <script src="/stock.js"></script>
 <script src="/offimport.js"></script>
+<script src="/offpav.js"></script>
 <script src="/sales-upload.js"></script>
 <script src="/cf-addon.js"></script>
 </body>

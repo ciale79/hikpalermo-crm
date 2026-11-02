@@ -372,5 +372,6 @@
     }
     doc.save(('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision.pdf');
   }
+  window.hpOffXlsx = xlsxOut; window.hpOffPdfStd = pdfOut;
   window.hpParseOfferPdf = async buf => parseGest(await pdfPages(buf));
 })();
