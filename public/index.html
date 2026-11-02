@@ -1908,7 +1908,7 @@ function compareModal(){const items=S.cmp.map(i=>S.cat[i]).filter(Boolean);if(it
       rowD('Rotazione',it=>ROT[it.st]||'—'),rowD('MOQ',it=>it.m||'—'),rowD('Note',it=>it.n||'—'),
       row('Codice esploso',it=>explodeTable(it.c,it,true)),row('Descrizione completa',it=>el('div',{class:'soft',style:'white-space:pre-wrap;font-size:.85rem;max-width:42ch'},it.d)),
       row('Documentazione',it=>{const c=it.kitN?it.c.split(' + ')[0]:it.c;return el('div',{class:'row',style:'gap:6px;flex-wrap:wrap;align-items:center'},window.hpDlChip?hpDlChip(c):null,window.hpGlobalChip?hpGlobalChip(c,undefined,it.url||''):null,window.hpTradChip&&it.L==='pav'?hpTradChip(c,it.url||''):null);}),
-      row('',it=>btn('Apri scheda',()=>artDetail(it),'sm'))))),el('p',{class:'hint'},'Le righe evidenziate hanno valori diversi tra gli articoli; in rosso il prezzo più basso.'));};
+      row('',it=>btn('Apri scheda',()=>artDetail(it),'sm'))))),el('p',{class:'hint'},'Le righe evidenziate hanno valori diversi tra gli articoli; '+(typeof HP_PAV!=='undefined'&&HP_PAV?'in viola':'in rosso')+' il prezzo più basso.'));};
   cliS.addEventListener('change',draw);draw();let cm;cm=modal('Confronto articoli',el('div',{class:'stack'},el('div',{class:'row'},el('span',{class:'soft'},'Prezzi netti per:'),cliS),box),[btn('Svuota confronto',()=>{S.cmp=[];renderTray();if(S.view==='art')VIEWS.art.update();cm.close();},'ghost'),btn('Chiudi',()=>cm.close())],{full:true,noFocus:true});}
 
 /* ---------- Naming rule ---------- */
