@@ -47,12 +47,18 @@
     const f = el('span', { class: 'hp-flag-uk', role: 'img', 'aria-label': 'Documentazione in inglese' }); f.innerHTML = UK; a.append(f, 'Cerca Datasheet'); return a; };
   window.hpGlobalChip = function (code, cls, url) {
     if (url === undefined) url = urlOf(code);
+    if (url) url = String(url).replace(/&amp;/g, '&');
     if (url && /^https?:\/\//i.test(url)) {
       const big = /\bbtn\b/.test(cls || '');
       const a = el('a', { class: big ? 'btn hp-glbtn' : 'tag hp-gltag', href: url, target: '_blank', rel: 'noopener', title: 'Scheda prodotto indicata nel listino', onclick: e => e.stopPropagation() });
       const f = el('span', { class: 'hp-flag-uk', role: 'img', 'aria-label': 'Pagina in inglese' }); f.innerHTML = UK; a.append(f, 'Scheda prodotto');
       const box = el('span', { class: 'hp-scbox' }, a);
-      linkOk(url).then(j => { if (j && j.ok === false && box.isConnected !== undefined) box.replaceChildren(el('span', { class: big ? 'hint hp-lkbad big' : 'hp-lkbad', title: 'Il link «scheda prodotto» del listino non funziona: ' + url }, 'link listino corrotto'), isModel(code) ? searchChip0(code, cls) : null); });
+      // la scheda deve essere del prodotto (PDF o pagina con il codice nell'indirizzo): una pagina generica di categoria non basta → «Cerca Datasheet»
+      const N = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const c0 = String(code || '').replace(/\([^()]*\)/g, ''); const keys = [N(c0), N(c0.split('/')[0])].filter(k => k.length >= 5);
+      const specific = u => /\.pdf(\?|#|$)/i.test(u) || keys.some(k => N(decodeURIComponent(u)).includes(k));
+      if (keys.length && !specific(url)) { linkOk(url).then(j => { if (!(j && j.fin && specific(j.fin))) box.replaceChildren(isModel(code) ? searchChip0(code, cls) : el('span', { class: 'hint' }, '')); }); a.style.opacity = '.6'; }
+      else linkOk(url).then(j => { if (j && j.ok !== false && j.fin && !specific(j.fin)) { box.replaceChildren(isModel(code) ? searchChip0(code, cls) : el('span', {})); return; } if (j && j.ok === false && box.isConnected !== undefined) box.replaceChildren(el('span', { class: big ? 'hint hp-lkbad big' : 'hp-lkbad', title: 'Il link «scheda prodotto» del listino non funziona: ' + url }, 'link listino corrotto'), isModel(code) ? searchChip0(code, cls) : null); });
       return box;
     }
     if (!isModel(code)) return null;

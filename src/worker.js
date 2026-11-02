@@ -905,17 +905,17 @@ async function api(req, env, ctx, url, u) {
   if (p === '/api/linkcheck' && m === 'GET') {
     const u0 = String(url.searchParams.get('u') || '').trim();
     if (!/^https?:\/\/[^\s]+$/i.test(u0) || u0.length > 1500) return json({ ok: false, bad: true });
-    const key = (await sha256(u0)).slice(0, 40);
+    const key = (await sha256('v2|' + u0)).slice(0, 40);
     const c = await getDoc(env, 'linkchk', key);
     if (c && now() - (c.data.at || 0) < (c.data.ok ? 14 : 2) * 864e5) return json(c.data);
-    let ok = true, st = 0;
+    let ok = true, st = 0, fin = '';
     try {
       const r = await fetch(u0, { headers: { 'user-agent': UA, accept: 'text/html,application/pdf,*/*', 'accept-language': 'en,it;q=0.8' }, redirect: 'follow' });
-      st = r.status;
+      st = r.status; fin = r.url || '';
       if (st === 404 || st === 410) ok = false;
       else if (r.ok && /html/i.test(r.headers.get('content-type') || '')) { const t = (await r.text()).slice(0, 60000); if (/<title>[^<]*(404|not found|pagina non trovata|page not found)[^<]*<\/title>/i.test(t)) ok = false; }
     } catch (e) { ok = false; st = -1; }
-    const out = { ok, st, at: now() };
+    const out = { ok, st, fin, at: now() };
     await env.DB.prepare('INSERT INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?) ON CONFLICT(col,id) DO UPDATE SET data=excluded.data, version=excluded.version, updated=excluded.updated').bind('linkchk', key, JSON.stringify(out), now(), now()).run();
     return json(out);
   }
