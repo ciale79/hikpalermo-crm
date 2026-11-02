@@ -29,6 +29,10 @@
     const k = Math.min(px / i.naturalWidth, px / i.naturalHeight) * 0.92; const w = i.naturalWidth * k, h = i.naturalHeight * k; g.drawImage(i, (px - w) / 2, (px - h) / 2, w, h);
     return c.toDataURL('image/jpeg', 0.88);
   }
+  // schede tecniche caricate a mano dall'esportazione: restano salvate per tutto il gruppo (raccolta «dsman», id = codice normalizzato)
+  const dsKey = c => (window.hpDsKey ? hpDsKey(c) : String(c || '').toUpperCase().replace(/[^A-Z0-9]+/g, '-'));
+  let DSMAN = new Map();
+  try { claude.use('db').then(db => { if (db) db.collection('dsman').onSnapshot(sn => { const m = new Map(); sn.docs.forEach(d => m.set(d.id, { id: d.id, ...d.data() })); DSMAN = m; }, () => { }); }); } catch (e) { }
   const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
   // immagine del prodotto: prima quella della pagina ufficiale ProAV (og:image della scheda prodotto), altrimenti quella del listino
   async function productImage(r, big) {
@@ -127,9 +131,9 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     let y = 16;
     { const w = 96; y = lockup((W - w) / 2, y, w) + 14; }
     T('Offerta riservata per', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 8;
-    fitCaps(cliName, W / 2, y, 15, DARK, true, W - 40); y += 11;
-    if (rif) { T('Riferimento', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 50); rl.slice(0, 2).forEach(l => { T(l, W / 2, y, { a: 'center', s: 12, c: DARK }); y += 6.5; }); y += 1; }
-    T(num + ' del ' + dt, W / 2, y, { a: 'center', s: 8, c: GREY }); y += 12;
+    fitCaps(cliName, W / 2, y, 15, DARK, true, W - 40); y += 19;
+    if (rif) { T('Riferimento', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 50); rl.slice(0, 2).forEach(l => { T(l, W / 2, y, { a: 'center', s: 12, c: DARK }); y += 6.5; }); y += 5; }
+    T(num + ' del ' + dt, W / 2, y, { a: 'center', s: 8, c: GREY }); y += 20;
     const intro = String(o.intro || '').trim();
     if (intro) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...INK); const lh = 9.5 * 0.3528 * 1.5; for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) { for (const l of doc.splitTextToSize(par, W - 56)) { doc.text(l, 28, y); y += lh; } y += lh * 0.6; } y += 6; }
     // immagini dei prodotti (fino a 4, i prodotti principali per valore)
@@ -256,17 +260,21 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const codes = [...new Map((o.righe || []).map(r => [mainC(r.c), r])).values()];
     const ds = codes.map(r => ({ c: mainC(r.c), r, st: 'cerco', url: null, file: null, on: true }));
     const drawDs = () => dsBox.replaceChildren(...(ds.length ? ds.map(x => {
-      const fIn = el('input', { type: 'file', accept: '.pdf', hidden: true, onchange: e => { const f = e.target.files[0]; if (f) { x.file = f; x.st = 'caricato'; x.on = true; drawDs(); } } });
-      const stTxt = { cerco: 'cerco la scheda…', it: '🇮🇹 scheda tradotta in italiano', orig: '🇬🇧 scheda originale (dal sito Hikvision)', caricato: '📎 ' + (x.file ? x.file.name : ''), no: 'non trovata' }[x.st];
+      const fIn = el('input', { type: 'file', accept: '.pdf', hidden: true, onchange: async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; x.file = f; x.st = 'caricato'; x.on = true; x.saving = true; drawDs();
+        try { if (typeof assets !== 'undefined' && assets) { const r = await assets.upload(f, { type: 'application/pdf' }); const D = { code: x.c, pdf: r.id, name: f.name, by: S.me, at: Date.now() }; await put('dsman', dsKey(x.c), D); DSMAN.set(dsKey(x.c), D); x.url = '/_blob/' + r.id; x.file = null; x.fname = f.name; } } catch (err) { console.warn(err); toast('Scheda di ' + x.c + ' usata per questa offerta, ma non salvata: ' + (err.message || err), 'bad'); }
+        x.saving = false; drawDs(); } });
+      const stTxt = { cerco: 'cerco la scheda…', it: '🇮🇹 scheda tradotta in italiano', orig: '🇬🇧 scheda originale (dal sito Hikvision)', caricato: '📎 ' + (x.file ? x.file.name : x.fname || '') + (x.saving ? ' · salvo…' : ''), man: '📎 ' + (x.fname || 'scheda caricata') + ' · salvata', no: 'non trovata' }[x.st];
       return el('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, el('label', { class: 'row', style: 'gap:6px' }, el('input', { type: 'checkbox', checked: x.on && x.st !== 'no' && x.st !== 'cerco', disabled: x.st === 'no' || x.st === 'cerco', onchange: e => { x.on = e.target.checked; } }), el('b', { class: 'mono' }, x.c)),
-        el('span', { class: 'hint', style: x.st === 'no' ? 'color:var(--accent)' : '' }, stTxt), x.st === 'no' || x.st === 'orig' ? btn(x.st === 'no' ? 'Carica PDF' : 'Usa un altro PDF', () => fIn.click(), 'sm ghost', 'up') : null,
+        el('span', { class: 'hint', style: x.st === 'no' ? 'color:var(--accent)' : '' }, stTxt), x.st === 'no' || x.st === 'orig' || x.st === 'man' || x.st === 'caricato' ? btn(x.st === 'no' ? 'Carica PDF' : 'Usa un altro PDF', () => fIn.click(), 'sm ghost', 'up') : null,
         x.st === 'no' ? el('a', { class: 'hint', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + x.c + ' datasheet filetype:pdf'), target: '_blank', rel: 'noopener' }, 'cercala su Google ↗') : null, fIn);
     }) : [el('p', { class: 'hint', style: 'margin:0' }, 'Nessun articolo nell\'offerta.')]));
     drawDs();
     ds.forEach(async x => {
       try {
         const D = S.dsTrad && window.hpDsKey ? S.dsTrad.get(hpDsKey(x.c)) : null;
+        const Mn = DSMAN.get(dsKey(x.c));
         if (D && D.pdf) { x.st = 'it'; x.url = '/_blob/' + D.pdf; }
+        else if (Mn && Mn.pdf) { x.st = 'man'; x.url = '/_blob/' + Mn.pdf; x.fname = Mn.name; }
         else { const it = fc(x.c, x.r.L) || {}; const u = it.url ? await withTimeout(window.hpFindDsPdf ? hpFindDsPdf(x.c, it.url, () => { }) : Promise.resolve([]), 15000) : null; if (u && u.length) { x.st = 'orig'; x.url = u[0]; } else { x.st = 'no'; x.on = false; } }
       } catch (e) { x.st = 'no'; x.on = false; }
       drawDs();
@@ -290,6 +298,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       el('h4', { style: 'margin:6px 0 0' }, 'Disegni, simulazioni e report HiTools Designer'), atBox, prog),
       [el('span', { class: 'grow' }), btn('Annulla', () => m.close()),
         btn('Excel', () => { const R = X.read(); m.close(); window.hpOffXlsx && hpOffXlsx(R.o, R.sc, R.lst); }, '', 'dl'),
+        btn('Word', async () => { const R = X.read(); m.close(); if (window.hpOffDocx) await hpOffDocx(R.o, R.sc, R.lst, true); }, '', 'doc'),
         btn('PDF', async () => {
           const R = X.read();
           const attach = [...ds.filter(x => x.on && (x.url || x.file)).map(x => ({ label: 'scheda ' + x.c, url: x.url, file: x.file })), ...(atBox._files || []).filter(f => f.on).map(f => ({ label: f.name, url: '/_blob/' + f.id })), ...extra.filter(x => x.on)];

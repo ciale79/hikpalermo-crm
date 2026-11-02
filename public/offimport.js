@@ -294,6 +294,7 @@
     const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node, el('p', { class: 'hint', style: 'margin:0' }, 'Data, validità, pagamento e tempi valgono per questo documento; pagamento e tempi si ricordano per le prossime esportazioni.')),
       [el('span', { class: 'grow' }), btn('Annulla', () => m.close()),
         btn('Excel', () => { const R = X.read(); m.close(); xlsxOut(R.o, R.sc, R.lst); }, '', 'dl'),
+        btn('Word', async () => { const R = X.read(); m.close(); if (window.hpOffDocx) { await hpOffDocx(R.o, R.sc, R.lst, false); } }, '', 'doc'),
         btn('PDF', () => { const R = X.read(); m.close(); pdfOut(R.o, R.sc, R.lst); }, 'pri', 'doc')], { wide: true });
   };
   async function xlsxOut(o, sc, lst) {
