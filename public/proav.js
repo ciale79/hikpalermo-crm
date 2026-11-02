@@ -63,34 +63,58 @@
   }, 500);
 
   /* ---------- ricerca ---------- */
+  /* ---------- articoli normalizzati: listini v2 (importazione libera) e vecchi listini a colonne ---------- */
+  const itemCache = new Map();
+  function itemsOf(m) {
+    const d = S.pavRows.get(m.id); if (!d) return [];
+    const ck = m.id + ':' + (d.at || 0); if (itemCache.has(ck)) return itemCache.get(ck);
+    let items;
+    if (d.v === 2) items = d.items || [];
+    else { const M = m.map || {}; items = (d.rows || []).map(r => { const c = String(r[M.c] ?? '').trim(); if (!c) return null; const o = { c, x: m.cols.map((h, i) => [h, r[i]]).filter(z => z[1] !== '' && z[1] != null) };
+      if (M.d != null && r[M.d] !== '') o.d = String(r[M.d]); if (M.p != null && num(r[M.p]) != null) o.p = num(r[M.p]); if (M.k != null && r[M.k] !== '') o.cat = String(r[M.k]);
+      const n = (M.n || []).map(i => [m.cols[i], num(r[i])]).filter(z => z[1] != null); if (n.length) o.n = n; return o; }).filter(Boolean); }
+    for (const it of items) it._h = [it.c, it.sap, it.ean, it.d, it.d2, it.cat, it.tip, ...(it.kit || []).flatMap(k => [k.c, k.sap, k.ean, k.d])].filter(Boolean).join(' ').toLowerCase();
+    itemCache.set(ck, items); return items;
+  }
+  const mainCode = it => it.kit ? it.kit[0].c : it.c;
+  const descOf = it => it.d || (it.kit && it.kit[0].d) || it.d2 || '';
+
+  /* ---------- ricerca ---------- */
   function search(q, onlyId, limit = 300) {
     const toks = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
     const out = [];
     for (const m of S.pavList || []) {
       if (onlyId && m.id !== onlyId) continue;
-      const d = S.pavRows.get(m.id); if (!d) continue; const M = m.map || {};
-      for (const r of d.rows) {
-        const c = String(r[M.c] ?? ''); if (!c) continue;
-        const hay = (c + ' ' + (r[M.d] ?? '') + ' ' + (M.k != null ? r[M.k] ?? '' : '')).toLowerCase();
-        if (toks.length && !toks.every(t => hay.includes(t))) continue;
-        const cl = c.toLowerCase(), q0 = toks.join(' ');
-        out.push({ m, r, c, rank: cl === q0 ? 0 : cl.startsWith(q0) ? 1 : 2 });
+      for (const r of itemsOf(m)) {
+        if (toks.length && !toks.every(t => r._h.includes(t))) continue;
+        const cl = r.c.toLowerCase(), q0 = toks.join(' ');
+        out.push({ m, r, c: r.c, rank: cl === q0 || (r.kit && r.kit.some(k => k.c.toLowerCase() === q0)) ? 0 : cl.startsWith(q0) ? 1 : 2 });
       }
     }
     out.sort((a, b) => a.rank - b.rank || a.c.localeCompare(b.c));
     return { tot: out.length, list: out.slice(0, limit) };
   }
-  const netsOf = (m, r) => ((m.map || {}).n || []).map(i => [m.cols[i], num(r[i])]).filter(x => x[1] != null);
+  const netsOf = (m, r) => (r.n || []).filter(x => x[1] != null);
+  const pimg = (id, size) => id ? el('img', { class: 'hp-pavimg', src: '/_blob/' + id, alt: '', loading: 'lazy', style: { width: size + 'px', height: size + 'px' } }) : el('span', { class: 'hp-pavimg none', style: { width: size + 'px', height: size + 'px' } });
+  const FL = { sap: 'Codice SAP', ean: 'EAN', cat: 'Categoria', tip: 'Tipologia / serie', gar: 'Garanzia', moq: 'MOQ', var: 'Variazione di prezzo', note: 'Note', d2: 'Descrizione tecnica / breve' };
 
   function rowDetail(m, r) {
-    const M = m.map || {}; const code = String(r[M.c] ?? '');
+    const code = mainCode(r);
+    const priceBox = (x, big) => el('div', { class: 'row', style: 'gap:18px;flex-wrap:wrap' }, x.p != null ? el('div', { class: 'stack', style: 'gap:0' }, el('span', { class: 'eyebrow' }, 'Prezzo di listino'), el('b', { class: 'num', style: 'font-size:' + (big ? '1.4rem' : '1rem') }, eur(x.p))) : null,
+      netsOf(m, x).map(([h, v]) => el('div', { class: 'stack', style: 'gap:0' }, el('span', { class: 'eyebrow' }, h), el('b', { class: 'num hp-net', style: 'font-size:' + (big ? '1.2rem' : '.95rem') }, eur(v)), el('small', { class: 'hp-net' }, 'PREZZO NETTO'))));
+    const dl = x => el('dl', { class: 'dl' }, Object.entries(FL).map(([k, l]) => x[k] == null || x[k] === '' ? null : [el('dt', {}, l), el('dd', { class: /sap|ean/.test(k) ? 'mono' : '', style: 'white-space:pre-wrap' }, String(x[k]))]),
+      x.url ? [el('dt', {}, 'Scheda prodotto'), el('dd', {}, el('a', { href: x.url, target: '_blank', rel: 'noopener' }, 'Apri la scheda ↗'))] : null,
+      (x.x || []).map(([h, v]) => [el('dt', {}, h || '—'), el('dd', { style: 'white-space:pre-wrap' }, typeof v === 'number' ? (/prez|price|list|nett|net|eur|€|cost|msrp|dealer|partner|distrib|install/i.test(h) ? eur(v) : v.toLocaleString('it-IT')) : String(v))]));
     const body = el('div', { class: 'stack' },
-      el('div', { class: 'row', style: 'gap:8px' }, el('span', { class: 'pill hp-pavpill' }, m.nome + (m.periodo ? ' (' + fmtP(m.periodo) + ')' : '')), el('b', { class: 'mono' }, code)),
-      M.d != null ? el('p', { style: 'margin:0' }, String(r[M.d] ?? '')) : null,
-      el('div', { class: 'row', style: 'gap:18px;flex-wrap:wrap' }, M.p != null && num(r[M.p]) != null ? el('div', { class: 'stack', style: 'gap:0' }, el('span', { class: 'eyebrow' }, 'Prezzo di listino'), el('b', { class: 'num', style: 'font-size:1.4rem' }, eur(num(r[M.p])))) : null,
-        netsOf(m, r).map(([h, v]) => el('div', { class: 'stack', style: 'gap:0' }, el('span', { class: 'eyebrow' }, h), el('b', { class: 'num hp-net', style: 'font-size:1.2rem' }, eur(v)), el('small', { class: 'hp-net' }, 'PREZZO NETTO')))),
-      el('dl', { class: 'dl' }, m.cols.map((h, i) => (r[i] === '' || r[i] == null) ? null : [el('dt', {}, h || 'Colonna ' + (i + 1)), el('dd', { style: 'white-space:pre-wrap' }, typeof r[i] === 'number' ? (/prez|price|list|nett|net|eur|€|cost|msrp|dealer|partner|distrib|install/i.test(h) ? eur(r[i]) : r[i].toLocaleString('it-IT', { maximumFractionDigits: 2 })) : String(r[i]))])));
-    const md = modal(code, body, [btn('Copia codice', () => copy(code), '', 'copy'), (window.hpGlobalChip && window.hpGlobalChip(code, 'btn hp-glbtn')) || el('a', { class: 'btn', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet'), target: '_blank', rel: 'noopener' }, 'Cerca Datasheet'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())], { wide: true });
+      el('div', { class: 'row', style: 'gap:16px;align-items:flex-start' }, r.img || (r.kit && r.kit.some(k => k.img)) ? pimg(r.img || r.kit.find(k => k.img).img, 140) : null,
+        el('div', { class: 'stack grow', style: 'min-width:240px' },
+          el('div', { class: 'row', style: 'gap:8px' }, el('span', { class: 'pill hp-pavpill' }, m.nome + (m.periodo ? ' (' + fmtP(m.periodo) + ')' : '')), r.kit ? el('span', { class: 'tag new' }, 'KIT · ' + r.kit.length + ' articoli') : null, el('b', { class: 'mono' }, code)),
+          descOf(r) ? el('p', { style: 'margin:0' }, descOf(r)) : null, priceBox(r, true), dl(r))),
+      r.kit ? el('section', { class: 'panel stack', style: 'background:var(--surface-2)' }, el('h4', { style: 'margin:0' }, 'Composizione del kit'),
+        el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['', 'Q.tà', 'Codice', 'SAP', 'EAN', 'Descrizione', 'Prezzi al pezzo'].map((h, i) => el('th', { class: i === 1 || i === 6 ? 'r' : '' }, h)))),
+          el('tbody', {}, r.kit.map(k => el('tr', {}, el('td', {}, pimg(k.img, 40)), el('td', { class: 'r num' }, el('b', {}, k.q + '×')), el('td', { class: 'mono' }, k.url ? el('a', { href: k.url, target: '_blank', rel: 'noopener' }, k.c) : k.c), el('td', { class: 'mono' }, k.sap || '—'), el('td', { class: 'mono' }, k.ean || '—'),
+            el('td', {}, el('div', { class: 'hp-pavdesc', title: k.d || '' }, k.d || k.d2 || '')), el('td', { class: 'r num hp-net', style: 'font-size:.82rem' }, (k.p != null ? 'Listino ' + eur(k.p) + ' ' : '') + (k.n || []).map(([h, v]) => h + ' ' + eur(v)).join(' · ') || '—'))))))) : null);
+    const md = modal(code, body, [btn('Copia codice', () => copy(code), '', 'copy'), (window.hpGlobalChip && window.hpGlobalChip(code, 'btn hp-glbtn')) || el('a', { class: 'btn', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet'), target: '_blank', rel: 'noopener' }, 'Cerca datasheet'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())], { wide: true });
   }
 
   // ricerca globale in alto: anche nei listini ProAV
@@ -98,88 +122,8 @@
     if (!S.pavList || !S.pavList.length) return [];
     if (S.pavList.some(m => !S.pavRows.has(m.id))) { loadAll(); return []; }
     const { list } = search(q, '', 5);
-    return grp('Listini ProAV', list.map(({ m, r }) => { const M = m.map || {}; const p = M.p != null ? num(r[M.p]) : null; return el('div', { class: 'gs-item', onclick: () => { const g = document.querySelector('#gsearch input'); if (g) g.value = ''; closeGs(); rowDetail(m, r); } }, ic('av', 16), el('span', { class: 't' }, el('span', { class: 'mono' }, String(r[M.c])), ' ', el('span', { class: 'muted' }, String(M.d != null ? r[M.d] ?? '' : ''))), el('span', { class: 'num' }, p != null ? eur(p) : '')); }));
+    return grp('Listini ProAV', list.map(({ m, r }) => el('div', { class: 'gs-item', onclick: () => { const g = document.querySelector('#gsearch input'); if (g) g.value = ''; closeGs(); rowDetail(m, r); } }, ic('av', 16), el('span', { class: 't' }, el('span', { class: 'mono' }, mainCode(r)), r.kit ? ' (kit)' : '', ' ', el('span', { class: 'muted' }, descOf(r).slice(0, 80))), el('span', { class: 'num' }, r.p != null ? eur(r.p) : ''))));
   };
-
-  /* ---------- caricamento di un listino Excel ---------- */
-  const loadLib = () => window.XLSX ? Promise.resolve() : new Promise((res, rej) => { const s = document.createElement('script'); s.src = LIB; s.onload = res; s.onerror = () => rej(new Error('Libreria Excel non disponibile')); document.head.append(s); });
-  const fileIn = el('input', { type: 'file', accept: '.xlsx,.xls,.xlsm,.xlsb,.csv', hidden: true }); document.body.append(fileIn);
-  let replaceMeta = null;
-  fileIn.addEventListener('change', () => { const f = fileIn.files[0]; fileIn.value = ''; if (f) readFile(f, replaceMeta); });
-  window.hpPavUpload = (meta) => { replaceMeta = meta || null; fileIn.click(); };
-  const RX = { c: /(^|\b)(cod|codice|model|modello|articolo|sku|part ?(n|no|num|number)\b|p\/n|item)/i, d: /desc/i, p: /(listino|list ?price|msrp|prezzo( di)? (listino|pubblico)|^prezzo$|^price$|retail|eu ?price|end ?user)/i, n: /(nett|net\b|net price|dealer|distribut|install|rivend|\bsi\b|system integrator|partner|acquisto|cost)/i, k: /(categ|famigl|family|gruppo|linea|line|serie|series|tipolog)/i };
-  function headerRow(rows) {
-    let best = -1, bi = 0;
-    for (let i = 0; i < Math.min(40, rows.length); i++) {
-      const cells = rows[i].map(x => String(x ?? '').trim()).filter(Boolean); if (cells.length < 2) continue;
-      const sc = (cells.some(x => RX.c.test(x)) ? 2 : 0) + (cells.some(x => RX.d.test(x)) ? 2 : 0) + (cells.some(x => RX.p.test(x) || RX.n.test(x)) ? 1 : 0) + Math.min(cells.length, 8) / 10 - (cells.filter(x => num(x) != null).length > cells.length / 2 ? 3 : 0);
-      if (sc > best) { best = sc; bi = i; }
-    }
-    return bi;
-  }
-  async function readFile(file, replace) {
-    if (file.size > 60 * 1048576) { toast('File troppo grande.', 'bad'); return; }
-    let wb;
-    try { await loadLib(); wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false }); } catch (e) { toast('File non leggibile: ' + e.message, 'bad'); return; }
-    const sheets = wb.SheetNames.map(n => ({ n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '', blankrows: false }) })).filter(x => x.rows.length);
-    if (!sheets.length) { toast('Il file non contiene dati.', 'bad'); return; }
-    let sh = sheets.slice().sort((a, b) => b.rows.length - a.rows.length)[0];
-    const now = new Date();
-    const nome = inp('pavNome', replace ? replace.nome : file.name.replace(/\.(xlsx|xls|xlsm|xlsb|csv)$/i, '').replace(/[_]+/g, ' ').trim());
-    const per = inp('pavPer', replace ? replace.periodo : now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0'), { type: 'month' });
-    const shSel = selectEl('pavSh', sheets.map(x => [x.n, x.n + ' · ' + x.rows.length + ' righe']), sh.n);
-    const hrSel = el('input', { type: 'number', min: '1', style: 'width:90px' });
-    const mapBox = el('div', { class: 'stack' }); const prev = el('div', { class: 'tbl-wrap', style: 'max-height:260px' });
-    let H0 = [], hi = 0, map = {};
-    const cols = () => H0.map((h, i) => [String(i), (h || 'Colonna ' + (i + 1)) + ' · ' + String.fromCharCode(65 + (i % 26))]);
-    const guess = () => {
-      const f = rx => H0.findIndex(h => rx.test(String(h)));
-      const c = f(RX.c), d = f(RX.d), k = f(RX.k);
-      let p = H0.findIndex(h => RX.p.test(String(h)) && !RX.n.test(String(h)));
-      const n = H0.map((h, i) => i).filter(i => i !== p && RX.n.test(String(H0[i])) && !RX.c.test(String(H0[i])) && !RX.d.test(String(H0[i])));
-      map = { c: c < 0 ? 0 : c, d: d < 0 ? null : d, p: p < 0 ? null : p, n, k: k < 0 ? null : k };
-    };
-    const drawMap = () => {
-      const sel = (key, lab, opt) => { const s = selectEl('pm_' + key, (opt ? [['', '—']] : []).concat(cols()), map[key] == null ? '' : map[key]); s.onchange = () => { map[key] = s.value === '' ? null : +s.value; drawPrev(); }; return fld(lab, s); };
-      const nets = el('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, H0.map((h, i) => el('label', { class: 'person' + (map.n.includes(i) ? ' on' : ''), style: 'cursor:pointer' }, el('input', { type: 'checkbox', checked: map.n.includes(i), onchange: e => { map.n = e.target.checked ? [...map.n, i] : map.n.filter(x => x !== i); drawMap(); drawPrev(); } }), h || 'Colonna ' + (i + 1))));
-      mapBox.replaceChildren(el('div', { class: 'grid2' }, sel('c', 'Codice *'), sel('d', 'Descrizione', true), sel('p', 'Prezzo di listino', true), sel('k', 'Categoria / famiglia', true)),
-        el('div', { class: 'fld full' }, el('span', {}, 'Prezzi netti (distributore, installatore, dealer…): in offerta non si applica lo sconto cliente'), nets));
-    };
-    const dataRows = () => sh.rows.slice(hi + 1).filter(r => String(r[map.c] ?? '').trim());
-    const drawPrev = () => {
-      const R = dataRows();
-      prev.replaceChildren(el('table', {}, el('thead', {}, el('tr', {}, ['Codice', 'Descrizione', 'Listino', 'Netti', 'Categoria'].map(h => el('th', {}, h)))),
-        el('tbody', {}, R.slice(0, 6).map(r => el('tr', {}, el('td', { class: 'mono' }, String(r[map.c] ?? '')), el('td', {}, String(map.d != null ? r[map.d] ?? '' : '').slice(0, 80)), el('td', { class: 'r num' }, map.p != null && num(r[map.p]) != null ? eur(num(r[map.p])) : '—'), el('td', { class: 'r num hp-net' }, map.n.map(i => num(r[i])).filter(x => x != null).map(eur).join(' · ') || '—'), el('td', {}, String(map.k != null ? r[map.k] ?? '' : '')))))),
-        el('p', { class: 'hint' }, R.length + ' articoli trovati'));
-    };
-    const setSheet = () => { sh = sheets.find(x => x.n === shSel.value) || sh; hi = headerRow(sh.rows); hrSel.value = hi + 1; H0 = (sh.rows[hi] || []).map(x => String(x ?? '').trim()); const w = Math.max(...sh.rows.slice(hi, hi + 50).map(r => r.length)); while (H0.length < w) H0.push(''); guess(); drawMap(); drawPrev(); };
-    shSel.onchange = setSheet;
-    hrSel.onchange = () => { hi = Math.max(0, Math.min(sh.rows.length - 1, (+hrSel.value || 1) - 1)); H0 = (sh.rows[hi] || []).map(x => String(x ?? '').trim()); guess(); drawMap(); drawPrev(); };
-    setSheet();
-    const body = el('div', { class: 'stack' },
-      el('div', { class: 'banner hp-pavban' }, 'Listino riservato ProAV: lo vedono solo ' + whoTxt() + '. Il file resta privato, non entra nei listini del gruppo né nei capitolati.'),
-      el('div', { class: 'grid2' }, fld('Nome del listino', nome), fld('Mese e anno del listino', per)),
-      el('div', { class: 'grid2' }, fld('Foglio', shSel), fld('Riga delle intestazioni', hrSel)),
-      mapBox, el('h4', { style: 'margin:4px 0 0' }, 'Anteprima'), prev);
-    const m = modal(replace ? 'Aggiorna listino ProAV' : 'Carica listino ProAV', body, [el('span', { class: 'grow' }), btn('Annulla', () => m.close()), btn(replace ? 'Sostituisci' : 'Carica', async () => {
-      const n = nome.value.trim(); if (!n) { toast('Dai un nome al listino.', 'bad'); nome.focus(); return; }
-      if (map.c == null) { toast('Scegli la colonna del codice.', 'bad'); return; }
-      const R = dataRows().map(r => H0.map((_, i) => { const v = r[i]; return typeof v === 'string' ? v.trim() : v; }));
-      if (!R.length) { toast('Nessun articolo trovato con questa colonna codice.', 'bad'); return; }
-      const id = replace ? replace.id : newId('proavListini');
-      const at = Date.now(); const blob = id + '_' + at.toString(36);
-      const payload = JSON.stringify({ cols: H0, rows: R, at });
-      try {
-        const r = await fetch('/api/proav/blob?id=' + encodeURIComponent(blob), { method: 'PUT', credentials: 'same-origin', headers: { ...H, 'content-type': 'application/json' }, body: payload });
-        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error?.message || ('errore ' + r.status));
-      } catch (e) { toast('Caricamento non riuscito: ' + e.message, 'bad'); return; }
-      const meta = { nome: n, periodo: per.value || '', righe: R.length, cols: H0, map, file: file.name, size: payload.length, sheet: sh.n, blob, by: S.me, at };
-      if (await put('proavListini', id, meta)) {
-        if (replace && replace.blob && replace.blob !== blob) fetch('/api/proav/blob?id=' + encodeURIComponent(replace.blob), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { });
-        S.pavRows.set(id, { cols: H0, rows: R, at }); m.close(); toast('Listino «' + n + '» caricato: ' + R.length + ' articoli'); if (S.view !== 'pav') go('pav');
-      }
-    }, 'pri', 'up')], { wide: true });
-  }
 
   /* ---------- chi accede (solo il proprietario) ---------- */
   function accessForm() {
@@ -227,8 +171,8 @@
       const cards = el('div', { class: 'hp-pavcards' }, L.map(m => el('div', { class: 'hp-pavcard' + (S.pavL === m.id ? ' on' : ''), role: 'button', tabindex: '0', onclick: () => { S.pavL = S.pavL === m.id ? '' : m.id; this.update(); }, onkeydown: e => { if (e.key === 'Enter') { S.pavL = S.pavL === m.id ? '' : m.id; this.update(); } } },
         el('div', { class: 'row between', style: 'gap:6px;flex-wrap:nowrap' }, el('b', { title: m.nome }, m.nome), el('span', { class: 'row', style: 'gap:2px;flex-wrap:nowrap' },
           el('button', { type: 'button', class: 'icon-btn', title: 'Sostituisci con un file aggiornato', 'aria-label': 'Aggiorna ' + m.nome, onclick: e => { e.stopPropagation(); window.hpPavUpload(m); } }, ic('up', 15)),
-          el('button', { type: 'button', class: 'icon-btn', title: 'Elimina listino', 'aria-label': 'Elimina ' + m.nome, onclick: async e => { e.stopPropagation(); if (!await ask('Eliminare il listino «' + m.nome + '»?', 'Elimina')) return; if (await remove('proavListini', m.id)) { fetch('/api/proav/blob?id=' + encodeURIComponent(m.blob || m.id), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { }); S.pavRows.delete(m.id); if (S.pavL === m.id) S.pavL = ''; toast('Listino eliminato'); } } }, ic('trash', 15)))),
-        el('span', { class: 'hint' }, (m.periodo ? fmtP(m.periodo) + ' · ' : '') + (m.righe || 0).toLocaleString('it-IT') + ' articoli' + ((m.map || {}).n && m.map.n.length ? ' · netti' : '')),
+          el('button', { type: 'button', class: 'icon-btn', title: 'Elimina listino', 'aria-label': 'Elimina ' + m.nome, onclick: async e => { e.stopPropagation(); if (!await ask('Eliminare il listino «' + m.nome + '»?', 'Elimina')) return; if (await remove('proavListini', m.id)) { (m.imgs || []).forEach(b => fetch('/api/blob/' + b, { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { })); fetch('/api/proav/blob?id=' + encodeURIComponent(m.blob || m.id), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { }); S.pavRows.delete(m.id); if (S.pavL === m.id) S.pavL = ''; toast('Listino eliminato'); } } }, ic('trash', 15)))),
+        el('span', { class: 'hint' }, (m.periodo ? fmtP(m.periodo) + ' · ' : '') + (m.righe || 0).toLocaleString('it-IT') + ' articoli' + (m.kit ? ' · ' + m.kit + ' kit' : '') + ((m.map || {}).n && m.map.n.length ? ' · netti' : '')),
         el('span', { class: 'hint', style: 'font-size:.72rem' }, 'Caricato ' + fD(m.at) + (m.by ? ' da ' + (m.by === S.me ? 'te' : nm(m.by)) : '')))));
       const qIn = el('input', { type: 'search', value: S.pavQ, placeholder: 'Cerca codice o descrizione nei listini ProAV…', 'aria-label': 'Cerca nei listini ProAV', style: 'flex:1;min-width:220px' });
       const res = el('div', {});
@@ -237,12 +181,16 @@
         const { tot, list } = search(S.pavQ, S.pavL);
         if (!S.pavQ && !S.pavL) { res.replaceChildren(el('p', { class: 'hint' }, 'Scrivi un codice o una parola, oppure scegli un listino qui sopra per sfogliarlo.')); return; }
         if (!list.length) { res.replaceChildren(el('p', { class: 'hint' }, 'Nessun articolo trovato.')); return; }
-        res.replaceChildren(el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Codice', 'Descrizione', 'Categoria', 'Listino', 'Netti', 'Fonte'].map((h, i) => el('th', { class: i === 3 || i === 4 ? 'r' : '' }, h)))),
-          el('tbody', {}, list.map(({ m, r }) => { const M = m.map || {}; const p = M.p != null ? num(r[M.p]) : null; const nets = netsOf(m, r);
-            return el('tr', { class: 'hp-click', onclick: () => rowDetail(m, r) }, el('td', { class: 'mono', style: 'white-space:nowrap' }, el('b', {}, String(r[M.c]))), el('td', {}, el('div', { class: 'hp-pavdesc', title: String(M.d != null ? r[M.d] ?? '' : '') }, String(M.d != null ? r[M.d] ?? '' : ''))), el('td', { class: 'muted' }, String(M.k != null ? r[M.k] ?? '' : '')), el('td', { class: 'r num' }, p != null ? el('b', {}, eur(p)) : el('span', { class: 'muted' }, '—')),
+        const anyImg = list.some(({ r }) => r.img || (r.kit && r.kit.some(k => k.img)));
+        res.replaceChildren(el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, [anyImg ? '' : null, 'Codice', 'SAP', 'Descrizione', 'Categoria', 'Listino', 'Netti', 'Fonte'].filter(x => x !== null).map(h => el('th', { class: h === 'Listino' || h === 'Netti' ? 'r' : '' }, h)))),
+          el('tbody', {}, list.map(({ m, r }) => { const nets = netsOf(m, r); const im = r.img || (r.kit && (r.kit.find(k => k.img) || {}).img);
+            return el('tr', { class: 'hp-click', onclick: () => rowDetail(m, r) }, anyImg ? el('td', {}, pimg(im, 44)) : null,
+              el('td', { class: 'mono', style: 'white-space:nowrap' }, el('b', {}, mainCode(r)), r.kit ? el('div', { class: 'hint', style: 'font-size:.72rem' }, el('span', { class: 'tag new', style: 'font-size:.62rem' }, 'KIT'), ' ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ')) : null),
+              el('td', { class: 'mono', style: 'font-size:.8rem' }, r.kit ? r.kit.map(k => el('div', {}, k.sap || '—')) : (r.sap || el('span', { class: 'muted' }, '—'))),
+              el('td', {}, el('div', { class: 'hp-pavdesc', title: descOf(r) }, descOf(r))), el('td', {}, el('div', {}, r.cat || ''), r.tip ? el('small', { class: 'hint', style: 'display:block;max-width:220px' }, r.tip) : null), el('td', { class: 'r num' }, r.p != null ? el('b', {}, eur(r.p)) : el('span', { class: 'muted' }, '—')),
               el('td', { class: 'r num' }, nets.length ? nets.map(([h, v]) => el('div', { class: 'hp-net', title: h + ' · prezzo netto' }, eur(v), el('small', {}, ' ' + h))) : el('span', { class: 'muted' }, '—')),
               el('td', {}, el('span', { class: 'pill hp-pavpill' }, m.nome + (m.periodo ? ' (' + fmtP(m.periodo) + ')' : ''))));
-          })))), el('p', { class: 'hint' }, tot > list.length ? 'Primi ' + list.length + ' risultati su ' + tot.toLocaleString('it-IT') + ': affina la ricerca.' : tot + (tot === 1 ? ' articolo' : ' articoli') + '. Clic su una riga per tutte le colonne. In rosso i prezzi netti.'));
+          })))), el('p', { class: 'hint' }, tot > list.length ? 'Primi ' + list.length + ' risultati su ' + tot.toLocaleString('it-IT') + ': affina la ricerca.' : tot + (tot === 1 ? ' articolo' : ' articoli') + '. Clic su una riga per la scheda completa. In rosso i prezzi netti.'));
       };
       let tm = 0; qIn.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(() => { S.pavQ = qIn.value; draw(); }, 160); });
       draw();
