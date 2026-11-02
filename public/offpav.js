@@ -128,7 +128,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     { const w = 96; y = lockup((W - w) / 2, y, w) + 14; }
     T('Offerta riservata per', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 8;
     fitCaps(cliName, W / 2, y, 15, DARK, true, W - 40); y += 11;
-    if (rif) { T('Riferimento', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 50); rl.slice(0, 2).forEach(l => { fitCaps(l, W / 2, y, 11.5, DARK, false, W - 40); y += 6.5; }); y += 1; }
+    if (rif) { T('Riferimento', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 50); rl.slice(0, 2).forEach(l => { T(l, W / 2, y, { a: 'center', s: 12, c: DARK }); y += 6.5; }); y += 1; }
     T(num + ' del ' + dt, W / 2, y, { a: 'center', s: 8, c: GREY }); y += 12;
     const intro = String(o.intro || '').trim();
     if (intro) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...INK); const lh = 9.5 * 0.3528 * 1.5; for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) { for (const l of doc.splitTextToSize(par, W - 56)) { doc.text(l, 28, y); y += lh; } y += lh * 0.6; } y += 6; }
@@ -220,7 +220,6 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     block('TEMPI DI CONSEGNA', [o.consegna || pick(/consegn/i) || '---']);
     block('VALIDITÀ DELL\'OFFERTA', ['La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.', 'Sono esclusi i costi di spedizione se non indicati.']);
     block('CONDIZIONI DI PAGAMENTO', [o.pagamento || pick(/pagament/i) || '-', 'Tutti i prezzi indicati si intendono IVA esclusa.']);
-    block('COORDINATE BANCARIE', ['Banca: ' + (cf.banca || pick(/^banca/i) || ''), 'IBAN: ' + (cf.iban || pick(/iban/i) || ''), 'Beneficiario: ' + (cf.beneficiario || pick(/benefic/i) || '')]);
     T('NOTE AGGIUNTIVE', 14, y, { s: 7.5, b: true, c: RED }); y += 4;
     const note = String(o.note || '').replace(/^(tempi di consegna|validit[aà][^:]*|condizioni di pagamento|banca|iban|beneficiario)\s*:.*$/gim, '').trim();
     const nl = note ? doc.splitTextToSize(note, W - 36) : []; const bh = Math.max(32, nl.length * 4.6 + 10);
