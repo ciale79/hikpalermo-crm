@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "createdAt": "2026-11-02T19:37:20.245Z",
+        "reason": "Claude: print-only datasheet page (window.print) uses a standard system font so the PDF renders identically on any PC; not UI styling"
+      }
+    ]
+  }
+}
