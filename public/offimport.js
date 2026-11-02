@@ -326,6 +326,14 @@
     };
     return { node, read };
   };
+  /* file dell'offerta pronto: il download parte dal clic su «Scarica» (un download avviato dopo un'attesa lunga, senza clic, il browser può bloccarlo in silenzio) */
+  window.hpDlReady = function (blob, name) {
+    const u = URL.createObjectURL(blob); const isPdf = /\.pdf$/i.test(name); const kb = blob.size / 1024;
+    const m = modal(isPdf ? 'Offerta PDF pronta' : 'Offerta pronta', el('div', { class: 'stack' }, el('p', { style: 'margin:0' }, el('b', { class: 'mono' }, name), el('span', { class: 'hint' }, ' · ' + (kb > 1024 ? (kb / 1024).toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' MB' : Math.round(kb) + ' KB')))),
+      [el('span', { class: 'grow' }), isPdf ? el('a', { class: 'btn', href: u, target: '_blank', rel: 'noopener' }, ic('ext', 16), 'Apri in una scheda') : null,
+        el('a', { class: 'btn pri', href: u, download: name, onclick: () => setTimeout(() => m.close(), 400) }, ic('dl', 16), 'Scarica')].filter(Boolean));
+    setTimeout(() => URL.revokeObjectURL(u), 30 * 60000);
+  };
   window.hpValidTxt = o => { let t = 'La presente Offerta ha validità ' + (o.valid || 30) + ' giorni'; if (o.data) { const d = new Date(o.data + 'T12:00'); d.setDate(d.getDate() + (+o.valid || 30)); if (!isNaN(d)) t += ' (fino al ' + d.toLocaleDateString('it-IT') + ')'; } return t + '.'; };
 
   /* ---------------- esportazione offerta: con o senza sconto ---------------- */
@@ -451,7 +459,7 @@
       T(HQ, W / 2, fy - 1.5, { a: 'center', s: 6 });
       const pg = p + '/' + n; doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); const wPg = doc.getTextWidth(pg); T('Pag. ', W - 4 - wPg, fy, { a: 'right', s: 6.5 }); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(String(p), W - 4 - wPg, fy); doc.setFont('helvetica', 'normal'); doc.setTextColor(...INK); doc.text('/' + n, W - 4 - wPg + doc.getTextWidth(String(p)), fy);
     }
-    doc.save(('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision.pdf');
+    window.hpDlReady(doc.output('blob'), ('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision.pdf');
   }
   window.hpOffXlsx = xlsxOut; window.hpOffPdfStd = pdfOut;
   window.hpParseOfferPdf = async buf => parseGest(await pdfPages(buf));

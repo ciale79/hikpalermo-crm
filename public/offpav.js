@@ -249,7 +249,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     }
     for (const pg of extra) { const o2 = pg.w > pg.h ? 'l' : 'p'; doc.addPage([pg.w * 25.4 / 72, pg.h * 25.4 / 72], o2); doc.addImage(pg.d, 'JPEG', 0, 0, pg.w * 25.4 / 72, pg.h * 25.4 / 72, undefined, 'FAST'); }
     say('Salvo il PDF…');
-    doc.save(('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision_proav.pdf');
+    window.hpDlReady(doc.output('blob'), ('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision_proav.pdf');
   }
 
   /* ---------- finestra di esportazione (ProAV) ---------- */
@@ -303,7 +303,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
         btn('PDF', async () => {
           const R = X.read();
           const attach = [...ds.filter(x => x.on && (x.url || x.file)).map(x => ({ label: 'scheda ' + x.c, url: x.url, file: x.file })), ...(atBox._files || []).filter(f => f.on).map(f => ({ label: f.name, url: '/_blob/' + f.id })), ...extra.filter(x => x.on)];
-          try { await build(R.o, { sc: R.sc, lst: R.lst, attach }, say); m.close(); toast('Offerta PDF pronta'); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; }
+          try { await build(R.o, { sc: R.sc, lst: R.lst, attach }, say); m.close(); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; }
         }, 'pri', 'doc')], { wide: true });
   };
   window.hpPavOfferBuild = build; window.hpPavProdImg = productImage;

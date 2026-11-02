@@ -99,7 +99,7 @@
         children: body.filter(Boolean) }] });
     const blob = await Packer.toBlob(docx);
     const name = ('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + (pav ? '_hikvision_proav' : '_hikvision') + '.docx';
-    if (typeof downloads !== 'undefined' && downloads) { try { await downloads.save({ filename: name, data: blob }); } catch (e) { if (e.code !== 'declined') toast('Download non riuscito (' + (e.code || 'errore') + ').', 'bad'); } }
+    if (window.hpDlReady) hpDlReady(blob, name);
     else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
   };
 })();
