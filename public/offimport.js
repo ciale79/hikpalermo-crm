@@ -255,33 +255,74 @@
   }
 
   /* ---------- opzioni comuni della finestra «Esporta»: cosa mostrare, data, validità, pagamento, tempi ---------- */
-  const PAGS = ['Bonifico bancario anticipato', 'Bonifico bancario 30 gg d.f.', 'Bonifico bancario 60 gg d.f.f.m.', 'Ri.Ba. 30 gg d.f.f.m.', 'Ri.Ba. 60 gg d.f.f.m.', 'Ri.Ba. 30/60 gg d.f.f.m.', 'Come da accordi commerciali in essere'];
-  const TEMPI = ['Merce disponibile a magazzino, salvo venduto', '1-2 settimane dalla conferma d\'ordine', '2-3 settimane dalla conferma d\'ordine', '4-6 settimane dalla conferma d\'ordine', '6-8 settimane dalla conferma d\'ordine', 'Da confermare all\'ordine'];
   const lsG = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, lsS = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
+  /* voci dei menu a tendina delle condizioni: condivise da tutto il gruppo (raccolta «offopt»: {cat, text, ord}), si creano, modificano e cancellano */
+  const OCAT = {
+    consegna: { t: 'Tempi di consegna', d: ['Merce disponibile a magazzino, salvo venduto', '1-2 settimane dalla conferma d\'ordine', '2-3 settimane dalla conferma d\'ordine', '4-6 settimane dalla conferma d\'ordine', '6-8 settimane dalla conferma d\'ordine', 'Da confermare all\'ordine'] },
+    valid: { t: 'Validità dell\'offerta', d: ['15 giorni', '30 giorni', '60 giorni', '90 giorni'], h: 'Scrivi i giorni (es. «30 giorni»): la scadenza si calcola dalla data dell\'offerta' },
+    sped: { t: 'Costi di spedizione', d: ['Sono esclusi i costi di spedizione se non indicati.', 'Spedizione inclusa nel prezzo.', 'Porto franco per ordini superiori a € 500,00 netti.', 'Ritiro a cura del cliente presso il magazzino del distributore.'] },
+    pag: { t: 'Condizioni di pagamento', d: ['Bonifico bancario anticipato', 'Bonifico bancario 30 gg d.f.', 'Bonifico bancario 60 gg d.f.f.m.', 'Ri.Ba. 30 gg d.f.f.m.', 'Ri.Ba. 60 gg d.f.f.m.', 'Ri.Ba. 30/60 gg d.f.f.m.', 'Come da accordi commerciali in essere'] },
+    note: { t: 'Note aggiuntive', d: ['Installazione, configurazione e cablaggio esclusi.', 'I prezzi si intendono IVA esclusa, franco magazzino del distributore.', 'Garanzia 3 anni sui prodotti Hikvision.'], h: 'Scegliendo una nota la si aggiunge al testo; il testo resta modificabile' }
+  };
+  let OPTS = null; const optSubs = new Set();
+  try { claude.use('db').then(db => { if (db) db.collection('offopt').onSnapshot(sn => { OPTS = sn.docs.map(d => ({ id: d.id, ...d.data() })); optSubs.forEach(f => { try { f(); } catch (e) { } }); }, () => { }); }); } catch (e) { }
+  const optsOf = cat => (OPTS || []).filter(x => x.cat === cat).sort((a, b) => (a.ord ?? 0) - (b.ord ?? 0) || (a.at || 0) - (b.at || 0));
+  // la prima volta che si usa, ogni menu parte con le voci più comuni (salvate, quindi poi modificabili e cancellabili)
+  let seeding = false; const seedOpts = async () => { if (seeding || !OPTS || typeof newId !== 'function') return; seeding = true;
+    for (const [cat, c] of Object.entries(OCAT)) if (!OPTS.some(x => x.cat === cat) && !lsG('hp_optSeed_' + cat)) { lsS('hp_optSeed_' + cat, '1'); let k = 0; for (const text of c.d) await put('offopt', newId('offopt'), { cat, text, ord: k++, at: Date.now(), by: S.me }); } };
+  window.hpOptManage = function (cat, onDone) {
+    const c = OCAT[cat]; const list = el('div', { class: 'stack', style: 'gap:8px' });
+    const draw = () => { const it = optsOf(cat); list.replaceChildren(...(it.length ? it.map((x, i) => {
+      const ta = el('textarea', { rows: Math.min(4, Math.max(1, Math.ceil((x.text || '').length / 70))), style: 'min-height:0;flex:1', value: x.text || '', 'aria-label': 'Testo della voce' });
+      ta.addEventListener('change', async () => { const v = ta.value.trim(); if (!v) { ta.value = x.text; return; } if (v !== x.text && await put('offopt', x.id, { ...x, text: v, id: undefined })) toast('Voce aggiornata'); });
+      return el('div', { class: 'row', style: 'gap:6px;align-items:flex-start;flex-wrap:nowrap' }, ta,
+        el('button', { type: 'button', class: 'icon-btn', title: 'Sposta su', 'aria-label': 'Sposta su', disabled: i === 0, onclick: async () => { const p = it[i - 1]; await put('offopt', x.id, { ...x, id: undefined, ord: i - 1 }); await put('offopt', p.id, { ...p, id: undefined, ord: i }); it.forEach(async (y, k) => { if (k !== i && k !== i - 1 && y.ord !== k) await put('offopt', y.id, { ...y, id: undefined, ord: k }); }); } }, '↑'),
+        el('button', { type: 'button', class: 'icon-btn', title: 'Elimina la voce', 'aria-label': 'Elimina la voce', onclick: async () => { if (!await ask('Eliminare la voce «' + String(x.text).slice(0, 80) + '»?', 'Elimina')) return; await remove('offopt', x.id); } }, ic('trash', 16)));
+    }) : [el('p', { class: 'hint', style: 'margin:0' }, 'Nessuna voce: aggiungine una.')])); };
+    const nt = el('textarea', { rows: 2, placeholder: 'Nuova voce…', style: 'min-height:0' });
+    const add = async () => { const v = nt.value.trim(); if (!v) { nt.focus(); return; } if (await put('offopt', newId('offopt'), { cat, text: v, ord: optsOf(cat).length, at: Date.now(), by: S.me })) { nt.value = ''; nt.focus(); } };
+    optSubs.add(draw); draw();
+    const m = modal('Voci di «' + c.t + '»', el('div', { class: 'stack' }, c.h ? el('p', { class: 'hint', style: 'margin:0' }, c.h) : null, list, el('h4', { style: 'margin:6px 0 0' }, 'Aggiungi'), nt),
+      [el('span', { class: 'grow' }), btn('Aggiungi voce', add, '', 'plus'), btn('Fatto', () => { optSubs.delete(draw); m.close(); onDone && onDone(); }, 'pri', 'check')]);
+  };
   window.hpExportOpts = function (o, extraShow) {
     const cond = (o.pdf && o.pdf.cond) || {}; const pick = rx => { for (const [k, v] of Object.entries(cond)) if (rx.test(k)) return String(v).trim(); return ''; };
     const ck = (on, t, h) => { const i = el('input', { type: 'checkbox', checked: on }); return { i, n: el('label', { class: 'row', style: 'gap:8px;align-items:flex-start' }, i, el('span', {}, el('b', {}, t), h ? el('div', { class: 'hint' }, h) : null)) }; };
     const anyNc = (o.righe || []).some(r => r.nc);
     const cL = ck(S.state.exL !== false, 'Prezzo di listino', 'Togliendolo, il cliente vede solo i prezzi netti');
     const cS = ck(S.state.exSc !== false, 'Sconto %', anyNc ? 'Le righe con «netto cliente» mostrano comunque solo il netto' : 'Le colonne di sconto vuote non compaiono comunque');
-    const cN = ck(true, 'Note aggiuntive', o.note ? '' : 'L\'offerta non ha note');
-    const dl = (id, arr) => el('datalist', { id }, arr.map(v => el('option', { value: v })));
     const fData = el('input', { type: 'date', value: o.data || new Date().toISOString().slice(0, 10) });
-    const fValid = el('input', { type: 'number', min: 1, step: 1, value: o.valid || 30, style: 'width:90px' });
-    const fPag = el('input', { type: 'text', list: 'hpPagL', value: o.pagamento || pick(/pagament/i) || lsG('hp_exPag'), placeholder: 'es. Bonifico bancario 30 gg d.f.' });
-    const fTmp = el('input', { type: 'text', list: 'hpTmpL', value: o.consegna || pick(/consegn/i) || lsG('hp_exTmp'), placeholder: 'es. 4-6 settimane dalla conferma d\'ordine' });
-    const scad = el('span', { class: 'hint' }); const upd = () => { const d = new Date(fData.value + 'T12:00'); d.setDate(d.getDate() + (+fValid.value || 0)); scad.textContent = isNaN(d) ? '' : 'valida fino al ' + d.toLocaleDateString('it-IT'); }; fData.oninput = fValid.oninput = upd; upd();
-    const F = (t, n, w) => el('label', { class: 'fld', style: w ? 'grid-column:1/-1' : '' }, el('span', {}, t), n);
+    seedOpts();
+    // un campo per sezione: menu a tendina delle voci salvate + testo modificabile per questo documento + «Gestisci voci»
+    const field = (cat, init) => {
+      const c = OCAT[cat]; const sel = el('select', { 'aria-label': c.t, style: 'flex:1;min-width:0' });
+      const ta = el('textarea', { rows: cat === 'note' ? 3 : 1, style: 'min-height:0', value: init || '', 'aria-label': c.t + ' (testo nel documento)' });
+      const fill = () => { const it = optsOf(cat); const cur = sel.value; sel.replaceChildren(el('option', { value: '' }, cat === 'note' ? '+ Aggiungi una nota salvata…' : it.length ? 'Scegli una voce…' : (OPTS ? 'Nessuna voce salvata' : 'Carico le voci…')), ...it.map(x => el('option', { value: x.id, selected: x.id === cur || (!cur && cat !== 'note' && x.text === ta.value.trim()) }, String(x.text).length > 90 ? String(x.text).slice(0, 88) + '…' : x.text))); if (cat !== 'note' && !ta.value.trim() && it.length && OPTS) { const last = lsG('hp_ex_' + cat); const d = it.find(x => x.text === last) || it[0]; ta.value = d.text; sel.value = d.id; ta.dispatchEvent(new Event('input')); } };
+      sel.addEventListener('change', () => { const x = optsOf(cat).find(y => y.id === sel.value); if (!x) return; if (cat === 'note') { ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + x.text; sel.value = ''; } else ta.value = x.text; ta.dispatchEvent(new Event('input')); });
+      optSubs.add(fill); fill();
+      const node = el('div', { class: 'fld', style: 'grid-column:1/-1' }, el('span', {}, c.t),
+        el('div', { class: 'row', style: 'gap:6px;flex-wrap:nowrap' }, sel, btn('Gestisci voci', () => hpOptManage(cat, fill), 'sm ghost', 'edit')), ta);
+      return { node, ta, done: () => optSubs.delete(fill) };
+    };
+    const fC = field('consegna', o.consegna || pick(/consegn/i));
+    const fV = field('valid', o.valid ? o.valid + ' giorni' : '');
+    const fS = field('sped', o.spedizione || '');
+    const fP = field('pag', o.pagamento || pick(/pagament/i));
+    const fN2 = field('note', o.note || '');
+    const days = () => parseInt((fV.ta.value.match(/\d+/) || [])[0], 10) || 0;
+    const scad = el('span', { class: 'hint' }); const upd = () => { const d = new Date(fData.value + 'T12:00'); d.setDate(d.getDate() + (days() || 30)); scad.textContent = isNaN(d) ? '' : 'Valida fino al ' + d.toLocaleDateString('it-IT') + (days() ? '' : ' (nessun numero di giorni: uso 30)'); };
+    fData.addEventListener('input', upd); fV.ta.addEventListener('input', upd); upd();
     const node = el('div', { class: 'stack' },
-      el('h4', { style: 'margin:0' }, 'Cosa mostrare'), el('div', { class: 'stack', style: 'gap:6px' }, cL.n, cS.n, cN.n, ...(extraShow || [])),
-      el('h4', { style: 'margin:6px 0 0' }, 'Dati dell\'offerta'),
-      el('div', { class: 'fgrid', style: 'grid-template-columns:repeat(auto-fit,minmax(180px,1fr))' }, F('Data dell\'offerta', fData), F('Validità (giorni)', el('div', { class: 'row', style: 'gap:8px' }, fValid, scad)),
-        F('Metodo di pagamento', fPag, true), F('Tempi di approvvigionamento', fTmp, true)), dl('hpPagL', PAGS), dl('hpTmpL', TEMPI));
+      el('h4', { style: 'margin:0' }, 'Cosa mostrare'), el('div', { class: 'stack', style: 'gap:6px' }, cL.n, cS.n, ...(extraShow || [])),
+      el('h4', { style: 'margin:6px 0 0' }, 'Condizioni dell\'offerta'),
+      el('div', { class: 'fgrid', style: 'grid-template-columns:repeat(auto-fit,minmax(180px,1fr))' }, el('label', { class: 'fld' }, el('span', {}, 'Data dell\'offerta'), fData), el('div', { class: 'fld', style: 'align-self:end' }, scad),
+        fC.node, fV.node, fS.node, fP.node, fN2.node));
     const read = () => {
-      S.state.exSc = cS.i.checked; S.state.exL = cL.i.checked; lsS('hp_exPag', fPag.value.trim()); lsS('hp_exTmp', fTmp.value.trim());
+      [fC, fV, fS, fP, fN2].forEach(f => f.done());
+      S.state.exSc = cS.i.checked; S.state.exL = cL.i.checked; lsS('hp_ex_consegna', fC.ta.value.trim()); lsS('hp_ex_valid', fV.ta.value.trim()); lsS('hp_ex_sped', fS.ta.value.trim()); lsS('hp_ex_pag', fP.ta.value.trim());
       // righe «netto cliente»: nel documento solo il netto, senza listino e senza sconto
       const righe = (o.righe || []).map(r => r.nc ? { ...r, noList: true, ncHide: true } : r);
-      return { o: { ...o, righe, data: fData.value || o.data, valid: +fValid.value || o.valid || 30, pagamento: fPag.value.trim(), consegna: fTmp.value.trim(), note: cN.i.checked ? o.note : '' }, sc: cS.i.checked, lst: cL.i.checked };
+      return { o: { ...o, righe, data: fData.value || o.data, valid: days() || 30, validTxt: fV.ta.value.trim(), spedizione: fS.ta.value.trim(), pagamento: fP.ta.value.trim(), consegna: fC.ta.value.trim(), note: fN2.ta.value.trim() }, sc: cS.i.checked, lst: cL.i.checked };
     };
     return { node, read };
   };
@@ -291,7 +332,7 @@
   const origExport = window.exportOffer;
   window.exportOffer = function (o) {
     const X = window.hpExportOpts(o);
-    const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node, el('p', { class: 'hint', style: 'margin:0' }, 'Data, validità, pagamento e tempi valgono per questo documento; pagamento e tempi si ricordano per le prossime esportazioni.')),
+    const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node, el('p', { class: 'hint', style: 'margin:0' }, 'Le voci scelte e i testi modificati valgono per questo documento; le ultime scelte si ripropongono alla prossima esportazione. «Gestisci voci» crea, modifica e cancella le voci dei menu per tutto il gruppo.')),
       [el('span', { class: 'grow' }), btn('Annulla', () => m.close()),
         btn('Excel', () => { const R = X.read(); m.close(); xlsxOut(R.o, R.sc, R.lst); }, '', 'dl'),
         btn('Word', async () => { const R = X.read(); m.close(); if (window.hpOffDocx) { await hpOffDocx(R.o, R.sc, R.lst, false); } }, '', 'doc'),
@@ -393,7 +434,8 @@
     const pick = rx => { for (const [kk, v] of Object.entries(cond)) if (rx.test(kk)) return String(v).trim(); return ''; };
     const block = (title, lines) => { T(title, 14, y, { s: 7.5, b: true, c: RED }); y += 8; lines.forEach(l => { const ls = doc.splitTextToSize(String(l), W - 28); ls.forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; }); }); y += 9; };
     block('TEMPI DI CONSEGNA', [o.consegna || pick(/consegn/i) || '---']);
-    block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt(o), 'Sono esclusi i costi di spedizione se non indicati.']);
+    block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt(o)]);
+    block('COSTI DI SPEDIZIONE', [o.spedizione || 'Sono esclusi i costi di spedizione se non indicati.']);
     block('CONDIZIONI DI PAGAMENTO', [o.pagamento || pick(/pagament/i) || '-', 'Tutti i prezzi indicati si intendono IVA esclusa.']);
     block('COORDINATE BANCARIE', ['Banca: ' + (cf.banca || pick(/^banca/i) || ''), 'IBAN: ' + (cf.iban || pick(/iban/i) || ''), 'Beneficiario: ' + (cf.beneficiario || pick(/benefic/i) || '')]);
     T('NOTE AGGIUNTIVE', 14, y, { s: 7.5, b: true, c: RED }); y += 6;

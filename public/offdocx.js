@@ -85,7 +85,8 @@
     const pick = rx => { for (const [k, v] of Object.entries(cond)) if (rx.test(k)) return String(v).trim(); return ''; };
     const block = (title, ls) => { body.push(Pp(R(title, { s: 8, b: true, c: RED }), { before: 6, after: 4 })); ls.forEach(l => body.push(Pp(R(l, { s: 8 }), { after: 2 }))); body.push(Pp(R(''), { after: 6 })); };
     block('TEMPI DI CONSEGNA', [o.consegna || pick(/consegn/i) || '---']);
-    block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt ? hpValidTxt(o) : 'La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.', 'Sono esclusi i costi di spedizione se non indicati.']);
+    block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt ? hpValidTxt(o) : 'La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.']);
+    block('COSTI DI SPEDIZIONE', [o.spedizione || 'Sono esclusi i costi di spedizione se non indicati.']);
     block('CONDIZIONI DI PAGAMENTO', [o.pagamento || pick(/pagament/i) || '-', 'Tutti i prezzi indicati si intendono IVA esclusa.']);
     if (!pav) block('COORDINATE BANCARIE', ['Banca: ' + (cf.banca || pick(/^banca/i) || ''), 'IBAN: ' + (cf.iban || pick(/iban/i) || ''), 'Beneficiario: ' + (cf.beneficiario || pick(/benefic/i) || '')]);
     const note = String(o.note || '').replace(/^(tempi di consegna|validit[aà][^:]*|condizioni di pagamento|banca|iban|beneficiario)\s*:.*$/gim, '').trim();

@@ -222,7 +222,8 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const pick = rx => { for (const [kk, v] of Object.entries(cond)) if (rx.test(kk)) return String(v).trim(); return ''; };
     const block = (title, ls) => { T(title, 14, y, { s: 7.5, b: true, c: RED }); y += 8; ls.forEach(l => doc.splitTextToSize(String(l), W - 28).forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; })); y += 9; };
     block('TEMPI DI CONSEGNA', [o.consegna || pick(/consegn/i) || '---']);
-    block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt ? hpValidTxt(o) : 'La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.', 'Sono esclusi i costi di spedizione se non indicati.']);
+    block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt ? hpValidTxt(o) : 'La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.']);
+    block('COSTI DI SPEDIZIONE', [o.spedizione || 'Sono esclusi i costi di spedizione se non indicati.']);
     block('CONDIZIONI DI PAGAMENTO', [o.pagamento || pick(/pagament/i) || '-', 'Tutti i prezzi indicati si intendono IVA esclusa.']);
     T('NOTE AGGIUNTIVE', 14, y, { s: 7.5, b: true, c: RED }); y += 4;
     const note = String(o.note || '').replace(/^(tempi di consegna|validit[aà][^:]*|condizioni di pagamento|banca|iban|beneficiario)\s*:.*$/gim, '').trim();
