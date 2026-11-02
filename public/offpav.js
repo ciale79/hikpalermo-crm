@@ -100,7 +100,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
   async function build(o, opt, say) {
     say('Preparo l\'offerta…');
     if (!window.jspdf) await loadScript(JSPDF); if (!window.jspdf.jsPDF.API.autoTable) await loadScript(AT);
-    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
+    const doc = window.hpPdfSafeDoc ? hpPdfSafeDoc(new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' })) : new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
     const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P0 = o.pdf || {}; const M = P0.meta || {}; const C = P0.cliente || {};
     const hik = await logo('/brand-hikvision.png', 900) || await logo('/hik-logo.png', 900); const pav = await logo('/proav-mark.png', 1200, true) || await logo('/proav-logo.png', 1200, true);
     const num = o.numero || '—'; const dt = o.data ? o.data.split('-').reverse().join('/') : new Date().toLocaleDateString('it-IT');
@@ -177,7 +177,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
 
     /* 4 · modulo d'ordine */
     doc.addPage();
-    if (hik) doc.addImage(hik.d, 'PNG', 14, 12, 70, 70 * hik.r);
+    lockup(14, 10, 62);
     y = 38;
     T('Partner contrattuale:', 16, y, { i: true, s: 8 }); T('HIKVISION ITALY Srl', 16, y + 5.5, { s: 8.5 }); T('Sede legale:', 16, y + 11, { s: 8 }); T('Viale Fulvio Testi, 113', 16, y + 16, { s: 8 }); T('20092 Cinisello Balsamo (MI)', 16, y + 21, { s: 8 });
     T('Spett.Le', 125, y, { s: 8 });
@@ -207,7 +207,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 }, columnStyles: cs });
     roundTables();
     y = doc.lastAutoTable.finalY + 14; if (y > PH - 45) { doc.addPage(); y = 30; }
-    if (hik) doc.addImage(hik.d, 'PNG', 32, y, 40, 40 * hik.r); y += 40 * (hik ? hik.r : .14) + 6;
+    y = lockup(32, y, 40) + 5;
     T('HIKVISION ITALY SRL', 52, y, { a: 'center', s: 7 });
     doc.setLineDashPattern([0.6, 0.8], 0); doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(85, y - 4, 128, y - 4); doc.line(130, y - 4, 196, y - 4); doc.setLineDashPattern([], 0);
     T('Luogo e data', 106, y, { a: 'center', s: 7 }); T('Il committente (timbro/firma)', 163, y, { a: 'center', s: 7 });

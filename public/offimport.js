@@ -279,6 +279,15 @@
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = H.map((h, i) => ({ wch: i === 2 ? 60 : i === 1 ? 24 : 14 }));
     const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Offerta'); await saveXlsx(wb, (o.numero || 'Offerta') + (com ? ' ' + com.nome : ''));
   }
+  /* ---------- caratteri sicuri per il PDF: i font standard di jsPDF hanno solo il set Windows-1252;
+     un carattere fuori set (≤, ≥, ≈, ⌀, frecce…) fa uscire la riga dalla cella con le lettere spaziate, quindi si sostituisce ---------- */
+  const CP = new Set('€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ');
+  const MAPC = { '≤': '<=', '≥': '>=', '≈': '~', '≠': '!=', '⌀': 'Ø', '∅': 'Ø', '→': '->', '←': '<-', '↔': '<->', '↑': '^', '↓': 'v', '√': 'rad.', '∞': 'inf.', 'Ω': 'Ohm', 'μ': 'µ', '∙': '·', '‧': '·', '⋅': '·', '′': "'", '″': '"', '‐': '-', '‑': '-', '‒': '-', '−': '-', '﹣': '-', '：': ':', '（': '(', '）': ')', '，': ',', '；': ';', '　': ' ', ' ': ' ', ' ': ' ', ' ': ' ', '​': '', '\u00a0': ' ', '℃': '°C', '℉': '°F', '㎡': 'm²', '㎜': 'mm', '㎝': 'cm', '㎏': 'kg', '³': '³', '✓': 'v', '✔': 'v', '•': '•' };
+  const safeCh = c => { const k = c.charCodeAt(0); if ((k >= 32 && k <= 126) || (k >= 160 && k <= 255) || c === '\n' || CP.has(c)) return c; if (MAPC[c] != null) return MAPC[c]; const n = c.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); return [...n].every(x => { const q = x.charCodeAt(0); return (q >= 32 && q <= 126) || (q >= 160 && q <= 255); }) ? n : ''; };
+  const pdfSafe = t => typeof t === 'string' ? [...t].map(safeCh).join('') : Array.isArray(t) ? t.map(pdfSafe) : t;
+  window.hpPdfSafe = pdfSafe;
+  window.hpPdfSafeDoc = doc => { const t0 = doc.text.bind(doc), s0 = doc.splitTextToSize.bind(doc), w0 = doc.getTextWidth.bind(doc); doc.text = (t, ...a) => t0(pdfSafe(t), ...a); doc.splitTextToSize = (t, ...a) => s0(pdfSafe(t), ...a); doc.getTextWidth = t => w0(pdfSafe(t)); return doc; };
+
   /* ---------- PDF dell'offerta: modello standard Hikvision (copertina, offerta commerciale, dettaglio SAP, condizioni) ---------- */
   const HQ = 'HIKVISION ITALY Srl - Viale Fulvio Testi, 113 - 20092 Cinisello Balsamo (MI) - P.IVA 07757250969';
   const imgData = (src, w) => new Promise(res => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * i.naturalHeight / i.naturalWidth); c.getContext('2d').drawImage(i, 0, 0, c.width, c.height); res({ d: c.toDataURL('image/png'), r: i.naturalHeight / i.naturalWidth }); }; i.onerror = () => res(null); i.src = src; });
@@ -288,7 +297,7 @@
       if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
       if (!window.jspdf.jsPDF.API.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
     } catch (e) { toast('Non riesco a caricare il generatore PDF.', 'bad'); return; }
-    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
+    const doc = window.hpPdfSafeDoc(new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' })); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
     const RED = [200, 16, 46], INK = [64, 64, 64], GREY = [128, 128, 128];
     const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P = o.pdf || {}; const M = P.meta || {}; const C = P.cliente || {};
     const logo = await imgData('/brand-hikvision.png', 1200) || await imgData('/hik-logo.png', 1200);
