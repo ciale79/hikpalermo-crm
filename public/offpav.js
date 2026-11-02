@@ -102,7 +102,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     if (!window.jspdf) await loadScript(JSPDF); if (!window.jspdf.jsPDF.API.autoTable) await loadScript(AT);
     const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
     const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P0 = o.pdf || {}; const M = P0.meta || {}; const C = P0.cliente || {};
-    const hik = await logo('/brand-hikvision.png', 900) || await logo('/hik-logo.png', 900); const pav = await logo('/proav-logo.png', 1200, true);
+    const hik = await logo('/brand-hikvision.png', 900) || await logo('/hik-logo.png', 900); const pav = await logo('/proav-mark.png', 1200, true) || await logo('/proav-logo.png', 1200, true);
     const num = o.numero || '—'; const dt = o.data ? o.data.split('-').reverse().join('/') : new Date().toLocaleDateString('it-IT');
     const cliName = cli.nome || C.nome || 'Cliente'; const rif = o.titolo || M.riferimento || (com ? com.nome : '');
     const me = (S.team && S.team.get(o.by || S.me)) || {}; const red = { n: M.redatto || nm(o.by || S.me), e: M.redattoEmail || me.email || (typeof mailOf === 'function' ? mailOf(o.by || S.me) : '') || '', t: M.redattoTel || me.tel || '' };
@@ -114,10 +114,14 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       let x = cx - w / 2; doc.setTextColor(...color); for (const [ch, s] of parts) { doc.setFontSize(s); doc.text(ch, x, y); x += doc.getTextWidth(ch); }
     };
     const fitCaps = (txt, cx, y, size, color, bold, maxW) => { let s = size; doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(s); while (doc.getTextWidth(String(txt).toUpperCase()) * 0.9 > maxW && s > 8) { s -= 0.5; doc.setFontSize(s); } smallCaps(txt, cx, y, s, color, bold); };
+    // tabelle con gli angoli esterni arrotondati: dopo autoTable si coprono gli spigoli e si ridisegna il bordo, pagina per pagina
+    const RAD = 2.4; let tb = null;
+    const tHooks = { willDrawPage: () => { }, didDrawCell: d => { const p = doc.internal.getCurrentPageInfo().pageNumber; const b = tb[p] || (tb[p] = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 }); b.x0 = Math.min(b.x0, d.cell.x); b.y0 = Math.min(b.y0, d.cell.y); b.x1 = Math.max(b.x1, d.cell.x + d.cell.width); b.y1 = Math.max(b.y1, d.cell.y + d.cell.height); } };
+    const roundTables = () => { const cur = doc.internal.getCurrentPageInfo().pageNumber; for (const [p, b] of Object.entries(tb)) { doc.setPage(+p); const w = b.x1 - b.x0, h = b.y1 - b.y0; doc.setDrawColor(255, 255, 255); doc.setLineWidth(RAD * 1.2); doc.roundedRect(b.x0 - RAD * 0.6, b.y0 - RAD * 0.6, w + RAD * 1.2, h + RAD * 1.2, RAD + RAD * 0.6, RAD + RAD * 0.6, 'S'); doc.setDrawColor(170, 174, 182); doc.setLineWidth(.3); doc.roundedRect(b.x0, b.y0, w, h, RAD, RAD, 'S'); } doc.setPage(cur); };
     const lines = o.righe || [];
     // logo Hikvision con sotto il logo ProAV, largo dalla «K» alla «I» di «sion» (22,8% → 69,3% della larghezza del logo Hikvision)
     const K0 = 0.228, I1 = 0.693;
-    const lockup = (x, y0, w) => { let yy = y0; if (hik) { doc.addImage(hik.d, 'PNG', x, yy, w, w * hik.r); yy += w * hik.r + w * 0.03; } if (pav) { const pw = w * (I1 - K0); doc.addImage(pav.d, 'PNG', x + w * K0, yy, pw, pw * pav.r); yy += pw * pav.r; } return yy; };
+    const lockup = (x, y0, w) => { let yy = y0; if (hik) { doc.addImage(hik.d, 'PNG', x, yy, w, w * hik.r); yy += w * hik.r + w * 0.045; } if (pav) { const pw = w * (I1 - K0); doc.addImage(pav.d, 'PNG', x + (w - pw) / 2, yy, pw, pw * pav.r); yy += pw * pav.r; } return yy; };
 
     /* 1 · copertina */
     let y = 16;
@@ -153,12 +157,13 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       body.push(['', { content: it.sap || r.sap || '', styles: { fontStyle: 'normal' } }, { content: r.c, styles: { fontStyle: 'bold', textColor: DARK } }, { content: String(r.q), styles: { halign: 'center' } }, { content: eur(t.unit), styles: { halign: 'right' } }, { content: eur(t.netto), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }]);
       body.push([{ content: longD(r) + (r.net ? ' (prezzo netto)' : ''), colSpan: 6, styles: { fontSize: 7.3, textColor: [70, 70, 70], cellPadding: { top: 1.6, bottom: 3.2, left: 2, right: 2 } } }]);
     });
-    doc.autoTable({ startY: 46, head: [['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale']], body, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid', rowPageBreak: 'avoid',
+    tb = {}; doc.autoTable({ startY: 46, head: [['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale']], body, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid', rowPageBreak: 'avoid',
       styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.8, textColor: [60, 60, 60], lineColor: [205, 208, 214], lineWidth: .15, valign: 'middle' },
       headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 },
       columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 24 }, 3: { cellWidth: 13 }, 4: { cellWidth: 26 }, 5: { cellWidth: 28 } },
       didParseCell: d => { if (d.section === 'body' && imgAt.has(d.row.index) && d.column.index === 0) d.cell.styles.minCellHeight = 22; },
-      didDrawCell: d => { if (d.section === 'body' && d.column.index === 0 && imgAt.get(d.row.index)) { const s = Math.min(d.cell.width, d.cell.height) - 2; doc.addImage(imgAt.get(d.row.index), 'JPEG', d.cell.x + (d.cell.width - s) / 2, d.cell.y + (d.cell.height - s) / 2, s, s); } } });
+      didDrawCell: d => { tHooks.didDrawCell(d); if (d.section === 'body' && d.column.index === 0 && imgAt.get(d.row.index)) { const s = Math.min(d.cell.width, d.cell.height) - 2; doc.addImage(imgAt.get(d.row.index), 'JPEG', d.cell.x + (d.cell.width - s) / 2, d.cell.y + (d.cell.height - s) / 2, s, s); } } });
+    roundTables();
     const Tt = offTot(lines); const iva = Math.round(Tt.N * 22) / 100;
     y = doc.lastAutoTable.finalY + 8; if (y > PH - 40) { doc.addPage(); y = 25; }
     const tot = (l, v, b, vr) => { T(l, W - 50, y, { a: 'right', s: b ? 10.5 : 9.5, c: [80, 80, 80] }); T(v, W - 16, y, { a: 'right', s: b ? 10.5 : 9.5, b: true, c: vr ? RED : INK }); y += 7.5; };
@@ -197,9 +202,10 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const foot = [[lab('Subtotale'), { content: eur(Tt.N), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }], [lab('IVA (22%)'), { content: eur(iva), styles: { halign: 'right', fontStyle: 'bold' } }],
       [lab('Totale offerta', { fillColor: [232, 232, 232], fontStyle: 'bold', textColor: DARK, fontSize: 9 }), { content: eur(Tt.N + iva), styles: { halign: 'right', fontStyle: 'bold', fillColor: [232, 232, 232], textColor: DARK, fontSize: 9 } }]];
     const cs = { 0: { cellWidth: 26 }, 2: { cellWidth: 9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: 18, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 13, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 11, halign: 'center' }; cs[k++] = { cellWidth: 20, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
-    doc.autoTable({ startY: y + 6, head: [head], body: [...sb, ...foot], margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid', rowPageBreak: 'avoid',
+    tb = {}; doc.autoTable({ didDrawCell: tHooks.didDrawCell, startY: y + 6, head: [head], body: [...sb, ...foot], margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid', rowPageBreak: 'avoid',
       styles: { font: 'helvetica', fontSize: 7, cellPadding: 1.6, textColor: [60, 60, 60], lineColor: [90, 90, 90], lineWidth: .15, valign: 'top' },
       headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 }, columnStyles: cs });
+    roundTables();
     y = doc.lastAutoTable.finalY + 14; if (y > PH - 45) { doc.addPage(); y = 30; }
     if (hik) doc.addImage(hik.d, 'PNG', 32, y, 40, 40 * hik.r); y += 40 * (hik ? hik.r : .14) + 6;
     T('HIKVISION ITALY SRL', 52, y, { a: 'center', s: 7 });
