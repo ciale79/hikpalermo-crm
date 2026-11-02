@@ -6,7 +6,7 @@
 (function () {
   'use strict';
   S.dsTrad = new Map();
-  claude.use('db').then(db => { if (db) db.collection('dstrad').onSnapshot(sn => { const m = new Map(); sn.docs.forEach(d => m.set(d.id, { id: d.id, ...d.data() })); S.dsTrad = m; }, () => { }); });
+  claude.use('db').then(db => { if (db) db.collection('dstrad').onSnapshot(sn => { const m = new Map(); sn.docs.forEach(d => m.set(d.id, { id: d.id, ...d.data() })); S.dsTrad = m; if (['art', 'pav'].includes(S.view) && VIEWS[S.view] && !document.querySelector('.modal')) VIEWS[S.view].update(); }, () => { }); });
   const nk = c => 'ds_' + String(c || '').toUpperCase().replace(/\([^()]*\)/g, '').replace(/[^A-Z0-9]/g, '').slice(0, 100);
   const flag = () => el('span', { class: 'hp-flag-it', role: 'img', 'aria-label': 'Italiano' });
 
@@ -187,7 +187,7 @@ ${JSON.stringify(part)}`;
       let wid = null;
       if (res.docx) { const uw = await fetch('/api/blob', { method: 'POST', credentials: 'same-origin', headers: { 'x-hp': '1', 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'x-name': encodeURIComponent('Datasheet ' + code + ' IT.docx') }, body: res.docx }); if (uw.ok) wid = (await uw.json()).id; }
       const D = { code, pdf: id, docx: wid, pages: res.pages, righe: res.righe, size: res.blob.size, src: src || '', at: Date.now(), by: S.me };
-      await put('dstrad', nk(code), D); S.dsTrad.set(nk(code), D);
+      await put('dstrad', nk(code), D); S.dsTrad.set(nk(code), D); try { if (['art', 'pav'].includes(S.view)) VIEWS[S.view].update(); } catch (e) { }
       for (const b of [old && old.pdf, old && old.docx]) if (b && b !== id && b !== wid) fetch('/api/blob/' + b, { method: 'DELETE', credentials: 'same-origin', headers: { 'x-hp': '1' } }).catch(() => { });
       m.close(); open(code, src);
     } catch (e) { box.replaceChildren(el('div', { class: 'banner', style: 'border-color:var(--accent)' }, 'Traduzione non riuscita: ' + (e.message || e)), chooser(code, src, box, m)); }
