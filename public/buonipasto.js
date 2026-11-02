@@ -131,6 +131,8 @@
       for (const r of CAL.get(dk) || []) why.push(r);
       const pasti = M.voci.filter(v => v.d === dk && v.inc);
       if (pasti.length) why.push({ k: 'pasto', l: pasti.map(v => v.desc + ' ' + eur(v.imp)).join(' · ') });
+      const cash = (M.cash || []).filter(v => v.d === dk && v.pasto);
+      if (cash.length) why.push({ k: 'contanti', l: 'Contanti: ' + cash.map(v => v.desc + ' ' + eur(v.imp)).join(' · ') });
       const auto = !why.length;
       const o = M.over ? M.over[dk] : undefined;
       days.push({ d, dk, wd, why, auto, bp: o === undefined ? auto : !!o, man: o !== undefined });
@@ -161,9 +163,27 @@
     toast('File con ' + rows.length + ' buoni pasto scaricato');
   }
 
+  /* ---------- spese contanti: elenco da consegnare per il rimborso ---------- */
+  async function exportCash(mk) {
+    const M = month(mk); const L = (M.cash || []).slice().sort((a, b) => a.d.localeCompare(b.d));
+    if (!L.length) { toast('Nessuna spesa in contanti in questo mese.', 'bad'); return; }
+    await loadScript(XLSXLIB);
+    const [y, m1] = mk.split('-').map(Number);
+    const serial = k => { const [a, b, c] = k.split('-').map(Number); return Math.round((Date.UTC(a, b - 1, c) - Date.UTC(1899, 11, 30)) / 864e5); };
+    const rows = [['Data', 'Descrizione', 'Tipo', 'Importo €']].concat(L.map(v => [serial(v.d), v.desc, v.pasto ? 'Pasto' : 'Altra spesa', v.imp]));
+    rows.push(['', 'Totale da riscuotere', '', r2(L.reduce((a, v) => a + v.imp, 0))]);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    for (let r = 1; r <= L.length; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 0 })]; if (c) { c.t = 'n'; c.z = 'dd/mm/yyyy'; } }
+    for (let r = 1; r <= L.length + 1; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 3 })]; if (c) c.z = '#,##0.00'; }
+    ws['!cols'] = [{ wch: 11 }, { wch: 44 }, { wch: 12 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Spese contanti');
+    const cogn = String(D.cognome || nm(S.me).split(' ').pop() || 'Utente').trim().replace(/[\\/:*?"<>|]+/g, '');
+    XLSX.writeFile(wb, 'Spese contanti ' + y + ' ' + MESI[m1 - 1] + ' ' + cogn + '.xlsx');
+  }
+
   /* ---------- pagina ---------- */
   const defMonth = () => { const t = new Date(); const d = t.getDate() <= 10 ? new Date(t.getFullYear(), t.getMonth() - 1, 1) : t; return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
-  const CHIP = { we: 'var(--ink-3)', festivo: 'var(--violet)', chiusura: '#C8102E', ferie: 'var(--info)', malattia: 'var(--info)', fiera: 'var(--warn)', trasferta: 'var(--warn)', pasto: 'var(--bad)' };
+  const CHIP = { we: 'var(--ink-3)', festivo: 'var(--violet)', chiusura: '#C8102E', ferie: 'var(--info)', malattia: 'var(--info)', fiera: 'var(--warn)', trasferta: 'var(--warn)', pasto: 'var(--bad)', contanti: 'var(--bad)' };
   const CATL = { pasto: ['Pasto', 'var(--bad)'], verifica: ['Da verificare', 'var(--warn)'], altro: ['Non è un pasto', 'var(--ink-3)'] };
   VIEWS.bp = {
     title: () => 'Buoni pasto',
@@ -185,6 +205,7 @@
       const kpi = el('div', { class: 'kpis' },
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Buoni pasto'), el('span', { class: 'v', style: 'color:var(--ok)' }, String(nBP)), el('span', { class: 's' }, 'per un valore di ' + eur(r2(nBP * BPV))), el('span', { class: 's' }, 'su ' + nLav + ' giorni lavorativi')),
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Pasti con la carta'), el('span', { class: 'v' }, String(new Set(M.voci.filter(v => v.inc).map(v => v.d)).size)), el('span', { class: 's' }, M.voci.filter(v => v.inc).length + ' voci · ' + eur(M.voci.filter(v => v.inc).reduce((a, v) => a + v.imp, 0)))),
+        el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Spese contanti'), el('span', { class: 'v' }, eur(r2((M.cash || []).reduce((a, v) => a + v.imp, 0)))), el('span', { class: 's' }, (M.cash || []).length + ((M.cash || []).length === 1 ? ' voce da riscuotere' : ' voci da riscuotere'))),
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Ferie, fiere e chiusure'), el('span', { class: 'v' }, String(days.filter(x => x.wd !== 0 && x.wd !== 6 && x.why.some(w => ['ferie', 'malattia', 'fiera', 'trasferta', 'chiusura'].includes(w.k))).length)), el('span', { class: 's' }, 'giorni lavorativi dal calendario')),
         el('div', { class: 'kpi' }, el('span', { class: 'eyebrow' }, 'Dati per il file'), el('div', { class: 'stack', style: 'gap:6px' }, cf, cg), el('span', { class: 's', style: 'font-size:.72rem;overflow-wrap:anywhere' }, 'Buoni Pasto ' + y + ' ' + MESI[m1 - 1] + ' ' + (D.cognome || nm(S.me).split(' ').pop()) + '.xls')));
       // voci dell'estratto
@@ -197,6 +218,30 @@
               el('td', { class: 'num', style: 'white-space:nowrap' }, dd.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' })), el('td', {}, el('b', {}, v.desc)), el('td', { class: 'r num' }, eur(v.imp)),
               el('td', {}, el('span', { class: 'pill', style: '--c:' + cc }, cl), ' ', el('button', { type: 'button', class: 'icon-btn', title: 'Elimina la voce', 'aria-label': 'Elimina ' + v.desc, onclick: () => { M.voci = M.voci.filter(x => x !== v); save(); this.update(); } }, ic('trash', 14))));
           })))) : emptyBox('Nessun movimento per ' + MESI[m1 - 1], 'Carica il PDF dell\'estratto conto della carta di credito: puoi caricarne più di uno se il mese è diviso in due estratti.'));
+      // spese in contanti (senza carta aziendale), da riscuotere
+      const cashL = (M.cash || []).slice().sort((a, b) => a.d.localeCompare(b.d));
+      const tk = new Date(); const inM = tk.getFullYear() === y && tk.getMonth() + 1 === m1;
+      const cD = el('input', { type: 'date', value: inM ? key(y, m1 - 1, tk.getDate()) : key(y, m1 - 1, 1), min: key(y, m1 - 1, 1), max: key(y, m1 - 1, new Date(y, m1, 0).getDate()), 'aria-label': 'Data della spesa' });
+      const cT = el('input', { type: 'text', placeholder: 'Descrizione (es. Pranzo Trattoria da Mario)', style: 'flex:1;min-width:200px', 'aria-label': 'Descrizione della spesa' });
+      const cI = el('input', { type: 'text', inputmode: 'decimal', placeholder: 'Importo €', style: 'width:110px', 'aria-label': 'Importo' });
+      const cP = el('input', { type: 'checkbox', checked: true });
+      const addCash = () => {
+        const raw = String(cI.value).replace(/[€\s]/g, ''); const imp = r2(+(raw.includes(',') ? raw.replace(/\./g, '').replace(',', '.') : raw));
+        if (!cD.value || !cD.value.startsWith(mk)) { toast('Scegli una data di ' + MESI[m1 - 1] + '.', 'bad'); cD.focus(); return; }
+        if (!cT.value.trim()) { toast('Scrivi una descrizione.', 'bad'); cT.focus(); return; }
+        if (!(imp > 0)) { toast('Importo non valido.', 'bad'); cI.focus(); return; }
+        M.cash = M.cash || []; M.cash.push({ id: Date.now().toString(36), d: cD.value, desc: cT.value.trim().slice(0, 120), imp, pasto: cP.checked }); save(); this.update();
+      };
+      [cT, cI].forEach(x => x.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCash(); } }));
+      const cashP = el('section', { class: 'panel stack' }, el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', {}, 'Spese contanti'), el('span', { class: 'hint' }, 'Spese pagate in contanti (non con la carta aziendale) da farti rimborsare. Se è un pasto, quel giorno non dà diritto al buono.')),
+          cashL.length ? btn('Scarica elenco (.xlsx)', () => exportCash(mk), '', 'dl') : null),
+        el('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, cD, cT, cI, el('label', { class: 'row', style: 'gap:6px' }, cP, 'È un pasto'), btn('Aggiungi', addCash, 'pri', 'plus')),
+        cashL.length ? el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Data', 'Descrizione', 'Tipo', 'Importo', ''].map((h, i) => el('th', { class: i === 3 ? 'r' : '' }, h)))),
+          el('tbody', {}, cashL.map(v => { const dd = new Date(v.d + 'T12:00');
+            return el('tr', {}, el('td', { class: 'num', style: 'white-space:nowrap' }, dd.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: '2-digit' })), el('td', {}, el('b', {}, v.desc)),
+              el('td', {}, el('label', { class: 'row', style: 'gap:6px' }, el('input', { type: 'checkbox', checked: !!v.pasto, 'aria-label': 'È un pasto', onchange: e => { v.pasto = e.target.checked; save(); this.update(); } }), v.pasto ? el('span', { class: 'pill', style: '--c:var(--bad)' }, 'Pasto') : el('span', { class: 'pill', style: '--c:var(--ink-3)' }, 'Altra spesa'))),
+              el('td', { class: 'r num' }, eur(v.imp)), el('td', {}, el('button', { type: 'button', class: 'icon-btn', title: 'Elimina la spesa', 'aria-label': 'Elimina ' + v.desc, onclick: () => { M.cash = M.cash.filter(x => x !== v); save(); this.update(); } }, ic('trash', 14))));
+          }), el('tr', {}, el('td', {}), el('td', {}, el('b', {}, 'Totale da riscuotere')), el('td', {}), el('td', { class: 'r num' }, el('b', {}, eur(r2(cashL.reduce((a, v) => a + v.imp, 0))))), el('td', {}))))) : el('p', { class: 'hint', style: 'margin:0' }, 'Nessuna spesa in contanti per ' + MESI[m1 - 1] + '.'));
       // calendario del mese
       const grid = el('div', { class: 'hp-bpcal' }, ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(d => el('div', { class: 'dh' }, d)));
       const lead = (new Date(y, m1 - 1, 1).getDay() + 6) % 7; for (let i = 0; i < lead; i++) grid.append(el('div', { class: 'hp-bpday out' }));
@@ -211,7 +256,7 @@
       const cal = el('section', { class: 'panel stack' }, el('div', { class: 'panel-h' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h3', {}, 'Revisione del mese di ' + MESI[m1 - 1] + ' ' + y), el('span', { class: 'hint' }, 'Spuntato «No BP» = niente buono pasto. Già spuntati: weekend, festivi, chiusure aziendali, ferie, malattia, fiere e trasferte a calendario e i giorni con un pasto in carta. Cambia la spunta per correggere.')),
         el('span', { class: 'pill', style: '--c:var(--ok)' }, nBP + (nBP === 1 ? ' buono' : ' buoni') + ' per un valore di ' + eur(r2(nBP * BPV)))), grid,
         el('p', { class: 'hint' }, 'Ferie, malattia, fiere e trasferte vengono dagli appuntamenti del calendario in cui sei tra i partecipanti (o che hai creato tu), anche a giornata intera su più giorni; le chiusure aziendali valgono per tutti.'));
-      r.replaceChildren(head, kpi, voci, cal);
+      r.replaceChildren(head, kpi, voci, cashP, cal);
     }
   };
   if (location.hash === '#bp' && S.view !== 'bp') setTimeout(() => go('bp'), 0);
