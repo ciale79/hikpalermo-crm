@@ -108,7 +108,7 @@
     const body = el('div', { class: 'stack' },
       el('div', { class: 'row', style: 'gap:16px;align-items:flex-start' }, r.img || (r.kit && r.kit.some(k => k.img)) ? pimg(r.img || r.kit.find(k => k.img).img, 140) : null,
         el('div', { class: 'stack grow', style: 'min-width:240px' },
-          el('div', { class: 'row', style: 'gap:8px' }, el('span', { class: 'pill hp-pavpill' }, m.nome + (m.periodo ? ' (' + fmtP(m.periodo) + ')' : '')), r.kit ? el('span', { class: 'tag new' }, 'KIT · ' + r.kit.length + ' articoli') : null, el('b', { class: 'mono' }, code)),
+          el('div', { class: 'row', style: 'gap:8px' }, el('span', { class: 'pill hp-pavpill' }, m.nome + (m.periodo ? ' (' + fmtP(m.periodo) + ')' : '')), r.kit ? el('span', { class: 'tag new hp-kittag' }, 'KIT · ' + r.kit.length + ' articoli') : null, el('b', { class: 'mono' }, code)),
           descOf(r) ? el('p', { style: 'margin:0' }, descOf(r)) : null, priceBox(r, true), dl(r))),
       r.kit ? el('section', { class: 'panel stack', style: 'background:var(--surface-2)' }, el('h4', { style: 'margin:0' }, 'Composizione del kit'),
         el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['', 'Q.tà', 'Codice', 'SAP', 'EAN', 'Descrizione', 'Prezzi al pezzo'].map((h, i) => el('th', { class: i === 1 || i === 6 ? 'r' : '' }, h)))),
@@ -136,7 +136,7 @@
         const c = r.c, b = r.kit ? 'KIT: ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ') : (r.d2 || r.tip || String(r.d || '').slice(0, 110));
         const d = r.kit ? (r.kit.map(k => k.q + '× ' + k.c + ' — ' + (k.d || k.d2 || '')).join('\n')) : (r.d || r.d2 || '');
         S.cat.push({ i: i0++, s, sap: r.kit ? (r.kit[0].sap || '') : (r.sap || ''), c, sz: r.cat || 'PROAV', fm: r.tip || '', b, d, p: r.p != null ? r.p : 0, noPrice: r.p == null, inf: /new/i.test(r.var || '') ? 'NEW' : '', st: '', m: r.moq || '', n: r.note || '', im: (im => im ? (String(im).startsWith('/') ? im : '/_blob/' + im) : -1)(r.img || (r.kit && (r.kit.find(k => k.img) || {}).img)),
-          nets: Object.keys(nets).length ? nets : null, url: r.url || (r.kit && r.kit[0].url) || '', isNet: false, L: 'pav', cn: norm(c), hay: [c, r._h].join(' | ').toLowerCase(), pavRef: { m, r } });
+          nets: Object.keys(nets).length ? nets : null, url: r.url || (r.kit && r.kit[0].url) || '', isNet: false, L: 'pav', kitN: r.kit ? r.kit.length : 0, cn: norm(c), hay: [c, r._h].join(' | ').toLowerCase(), pavRef: { m, r } });
       }
     }
     S.byCode = new Map(); for (const it of S.cat) { if (!S.byCode.has(it.cn)) S.byCode.set(it.cn, []); S.byCode.get(it.cn).push(it); }
@@ -216,7 +216,7 @@
         res.replaceChildren(el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, [anyImg ? '' : null, 'Codice', 'SAP', 'Descrizione', 'Categoria', 'Listino', 'Netti', 'Fonte'].filter(x => x !== null).map(h => el('th', { class: h === 'Listino' || h === 'Netti' ? 'r' : '' }, h)))),
           el('tbody', {}, list.map(({ m, r }) => { const nets = netsOf(m, r); const im = r.img || (r.kit && (r.kit.find(k => k.img) || {}).img);
             return el('tr', { class: 'hp-click', onclick: () => rowDetail(m, r) }, anyImg ? el('td', {}, pimg(im, 44)) : null,
-              el('td', { class: 'mono', style: 'white-space:nowrap' }, el('b', {}, mainCode(r)), window.hpGlobalChip ? el('div', { style: 'margin-top:3px' }, hpGlobalChip(mainCode(r), undefined, r.url || (r.kit && r.kit[0].url) || '')) : null, r.kit ? el('div', { class: 'hint', style: 'font-size:.72rem' }, el('span', { class: 'tag new', style: 'font-size:.62rem' }, 'KIT'), ' ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ')) : null),
+              el('td', { class: 'mono', style: 'white-space:nowrap' }, el('b', {}, mainCode(r)), window.hpGlobalChip ? el('div', { style: 'margin-top:3px' }, hpGlobalChip(mainCode(r), undefined, r.url || (r.kit && r.kit[0].url) || '')) : null, r.kit ? el('div', { class: 'hint', style: 'font-size:.72rem' }, el('span', { class: 'tag new hp-kittag' }, 'KIT · ' + r.kit.length + ' articoli'), ' ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ')) : null),
               el('td', { class: 'mono', style: 'font-size:.8rem' }, r.kit ? r.kit.map(k => el('div', {}, k.sap || '—')) : (r.sap || el('span', { class: 'muted' }, '—'))),
               el('td', {}, el('div', { class: 'hp-pavdesc', title: descOf(r) }, descOf(r))), el('td', {}, el('div', {}, r.cat || ''), r.tip ? el('small', { class: 'hint', style: 'display:block;max-width:220px' }, r.tip) : null), el('td', { class: 'r num' }, r.p != null ? el('b', {}, eur(r.p)) : el('span', { class: 'muted' }, '—')),
               el('td', { class: 'r num' }, nets.length ? nets.map(([h, v]) => el('div', { class: 'hp-net', title: h + ' · prezzo netto' }, eur(v), el('small', {}, ' ' + h))) : el('span', { class: 'muted' }, '—')),
