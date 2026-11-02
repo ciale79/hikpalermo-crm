@@ -7,7 +7,7 @@
   if (typeof HP_PAV === 'undefined' || !HP_PAV) return;
   const LIB = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   const H = { 'x-hp': '1' };
-  S.pavList = null; S.pavRows = new Map(); S.pavQ = S.pavQ || ''; S.pavL = S.pavL ?? null; S.pavCfg = null;
+  S.pavList = null; S.pavRows = new Map(); S.pavQ = S.pavQ || ''; S.pavL = S.pavL ?? (() => { try { const v = localStorage.getItem('hp_pavL'); return v == null ? null : v; } catch (e) { return null; } })(); S.pavCfg = null;
 
   /* ---------- aspetto ---------- */
   document.title = 'HIK Palermo · ProAV';
@@ -198,6 +198,7 @@
       if (!L.length) { r.replaceChildren(head, el('section', { class: 'panel' }, emptyBox('Nessun listino ProAV', 'Carica l\'Excel di un listino: scegli le colonne di codice, descrizione, prezzo di listino ed eventuali netti. Lo vedrete solo voi.', btn('Carica listino', () => window.hpPavUpload(), 'pri sm', 'up')))); return; }
       // listino aperto di default: il Listino TD Nino (se c'è), altrimenti il più recente
       if (S.pavL == null || (S.pavL && !L.some(m => m.id === S.pavL))) { const d = L.find(m => /td\s*nino/i.test(m.nome || '')) || L[0]; S.pavL = d ? d.id : ''; }
+      try { localStorage.setItem('hp_pavL', S.pavL || ''); } catch (e) { }
       const ready = L.every(m => S.pavRows.has(m.id));
       const cards = el('div', { class: 'hp-pavcards' }, L.map(m => el('div', { class: 'hp-pavcard' + (S.pavL === m.id ? ' on' : ''), role: 'button', tabindex: '0', onclick: () => { S.pavL = S.pavL === m.id ? '' : m.id; this.update(); }, onkeydown: e => { if (e.key === 'Enter') { S.pavL = S.pavL === m.id ? '' : m.id; this.update(); } } },
         el('div', { class: 'row between', style: 'gap:6px;flex-wrap:nowrap' }, el('b', { title: m.nome }, m.nome), el('span', { class: 'row', style: 'gap:2px;flex-wrap:nowrap' },

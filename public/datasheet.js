@@ -41,7 +41,7 @@
     return [...new Set(pdf.sort((a, b) => rank(a) - rank(b)).map(x => x.h))].slice(0, 3);
   }
   async function pdfBytes(u) { const { ct, blob } = await fetchRaw(u); if (!/pdf/.test(ct) && !/\.pdf/i.test(u)) throw new Error('il link non è un PDF'); return await blob.arrayBuffer(); }
-  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', PDFW = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js', JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  const DOCX = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js', PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', PDFW = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js', JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 
   // righe di testo di una pagina: pezzi sulla stessa linea e vicini si uniscono in un segmento con posizione e dimensioni (in pixel del canvas)
   function segments(tc, vp) {
@@ -128,6 +128,7 @@ ${JSON.stringify(part)}`;
       const { g, cv } = P; const W = cv.width, H = cv.height;
       const todo = P.segs.filter(x => x.t && x.t !== x.s).map(x => ({ ...x, c: colors(g, x.x, x.y, x.w, x.h, W, H) }));
       for (const x of todo) { g.fillStyle = x.c.bg; g.fillRect(x.x - 1.5, x.y - x.h * 0.12, x.w + 3, x.h * 1.3); }
+      P.bg = cv.toDataURL('image/jpeg', 0.9); P.runs = []; // sfondo senza il testo tradotto: per il file Word, dove il testo resta modificabile
       for (const x of todo) {
         const FF = 'px Helvetica, Arial, sans-serif'; const s0 = x.h;
         // grassetto: il nome del font lo dice di rado, quindi si confronta la larghezza originale con quella normale e grassetto
@@ -142,6 +143,7 @@ ${JSON.stringify(part)}`;
         g.font = font(size); let tw = g.measureText(x.t).width;
         if (tw > room) { size = Math.max(x.h * 0.55, size * room / tw); g.font = font(size); tw = g.measureText(x.t).width; }
         g.fillStyle = x.c.fg; g.textBaseline = 'alphabetic'; g.fillText(x.t, x.x, x.y + x.h * 0.82, tw > room ? room : undefined);
+        P.runs.push({ t: x.t, x: x.x, y: x.y, size, bold, fg: x.c.fg, room: Math.max(room, tw) });
       }
     }
     await loadScript(JSPDF);
@@ -151,7 +153,26 @@ ${JSON.stringify(part)}`;
       if (!doc) doc = new jsPDF({ orientation: o, unit: 'pt', format: [P.wPt, P.hPt], compress: true }); else doc.addPage([P.wPt, P.hPt], o);
       doc.addImage(P.cv.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, P.wPt, P.hPt, undefined, 'FAST');
     }
-    return { blob: doc.output('blob'), pages: pages.length, righe: all.filter(x => x.t && x.t !== x.s).length };
+    let docx = null; try { docx = await buildDocx(pages, 2.2); } catch (e) { console.warn('word', e); }
+    return { blob: doc.output('blob'), docx, pages: pages.length, righe: all.filter(x => x.t && x.t !== x.s).length };
+  }
+  // file Word modificabile: ogni pagina ha la grafica originale come sfondo e il testo italiano in cornici nella stessa posizione
+  async function buildDocx(pages, k) {
+    await loadScript(DOCX);
+    const X = window.docx; const tw = px => Math.round(px / k * 20); // pixel del canvas → twip
+    const hex = c => { const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(c || ''); return m ? [m[1], m[2], m[3]].map(v => (+v).toString(16).padStart(2, '0')).join('') : '222222'; };
+    const b64 = u => Uint8Array.from(atob(u.split(',')[1]), c => c.charCodeAt(0));
+    const sections = pages.map(P => {
+      const wPx = P.wPt * 96 / 72, hPx = P.hPt * 96 / 72;
+      const bg = new X.Paragraph({ children: [new X.ImageRun({ type: 'jpg', data: b64(P.bg), transformation: { width: wPx, height: hPx }, floating: { horizontalPosition: { relative: 'page', offset: 0 }, verticalPosition: { relative: 'page', offset: 0 }, behindDocument: true, allowOverlap: true } })] });
+      const frames = (P.runs || []).map(r => new X.Paragraph({
+        frame: { type: 'absolute', position: { x: tw(r.x), y: tw(r.y - r.size * 0.1) }, width: tw(r.room + r.size * 0.6), height: tw(r.size * 1.25), anchor: { horizontal: 'page', vertical: 'page' }, wrap: 'none', rule: 'atLeast' },
+        spacing: { before: 0, after: 0, line: 240 },
+        children: [new X.TextRun({ text: r.t, bold: r.bold, size: Math.max(8, Math.round(r.size / k * 2)), color: hex(r.fg), font: 'Arial' })]
+      }));
+      return { properties: { page: { size: { width: Math.round(P.wPt * 20), height: Math.round(P.hPt * 20) }, margin: { top: 0, right: 0, bottom: 0, left: 0, header: 0, footer: 0 } } }, children: [bg, ...frames] };
+    });
+    return await X.Packer.toBlob(new X.Document({ sections }));
   }
 
   async function run(code, src, getBytes, box, m) {
@@ -163,9 +184,11 @@ ${JSON.stringify(part)}`;
       const up = await fetch('/api/blob', { method: 'POST', credentials: 'same-origin', headers: { 'x-hp': '1', 'content-type': 'application/pdf', 'x-name': encodeURIComponent('Datasheet ' + code + ' IT.pdf') }, body: res.blob });
       if (!up.ok) throw new Error('salvataggio non riuscito (' + up.status + ')');
       const id = (await up.json()).id; const old = S.dsTrad.get(nk(code));
-      const D = { code, pdf: id, pages: res.pages, righe: res.righe, size: res.blob.size, src: src || '', at: Date.now(), by: S.me };
+      let wid = null;
+      if (res.docx) { const uw = await fetch('/api/blob', { method: 'POST', credentials: 'same-origin', headers: { 'x-hp': '1', 'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'x-name': encodeURIComponent('Datasheet ' + code + ' IT.docx') }, body: res.docx }); if (uw.ok) wid = (await uw.json()).id; }
+      const D = { code, pdf: id, docx: wid, pages: res.pages, righe: res.righe, size: res.blob.size, src: src || '', at: Date.now(), by: S.me };
       await put('dstrad', nk(code), D); S.dsTrad.set(nk(code), D);
-      if (old && old.pdf && old.pdf !== id) fetch('/api/blob/' + old.pdf, { method: 'DELETE', credentials: 'same-origin', headers: { 'x-hp': '1' } }).catch(() => { });
+      for (const b of [old && old.pdf, old && old.docx]) if (b && b !== id && b !== wid) fetch('/api/blob/' + b, { method: 'DELETE', credentials: 'same-origin', headers: { 'x-hp': '1' } }).catch(() => { });
       m.close(); open(code, src);
     } catch (e) { box.replaceChildren(el('div', { class: 'banner', style: 'border-color:var(--accent)' }, 'Traduzione non riuscita: ' + (e.message || e)), chooser(code, src, box, m)); }
   }
@@ -206,7 +229,7 @@ ${(D.sezioni || []).map(s => '<h2>' + esc(s.titolo) + '</h2><table>' + (s.righe 
     let acts = [];
     if (D && D.pdf) {
       const href = '/_blob/' + D.pdf; const name = 'Datasheet ' + code.replace(/[\\/:*?"<>|]+/g, '-') + ' IT.pdf';
-      acts = [btn('Traduci di nuovo', () => { m.close(); fresh(code, url); }, 'ghost'), el('a', { class: 'btn', href, target: '_blank', rel: 'noopener' }, ic('ext', 16), 'Apri in una scheda'), el('a', { class: 'btn pri', href, download: name }, ic('dl', 16), 'Scarica PDF')];
+      acts = [btn('Traduci di nuovo', () => { m.close(); fresh(code, url); }, 'ghost'), el('a', { class: 'btn', href, target: '_blank', rel: 'noopener' }, ic('ext', 16), 'Apri in una scheda'), D.docx ? el('a', { class: 'btn', href: '/_blob/' + D.docx, download: name.replace(/\.pdf$/, '.docx'), title: 'File Word con la grafica originale come sfondo e il testo italiano modificabile' }, ic('doc', 16), 'Scarica Word') : null, el('a', { class: 'btn pri', href, download: name }, ic('dl', 16), 'Scarica PDF')].filter(Boolean);
       box.append(el('div', { class: 'row', style: 'gap:8px' }, flag(), el('b', { class: 'mono' }, code), el('span', { class: 'hint' }, D.pages + (D.pages === 1 ? ' pagina' : ' pagine') + ' · ' + (D.righe || 0) + ' righe tradotte · ' + new Date(D.at).toLocaleDateString('it-IT') + (D.by ? ' · ' + nm(D.by) : '')), D.src ? el('a', { class: 'hint', href: D.src, target: '_blank', rel: 'noopener' }, 'originale ↗') : null),
         el('iframe', { src: href + '#view=FitH', title: 'Datasheet in italiano', class: 'hp-dsframe' }),
         el('p', { class: 'hint', style: 'margin:0' }, 'Grafica del PDF originale con il testo tradotto da 800AI: in caso di dubbio fa fede il datasheet originale.'));
