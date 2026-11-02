@@ -37,7 +37,24 @@
   // pagina ufficiale su hikvision.com (inglese): manuali, firmware, documentazione globale
   const UK = '<svg viewBox="0 0 60 30" width="15" height="10" aria-hidden="true"><clipPath id="hpuk"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#hpuk)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg>';
   const isModel = c => /^[A-Za-z]{1,8}-[A-Za-z0-9]/.test(String(c || '').trim());
-  window.hpGlobalChip = function (code, cls) {
+  // link «scheda prodotto» del listino: controllato dal server (una volta, poi in cache); se è rotto torna «Cerca Datasheet»
+  const LC = new Map(); const lcQ = []; let lcRun = 0;
+  const lcNext = () => { while (lcRun < 4 && lcQ.length) { const [u, res] = lcQ.shift(); lcRun++; fetch('/api/linkcheck?u=' + encodeURIComponent(u), { credentials: 'same-origin', headers: { 'x-hp': '1' } }).then(r => r.ok ? r.json() : { ok: true }).catch(() => ({ ok: true })).then(j => { lcRun--; res(j); lcNext(); }); } };
+  const linkOk = u => { if (!LC.has(u)) LC.set(u, new Promise(res => { lcQ.push([u, res]); lcNext(); })); return LC.get(u); };
+  const urlOf = code => { try { const it = typeof findCode === 'function' ? findCode(code) : null; return it && it.url || ''; } catch (e) { return ''; } };
+  const searchChip0 = (code, cls) => { const dl = typeof docLinks === 'function' ? docLinks(code) : { ds: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet') };
+    const a = el('a', { class: cls || 'tag hp-gltag', href: dl.ds, target: '_blank', rel: 'noopener', title: dl.dsSaved ? 'Datasheet ufficiale (link salvato)' : 'Cerca il datasheet su hikvision.com (in inglese)', onclick: e => e.stopPropagation() });
+    const f = el('span', { class: 'hp-flag-uk', role: 'img', 'aria-label': 'Documentazione in inglese' }); f.innerHTML = UK; a.append(f, 'Cerca Datasheet'); return a; };
+  window.hpGlobalChip = function (code, cls, url) {
+    if (url === undefined) url = urlOf(code);
+    if (url && /^https?:\/\//i.test(url)) {
+      const big = /\bbtn\b/.test(cls || '');
+      const a = el('a', { class: big ? 'btn hp-glbtn' : 'tag hp-gltag', href: url, target: '_blank', rel: 'noopener', title: 'Scheda prodotto indicata nel listino', onclick: e => e.stopPropagation() });
+      const f = el('span', { class: 'hp-flag-uk', role: 'img', 'aria-label': 'Pagina in inglese' }); f.innerHTML = UK; a.append(f, 'Scheda prodotto');
+      const box = el('span', { class: 'hp-scbox' }, a);
+      linkOk(url).then(j => { if (j && j.ok === false && box.isConnected !== undefined) box.replaceChildren(el('span', { class: big ? 'hint hp-lkbad big' : 'hp-lkbad', title: 'Il link «scheda prodotto» del listino non funziona: ' + url }, 'link listino corrotto'), isModel(code) ? searchChip0(code, cls) : null); });
+      return box;
+    }
     if (!isModel(code)) return null;
     // «Cerca Datasheet»: lo stesso link della scheda articolo (salvato dal gruppo o ricerca su hikvision.com), senza usare l'AI
     const dl = typeof docLinks === 'function' ? docLinks(code) : { ds: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet') };

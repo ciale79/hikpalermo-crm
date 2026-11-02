@@ -112,9 +112,9 @@
           descOf(r) ? el('p', { style: 'margin:0' }, descOf(r)) : null, priceBox(r, true), dl(r))),
       r.kit ? el('section', { class: 'panel stack', style: 'background:var(--surface-2)' }, el('h4', { style: 'margin:0' }, 'Composizione del kit'),
         el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['', 'Q.tà', 'Codice', 'SAP', 'EAN', 'Descrizione', 'Prezzi al pezzo'].map((h, i) => el('th', { class: i === 1 || i === 6 ? 'r' : '' }, h)))),
-          el('tbody', {}, r.kit.map(k => el('tr', {}, el('td', {}, pimg(k.img, 40)), el('td', { class: 'r num' }, el('b', {}, k.q + '×')), el('td', { class: 'mono' }, k.url ? el('a', { href: k.url, target: '_blank', rel: 'noopener' }, k.c) : k.c), el('td', { class: 'mono' }, k.sap || '—'), el('td', { class: 'mono' }, k.ean || '—'),
+          el('tbody', {}, r.kit.map(k => el('tr', {}, el('td', {}, pimg(k.img, 40)), el('td', { class: 'r num' }, el('b', {}, k.q + '×')), el('td', { class: 'mono' }, k.c, window.hpGlobalChip ? el('div', { style: 'margin-top:3px' }, hpGlobalChip(k.c, undefined, k.url || '')) : null), el('td', { class: 'mono' }, k.sap || '—'), el('td', { class: 'mono' }, k.ean || '—'),
             el('td', {}, el('div', { class: 'hp-pavdesc', title: k.d || '' }, k.d || k.d2 || '')), el('td', { class: 'r num hp-net', style: 'font-size:.82rem' }, (k.p != null ? 'Listino ' + eur(k.p) + ' ' : '') + (k.n || []).map(([h, v]) => h + ' ' + eur(v)).join(' · ') || '—'))))))) : null);
-    const md = modal(code, body, [btn('Copia codice', () => copy(code), '', 'copy'), (window.hpGlobalChip && window.hpGlobalChip(code, 'btn hp-glbtn')) || el('a', { class: 'btn', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet'), target: '_blank', rel: 'noopener' }, 'Cerca datasheet'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())], { wide: true });
+    const md = modal(code, body, [btn('Copia codice', () => copy(code), '', 'copy'), (window.hpGlobalChip && window.hpGlobalChip(code, 'btn hp-glbtn', r.url || (r.kit && r.kit[0].url) || '')) || el('a', { class: 'btn', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + code + ' datasheet'), target: '_blank', rel: 'noopener' }, 'Cerca datasheet'), el('span', { class: 'grow' }), btn('Chiudi', () => md.close())], { wide: true });
   }
 
   /* ---------- listini ProAV anche in «Articoli» (e quindi in ricerca, offerte e capitolati di questa area) ---------- */
@@ -136,7 +136,7 @@
         const c = r.c, b = r.kit ? 'KIT: ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ') : (r.d2 || r.tip || String(r.d || '').slice(0, 110));
         const d = r.kit ? (r.kit.map(k => k.q + '× ' + k.c + ' — ' + (k.d || k.d2 || '')).join('\n')) : (r.d || r.d2 || '');
         S.cat.push({ i: i0++, s, sap: r.kit ? (r.kit[0].sap || '') : (r.sap || ''), c, sz: r.cat || 'PROAV', fm: r.tip || '', b, d, p: r.p != null ? r.p : 0, noPrice: r.p == null, inf: /new/i.test(r.var || '') ? 'NEW' : '', st: '', m: r.moq || '', n: r.note || '', im: (im => im ? (String(im).startsWith('/') ? im : '/_blob/' + im) : -1)(r.img || (r.kit && (r.kit.find(k => k.img) || {}).img)),
-          nets: Object.keys(nets).length ? nets : null, url: r.url || '', isNet: false, L: 'pav', cn: norm(c), hay: [c, r._h].join(' | ').toLowerCase(), pavRef: { m, r } });
+          nets: Object.keys(nets).length ? nets : null, url: r.url || (r.kit && r.kit[0].url) || '', isNet: false, L: 'pav', cn: norm(c), hay: [c, r._h].join(' | ').toLowerCase(), pavRef: { m, r } });
       }
     }
     S.byCode = new Map(); for (const it of S.cat) { if (!S.byCode.has(it.cn)) S.byCode.set(it.cn, []); S.byCode.get(it.cn).push(it); }
@@ -214,7 +214,7 @@
         res.replaceChildren(el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, [anyImg ? '' : null, 'Codice', 'SAP', 'Descrizione', 'Categoria', 'Listino', 'Netti', 'Fonte'].filter(x => x !== null).map(h => el('th', { class: h === 'Listino' || h === 'Netti' ? 'r' : '' }, h)))),
           el('tbody', {}, list.map(({ m, r }) => { const nets = netsOf(m, r); const im = r.img || (r.kit && (r.kit.find(k => k.img) || {}).img);
             return el('tr', { class: 'hp-click', onclick: () => rowDetail(m, r) }, anyImg ? el('td', {}, pimg(im, 44)) : null,
-              el('td', { class: 'mono', style: 'white-space:nowrap' }, el('b', {}, mainCode(r)), r.kit ? el('div', { class: 'hint', style: 'font-size:.72rem' }, el('span', { class: 'tag new', style: 'font-size:.62rem' }, 'KIT'), ' ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ')) : null),
+              el('td', { class: 'mono', style: 'white-space:nowrap' }, el('b', {}, mainCode(r)), window.hpGlobalChip ? el('div', { style: 'margin-top:3px' }, hpGlobalChip(mainCode(r), undefined, r.url || (r.kit && r.kit[0].url) || '')) : null, r.kit ? el('div', { class: 'hint', style: 'font-size:.72rem' }, el('span', { class: 'tag new', style: 'font-size:.62rem' }, 'KIT'), ' ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ')) : null),
               el('td', { class: 'mono', style: 'font-size:.8rem' }, r.kit ? r.kit.map(k => el('div', {}, k.sap || '—')) : (r.sap || el('span', { class: 'muted' }, '—'))),
               el('td', {}, el('div', { class: 'hp-pavdesc', title: descOf(r) }, descOf(r))), el('td', {}, el('div', {}, r.cat || ''), r.tip ? el('small', { class: 'hint', style: 'display:block;max-width:220px' }, r.tip) : null), el('td', { class: 'r num' }, r.p != null ? el('b', {}, eur(r.p)) : el('span', { class: 'muted' }, '—')),
               el('td', { class: 'r num' }, nets.length ? nets.map(([h, v]) => el('div', { class: 'hp-net', title: h + ' · prezzo netto' }, eur(v), el('small', {}, ' ' + h))) : el('span', { class: 'muted' }, '—')),
