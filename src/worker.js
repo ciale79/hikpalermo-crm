@@ -560,7 +560,8 @@ async function claudeProxy(req, env) {
   if (!env.ANTHROPIC_API_KEY) return err('not_configured', 'Chiave Anthropic non configurata sul server.', 503);
   const b = await req.json().catch(() => null);
   if (!b || !Array.isArray(b.messages)) return err('invalid_argument', 'Richiesta non valida');
-  const body = { model: env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: Math.min(+b.max_tokens || 16000, 32000), messages: Array.isArray(b.tools) && b.tools.length ? withCache(b.messages) : b.messages };
+  const okModel = ['claude-sonnet-5-5', 'claude-haiku-5-5'].includes(b.model) ? b.model : null;
+  const body = { model: okModel || env.CLAUDE_MODEL || 'claude-opus-5-5', max_tokens: Math.min(+b.max_tokens || 16000, 32000), messages: Array.isArray(b.tools) && b.tools.length ? withCache(b.messages) : b.messages };
   if (b.system) body.system = b.system;
   if (Array.isArray(b.tools) && b.tools.length) body.tools = b.tools;
   if (b.tool_choice) body.tool_choice = b.tool_choice;
