@@ -42,8 +42,8 @@
       String(o.intro || '').trim().split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(new Paragraph({ children: [R(par, { s: 10 })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 330 } })));
       // immagini dei prodotti in copertina, come nel PDF
       const cov = window.hpPavCovData ? await hpPavCovData(o) : [];
-      if (cov.length) { const sz = Math.min(40, (175 - 6 * (cov.length - 1)) / cov.length); const cw = Math.round((sz + 6) * 56.7);
-        body.push(Pp(R('', { s: 10 }), { after: 30 }), new Table({ width: { size: cw * cov.length, type: WidthType.DXA }, alignment: AlignmentType.CENTER, layout: TableLayoutType.FIXED, columnWidths: cov.map(() => cw), rows: [new TableRow({ children: await Promise.all(cov.map(async d => cell(new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(d), transformation: { width: Math.round(sz * 3.78), height: Math.round(sz * 3.78) } })] }), { noB: true, w: cw }))) })] })); }
+      if (cov.length) { const im = cov[0]; let h = 70, w = h / (im.r || 1); if (w > 174) { w = 174; h = w * (im.r || 1); }
+        body.push(Pp(R('', { s: 10 }), { after: 30 }), new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(im.d), transformation: { width: Math.round(w * 3.78), height: Math.round(h * 3.78) } })] })); }
       /* pagina «Offerta» con le anteprime dei prodotti */
       body.push(new Paragraph({ children: [new PageBreak()] }), nl ? img(nl, 52.5, 'l') : null, Pp(R('', { s: 10 }), { after: 6 }), Pp(R('Offerta', { s: 11, c: RED }), { after: 2 }), Pp(R(num + ' del ' + dt + (rif ? ' · ' + rif : ''), { s: 8, c: GREY }), { after: 6 }));
       { const L0 = o.righe || []; const cellB = (c, op = {}) => cell(c, { ...op, bord: op.head ? { top: none, left: none, right: none, bottom: thin } : { top: none, bottom: none, left: none, right: none } }); const thumbs = await Promise.all(L0.map(r => window.hpPavProdImg ? hpPavProdImg({ ...r, c: hpPavMainC(r.c) }, false).catch(() => null) : null));

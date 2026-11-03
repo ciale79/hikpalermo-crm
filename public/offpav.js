@@ -25,6 +25,13 @@
     if (dark) { g.globalCompositeOperation = 'source-in'; g.fillStyle = 'rgb(51,51,51)'; g.fillRect(0, 0, c.width, c.height); }
     return { d: c.toDataURL('image/png'), r: c.height / c.width };
   }
+  // immagine con le proporzioni originali (sfondo bianco), per la copertina
+  async function natural(src, px) {
+    const i = await loadImg(src); if (!i || !i.naturalWidth) return null;
+    const k = Math.min(1, px / Math.max(i.naturalWidth, i.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.round(i.naturalWidth * k); c.height = Math.round(i.naturalHeight * k);
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(i, 0, 0, c.width, c.height);
+    return { d: c.toDataURL('image/jpeg', 0.9), r: c.height / c.width };
+  }
   async function square(src, px) {
     const i = await loadImg(src); if (!i) return null;
     const c = document.createElement('canvas'); c.width = c.height = px; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, px, px);
@@ -39,7 +46,7 @@
   window.hpCodeLines = c => String(c || '').split(/\s*\+\s*/).flatMap((p, i, a) => { const t = p + (i < a.length - 1 ? ' +' : ''); const out = []; for (let k = 0; k < t.length; k += 22) out.push(t.slice(k, k + 22)); return out.length ? out : ['']; });
   const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
   // immagine del prodotto: prima quella della pagina ufficiale ProAV (og:image della scheda prodotto), altrimenti quella del listino
-  async function productImage(r, big) {
+  async function productImage(r, big, nat) {
     const it = fc(r.c, r.L) || {};
     const url = String(it.url || '').replace(/&amp;/g, '&');
     if (big && /^https?:\/\//.test(url)) {
@@ -48,13 +55,13 @@
         const html = await h.text(); const m = /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]*content=["']([^"']+)["']/i.exec(html) || /content=["']([^"']+)["'][^>]+(?:property|name)=["']og:image["']/i.exec(html); if (!m) return null;
         let src; try { src = new URL(m[1].replace(/&amp;/g, '&'), url).href; } catch (e) { return null; }
         const ir = await fetch('/api/fetch?u=' + encodeURIComponent(src), { credentials: 'same-origin' }); if (!ir.ok || !/image/.test(ir.headers.get('content-type') || '')) return null;
-        const b = URL.createObjectURL(await ir.blob()); const out = await square(b, 600); URL.revokeObjectURL(b); return out;
+        const b = URL.createObjectURL(await ir.blob()); const out = nat ? await natural(b, 1400) : await square(b, 600); URL.revokeObjectURL(b); return out;
       })(), 8000);
       if (d) return d;
     }
     const im = r.im != null ? r.im : it.im;
-    if (typeof im === 'string' && im[0] === '/') return square(im, big ? 600 : 300);
-    try { const n = window.artThumbC ? artThumbC(r.c, im, 96) : thumb(im, 96); if (n && !n.classList.contains('none') && window.hpImgData) return await window.hpImgData(n, big ? 400 : 240); } catch (e) { }
+    if (typeof im === 'string' && im[0] === '/') return nat ? natural(im, 1400) : square(im, big ? 600 : 300);
+    try { const n = window.artThumbC ? artThumbC(r.c, im, 96) : thumb(im, 96); if (n && !n.classList.contains('none') && window.hpImgData) { const d = await window.hpImgData(n, big ? 400 : 240); return nat && d ? natural(d, 1400) : d; } } catch (e) { }
     return null;
   }
 
@@ -87,26 +94,26 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
   };
 
   /* ---------- immagini di copertina: automatiche (i 4 prodotti principali per valore) o scelte nella scheda offerta ---------- */
-  const COVMAX = 6;
-  const autoCov = D => [...new Map((D.righe || []).filter(r => r.c).slice().sort((a, b) => lineTot(b).netto - lineTot(a).netto).map(r => [mainC(r.c), r])).values()].slice(0, 4).map(r => ({ k: 'art', c: mainC(r.c), L: r.L }));
+  const COVMAX = 1; // in copertina una sola immagine, alta 7 cm con le sue proporzioni
+  const autoCov = D => [...new Map((D.righe || []).filter(r => r.c).slice().sort((a, b) => lineTot(b).netto - lineTot(a).netto).map(r => [mainC(r.c), r])).values()].slice(0, 1).map(r => ({ k: 'art', c: mainC(r.c), L: r.L }));
   const covImgCache = new Map();
   const covImage = async (x, D) => {
-    if (x.k === 'img') return square('/_blob/' + x.id, 600);
+    if (x.k === 'img') return natural('/_blob/' + x.id, 1400);
     const key = x.c + '|' + (x.L || ''); if (covImgCache.has(key)) return covImgCache.get(key);
     const r = (D.righe || []).find(y => mainC(y.c) === x.c) || { c: x.c, L: x.L };
-    const p = productImage({ ...r, c: x.c }, true); covImgCache.set(key, p); return p;
+    const p = productImage({ ...r, c: x.c }, true, true); covImgCache.set(key, p); return p;
   };
   function covBox(D) {
     const box = el('div', { class: 'hp-covgrid' }); const hint = el('span', { class: 'hint' });
-    const fIn = el('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+    const fIn = el('input', { type: 'file', accept: 'image/*', hidden: true });
     const addSel = el('select', { 'aria-label': 'Aggiungi l\'immagine di un articolo', style: 'width:auto;max-width:280px' });
     const list = () => Array.isArray(D.cov) ? D.cov : autoCov(D);
     const own = () => { if (!Array.isArray(D.cov)) D.cov = autoCov(D); return D.cov; };
     const draw = () => {
-      const L = list(); hint.textContent = Array.isArray(D.cov) ? 'Scelte a mano · ' + L.length + ' di ' + COVMAX : 'Automatiche: i prodotti principali per valore';
+      const L = list(); hint.textContent = Array.isArray(D.cov) ? 'Scelta a mano · una sola immagine, alta 7 cm' : 'Automatica: il prodotto principale per valore · alta 7 cm';
       box.replaceChildren(...(L.length ? L.map((x, i) => {
         const im = el('div', { class: 'hp-covimg' }, el('span', { class: 'spin' }));
-        covImage(x, D).then(d => im.replaceChildren(d ? el('img', { src: d, alt: x.k === 'img' ? x.name || 'immagine' : x.c }) : el('span', { class: 'hint' }, 'nessuna immagine')));
+        covImage(x, D).then(d => im.replaceChildren(d ? el('img', { src: d.d || d, alt: x.k === 'img' ? x.name || 'immagine' : x.c }) : el('span', { class: 'hint' }, 'nessuna immagine')));
         const mv = (dlt) => { const a = own(); const j = i + dlt; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; draw(); };
         return el('div', { class: 'hp-covit' }, im, el('small', { class: 'mono', style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.68rem', title: x.k === 'img' ? x.name : x.c }, x.k === 'img' ? '📎 ' + (x.name || 'immagine') : x.c), el('div', { class: 'row', style: 'gap:2px;justify-content:center;flex-wrap:nowrap' },
           el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Sposta a sinistra', disabled: i === 0, onclick: () => mv(-1) }, '←'),
@@ -116,11 +123,11 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       const used = new Set(L.filter(x => x.k === 'art').map(x => x.c));
       const codes = [...new Map((D.righe || []).filter(r => r.c && !used.has(mainC(r.c))).map(r => [mainC(r.c), r])).values()];
       addSel.replaceChildren(el('option', { value: '' }, codes.length ? '+ Immagine di un articolo…' : 'Tutti gli articoli sono già in copertina'), ...codes.map(r => el('option', { value: mainC(r.c) }, mainC(r.c))));
-      addSel.disabled = !codes.length || L.length >= COVMAX;
+      addSel.disabled = !codes.length;
     };
-    addSel.addEventListener('change', () => { const c = addSel.value; if (!c) return; const r = (D.righe || []).find(y => mainC(y.c) === c); const a = own(); if (a.length >= COVMAX) { toast('In copertina ci stanno al massimo ' + COVMAX + ' immagini.', 'bad'); return; } a.push({ k: 'art', c, L: r && r.L }); draw(); });
-    fIn.addEventListener('change', async () => { const fs = [...fIn.files]; fIn.value = ''; for (const f of fs) { const a = own(); if (a.length >= COVMAX) { toast('In copertina ci stanno al massimo ' + COVMAX + ' immagini.', 'bad'); break; }
-      try { const r = await assets.upload(f, { type: f.type || 'image/jpeg' }); a.push({ k: 'img', id: r.id, name: f.name }); draw(); } catch (e) { toast('Caricamento di «' + f.name + '» non riuscito', 'bad'); } } });
+    addSel.addEventListener('change', () => { const c = addSel.value; if (!c) return; const r = (D.righe || []).find(y => mainC(y.c) === c); const a = own(); a.splice(0, a.length, { k: 'art', c, L: r && r.L }); draw(); });
+    fIn.addEventListener('change', async () => { const f = fIn.files[0]; fIn.value = ''; if (!f) return; const a = own();
+      try { const r = await assets.upload(f, { type: f.type || 'image/jpeg' }); a.splice(0, a.length, { k: 'img', id: r.id, name: f.name }); draw(); } catch (e) { toast('Caricamento di «' + f.name + '» non riuscito', 'bad'); } });
     draw();
     return el('div', { class: 'fld full' }, el('span', { class: 'row between', style: 'gap:8px;flex-wrap:wrap' }, el('span', {}, 'Immagini di copertina ', hint),
       el('span', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, addSel, typeof assets !== 'undefined' && assets ? btn('Carica immagine', () => fIn.click(), 'sm ghost', 'up') : null, btn('Automatiche', () => { D.cov = null; draw(); }, 'sm ghost', 'spark'))), box, fIn);
@@ -203,10 +210,9 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     say('Cerco le immagini dei prodotti…');
     const covList = Array.isArray(o.cov) ? o.cov : autoCov(o);
     const covImgs = (await Promise.all(covList.slice(0, COVMAX).map(x => covImage(x, o).catch(() => null)))).filter(Boolean);
-    if (covImgs.length) {
-      const n = covImgs.length; const gap = 6; const room = Math.max(30, PH - 24 - y); const sz = Math.min(42, (CW - gap * (n - 1)) / n, room);
-      let x = (W - (n * sz + (n - 1) * gap)) / 2; const yy = Math.min(PH - 22 - sz, Math.max(y, PH - 30 - sz - 10));
-      for (const d of covImgs) { doc.setDrawColor(225, 228, 234); doc.setLineWidth(.2); doc.roundedRect(x, yy, sz, sz, 2, 2); doc.addImage(d, 'JPEG', x + 1, yy + 1, sz - 2, sz - 2); x += sz + gap; }
+    if (covImgs.length) { // una sola immagine, alta 7 cm con le sue proporzioni, centrata (se è molto larga si stringe alla larghezza utile)
+      const im = covImgs[0]; let h = 70, w = h / (im.r || 1); if (w > CW) { w = CW; h = w * (im.r || 1); }
+      const yy = Math.min(PH - 22 - h, Math.max(y, PH - 30 - h - 10)); doc.addImage(im.d, 'JPEG', (W - w) / 2, yy, w, h);
     }
 
     /* 2 · offerta con anteprime */
