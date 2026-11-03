@@ -188,14 +188,14 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     let y = MG;
     y = logoAt((W - 69.6) / 2, y, 69.6) + 2 * PT;
     y = BLANK(y, 10, 1.15, 10); y = BLANK(y, 10, 1.15, 10);
-    y = PARA('Offerta riservata per', y, { s: 11, c: GREY });
+    y = PARA('Offerta riservata per', y, { s: 10, c: GREY });
     y = PARA(cliName.toUpperCase(), y, { s: 14, b: true, c: DARK });
     y = BLANK(y, 10);
-    if (rif) { y = PARA('Riferimento', y, { s: 11, c: GREY }); y = PARA(rif, y, { s: 14, c: DARK }); }
+    if (rif) { y = PARA('Riferimento', y, { s: 10, c: GREY }); y = PARA(rif, y, { s: 12, c: DARK }); }
     y = PARA(num + ' del ' + dt, y, { s: 8, c: GREY });
     y = BLANK(y, 10); y = BLANK(y, 10);
     const intro = String(o.intro || '').trim();
-    if (intro) for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) y = PARA(par, y, { s: 11, mult: 1.375, a: 'j', after: 8 });
+    if (intro) for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) y = PARA(par, y, { s: 10, mult: 1.375, a: 'j', after: 8 });
     y += 4;
     // immagini dei prodotti (fino a 4, i prodotti principali per valore)
     say('Cerco le immagini dei prodotti…');
@@ -210,7 +210,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     /* 2 · offerta con anteprime */
     doc.addPage(); y = MG;
     y = logoAt(MG, y, 52.5) + 2 * PT; y = BLANK(y, 10, 1.15, 6);
-    y = PARA('Offerta', y, { s: 14, c: RED, mult: 1.15, after: 2 }); y = PARA(num + ' del ' + dt + (rif ? ' · ' + rif : ''), y, { s: 8, c: GREY, mult: 1.15, after: 6 });
+    y = PARA('Offerta', y, { s: 11, c: RED, mult: 1.15, after: 2 }); y = PARA(num + ' del ' + dt + (rif ? ' · ' + rif : ''), y, { s: 8, c: GREY, mult: 1.15, after: 6 });
     const y2 = y;
     say('Preparo le anteprime…');
     const thumbs = await Promise.all(lines.map(r => productImage({ ...r, c: mainC(r.c) }, false)));
@@ -224,11 +224,11 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       body.push([{ content: longD(r) + (r.net ? ' (prezzo netto)' : ''), colSpan: 6, styles: { fontSize: 7.5, textColor: INK, cellPadding: { top: 0.9, bottom: 2.2, left: 1.4, right: 1.4 } } }]);
     });
     tb = {}; doc.autoTable({ startY: y2, head: [['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale']], body, margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
-      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'middle' },
-      headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 },
+      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: 0, valign: 'middle' },
+      headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineWidth: 0 },
       columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 24 }, 3: { cellWidth: 13 }, 4: { cellWidth: 26 }, 5: { cellWidth: 28 } },
       didParseCell: d => { if (d.section === 'body' && imgAt.has(d.row.index) && d.column.index === 0) d.cell.styles.minCellHeight = 22; },
-      didDrawCell: d => { tHooks.didDrawCell(d); if (d.section === 'body' && d.column.index === 0 && imgAt.get(d.row.index)) { const s = Math.min(d.cell.width, d.cell.height) - 2; doc.addImage(imgAt.get(d.row.index), 'JPEG', d.cell.x + (d.cell.width - s) / 2, d.cell.y + (d.cell.height - s) / 2, s, s); } } });
+      didDrawCell: d => { tHooks.didDrawCell(d); if (d.section === 'head') { doc.setDrawColor(...LINEC); doc.setLineWidth(.2); doc.line(d.cell.x, d.cell.y + d.cell.height, d.cell.x + d.cell.width, d.cell.y + d.cell.height); } if (d.section === 'body' && d.column.index === 0 && imgAt.get(d.row.index)) { const s = Math.min(d.cell.width, d.cell.height) - 2; doc.addImage(imgAt.get(d.row.index), 'JPEG', d.cell.x + (d.cell.width - s) / 2, d.cell.y + (d.cell.height - s) / 2, s, s); } } });
     roundTables();
     const Tt = offTot(lines); const iva = Math.round(Tt.N * 22) / 100;
     y = doc.lastAutoTable.finalY + 8; if (y > PH - 40) { doc.addPage(); y = 25; }
@@ -245,11 +245,11 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     doc.addPage(); y = MG;
     y = logoAt(MG, y, 52.5) + 2 * PT; y = BLANK(y, 10, 1.15, 6);
     const cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
-    { const cx1 = MG + 1.4, cx2 = MG + 95.25 + 1.4, cw2 = CW - 95.25 - 2.8; let ya = y + 0.9, yb = y + 0.9; const o11 = { s: 11, mult: 1.15, after: 1 };
+    { const cx1 = MG + 1.4, cx2 = MG + 95.25 + 1.4, cw2 = CW - 95.25 - 2.8; let ya = y + 0.9, yb = y + 0.9; const o11 = { s: 10, mult: 1.15, after: 1 };
       ya = PARA('Partner contrattuale:', ya, { ...o11, i: true, x: cx1 }); for (const t of ['HIKVISION ITALY Srl', 'Sede legale: Viale Fulvio Testi, 113', '20092 Cinisello Balsamo (MI)']) ya = PARA(t, ya, { ...o11, x: cx1 });
       yb = PARA('Spett.le', yb, { ...o11, x: cx2, w: cw2 }); for (const t of cl) yb = PARA(t, yb, { ...o11, x: cx2, w: cw2 });
       y = Math.max(ya, yb) + 0.9; }
-    y = PARA('Offerta commerciale', y, { s: 14, c: RED, mult: 1.15, before: 14, after: 6 });
+    y = PARA('Offerta commerciale', y, { s: 11, c: RED, mult: 1.15, before: 14, after: 6 });
     const kv = (k, v) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(10); const kw = doc.getTextWidth(k + '  '); PARA(k, y, { s: 10, b: true, mult: 1.15 }); y = PARA(v, y, { s: 10, mult: 1.15, after: 2, x: MG + kw, w: CW - kw }); };
     kv('Offerta numero:', num + ' del ' + dt); kv('Redatta da:', [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean).join(' · ')); if (rif) kv('Riferimento:', rif);
     y = PARA('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', y, { s: 8, mult: 1.15, before: 8, after: 2 });
@@ -307,7 +307,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       try { say('Aggiungo ' + a.label + '…'); const buf = a.file ? await a.file.arrayBuffer() : await fetchBuf(a.url); const pages = await pdfPagesFrom(buf, say, a.label); extra.push(...pages); }
       catch (e) { toast('Non ho potuto aggiungere «' + a.label + '»: ' + e.message, 'bad'); }
     }
-    for (const pg of extra) { const o2 = pg.w > pg.h ? 'l' : 'p'; doc.addPage([pg.w * 25.4 / 72, pg.h * 25.4 / 72], o2); doc.addImage(pg.d, 'JPEG', 0, 0, pg.w * 25.4 / 72, pg.h * 25.4 / 72, undefined, 'FAST'); }
+    for (const pg of extra) { const land = pg.w > pg.h; doc.addPage('a4', land ? 'l' : 'p'); const PW = land ? 297 : 210, PHh = land ? 210 : 297, m = 6; const k = Math.min((PW - 2 * m) / pg.w, (PHh - 2 * m) / pg.h); const iw = pg.w * k, ih = pg.h * k; doc.addImage(pg.d, 'JPEG', (PW - iw) / 2, (PHh - ih) / 2, iw, ih, undefined, 'FAST'); }
     say('Salvo il PDF…');
     window.hpDlReady(doc.output('blob'), ('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision_proav.pdf');
   }

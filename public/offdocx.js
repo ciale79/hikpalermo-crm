@@ -30,30 +30,30 @@
     const img = (im, wMm, a) => im ? Pp(new ImageRun({ type: 'png', data: im.data, transformation: { width: Math.round(wMm * 3.78), height: Math.round(wMm * im.r * 3.78) } }), { a: a || 'c', after: 2, img: true }) : null;
     const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, thin = { style: BorderStyle.SINGLE, size: 4, color: LINE };
     const cell = (content, op = {}) => new TableCell({ children: (Array.isArray(content) ? content : [content]).map(c => c instanceof Paragraph ? c : Pp(R(c, { s: op.s || 7.5, b: op.b, c: op.c || (op.head ? 'FFFFFF' : INK) }), { a: op.a, after: 0, line: 240 })), columnSpan: op.span, width: op.w ? { size: op.w, type: WidthType.DXA } : undefined,
-      shading: op.fill ? { type: ShadingType.CLEAR, color: 'auto', fill: op.fill } : undefined, margins: { top: 50, bottom: 50, left: 80, right: 80 }, borders: op.noB ? { top: none, bottom: none, left: none, right: none } : { top: thin, bottom: thin, left: thin, right: thin } });
+      shading: op.fill ? { type: ShadingType.CLEAR, color: 'auto', fill: op.fill } : undefined, margins: { top: 50, bottom: 50, left: 80, right: 80 }, borders: op.bord !== undefined ? op.bord : op.noB ? { top: none, bottom: none, left: none, right: none } : { top: thin, bottom: thin, left: thin, right: thin } });
 
     const body = [];
     /* 1 · copertina */
     if (pav) { // copertina ProAV come il modello Word di riferimento
       const P1 = (t, op) => Pp(R(t, op), { after: 0, img: true }); const E = () => Pp(R('', { s: 10 }), { after: 0, img: true });
       body.push(nl ? img(nl, 69.6, 'c') : img(hik, 100), Pp(R('', { s: 10 }), { after: 10 }), Pp(R('', { s: 10 }), { after: 10 }),
-        P1('Offerta riservata per', { s: 11, c: GREY }), P1(cliName.toUpperCase(), { s: 14, b: true, c: DARK }), E(),
-        rif ? P1('Riferimento', { s: 11, c: GREY }) : null, rif ? P1(rif, { s: 14, c: DARK }) : null, P1(num + ' del ' + dt, { s: 8, c: GREY }), E(), E());
-      String(o.intro || '').trim().split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(new Paragraph({ children: [R(par, { s: 11 })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 330 } })));
+        P1('Offerta riservata per', { s: 10, c: GREY }), P1(cliName.toUpperCase(), { s: 14, b: true, c: DARK }), E(),
+        rif ? P1('Riferimento', { s: 10, c: GREY }) : null, rif ? P1(rif, { s: 12, c: DARK }) : null, P1(num + ' del ' + dt, { s: 8, c: GREY }), E(), E());
+      String(o.intro || '').trim().split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(new Paragraph({ children: [R(par, { s: 10 })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 330 } })));
       // immagini dei prodotti in copertina, come nel PDF
       const cov = window.hpPavCovData ? await hpPavCovData(o) : [];
       if (cov.length) { const sz = Math.min(40, (175 - 6 * (cov.length - 1)) / cov.length); const cw = Math.round((sz + 6) * 56.7);
         body.push(Pp(R('', { s: 10 }), { after: 30 }), new Table({ width: { size: cw * cov.length, type: WidthType.DXA }, alignment: AlignmentType.CENTER, layout: TableLayoutType.FIXED, columnWidths: cov.map(() => cw), rows: [new TableRow({ children: await Promise.all(cov.map(async d => cell(new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(d), transformation: { width: Math.round(sz * 3.78), height: Math.round(sz * 3.78) } })] }), { noB: true, w: cw }))) })] })); }
       /* pagina «Offerta» con le anteprime dei prodotti */
-      body.push(new Paragraph({ children: [new PageBreak()] }), nl ? img(nl, 52.5, 'l') : null, Pp(R('', { s: 10 }), { after: 6 }), Pp(R('Offerta', { s: 14, c: RED }), { after: 2 }), Pp(R(num + ' del ' + dt + (rif ? ' · ' + rif : ''), { s: 8, c: GREY }), { after: 6 }));
-      { const L0 = o.righe || []; const thumbs = await Promise.all(L0.map(r => window.hpPavProdImg ? hpPavProdImg({ ...r, c: hpPavMainC(r.c) }, false).catch(() => null) : null));
+      body.push(new Paragraph({ children: [new PageBreak()] }), nl ? img(nl, 52.5, 'l') : null, Pp(R('', { s: 10 }), { after: 6 }), Pp(R('Offerta', { s: 11, c: RED }), { after: 2 }), Pp(R(num + ' del ' + dt + (rif ? ' · ' + rif : ''), { s: 8, c: GREY }), { after: 6 }));
+      { const L0 = o.righe || []; const cellB = (c, op = {}) => cell(c, { ...op, bord: op.head ? { bottom: thin } : {} }); const thumbs = await Promise.all(L0.map(r => window.hpPavProdImg ? hpPavProdImg({ ...r, c: hpPavMainC(r.c) }, false).catch(() => null) : null));
         const cw = [1360, 1360, 0, 740, 1470, 1590]; cw[2] = 9906 - cw.reduce((a, b) => a + b, 0);
-        const rows = [new TableRow({ tableHeader: true, children: ['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale'].map((h, k) => cell(h, { head: true, fill: 'DEE0E4', c: DARK, b: true, w: cw[k], a: 'c' })) })]; let sz0 = null;
-        for (let i = 0; i < L0.length; i++) { const r = L0[i]; if ((r.sez || '') !== sz0) { sz0 = r.sez || ''; if (sz0) rows.push(new TableRow({ children: [cell(sz0, { b: true, fill: 'F6F7F8', span: 6 })] })); }
+        const rows = [new TableRow({ tableHeader: true, children: ['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale'].map((h, k) => cellB(h, { head: true, fill: 'DEE0E4', c: DARK, b: true, w: cw[k], a: 'c' })) })]; let sz0 = null;
+        for (let i = 0; i < L0.length; i++) { const r = L0[i]; if ((r.sez || '') !== sz0) { sz0 = r.sez || ''; if (sz0) rows.push(new TableRow({ children: [cellB(sz0, { b: true, fill: 'F6F7F8', span: 6 })] })); }
           const it = fc(r.c, r.L) || {}; const t = lineTot(r); const th = thumbs[i];
-          rows.push(new TableRow({ cantSplit: true, children: [cell(th ? new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(th), transformation: { width: 64, height: 64 } })] }) : '', { w: cw[0] }), cell(it.sap || r.sap || '', { w: cw[1] }), cell(r.c, { w: cw[2], b: true, c: DARK }), cell(String(r.q), { w: cw[3], a: 'c' }), cell(eur(t.unit), { w: cw[4], a: 'r' }), cell(eur(t.netto), { w: cw[5], a: 'r', b: true, c: RED })] }));
-          rows.push(new TableRow({ children: [cell(String(window.hpPavLongD ? hpPavLongD(r) : r.b || '') + (r.net ? ' (prezzo netto)' : ''), { span: 6 })] })); }
-        body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cw, rows }));
+          rows.push(new TableRow({ cantSplit: true, children: [cellB(th ? new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(th), transformation: { width: 64, height: 64 } })] }) : '', { w: cw[0] }), cellB(it.sap || r.sap || '', { w: cw[1] }), cellB(r.c, { w: cw[2], b: true, c: DARK }), cellB(String(r.q), { w: cw[3], a: 'c' }), cellB(eur(t.unit), { w: cw[4], a: 'r' }), cellB(eur(t.netto), { w: cw[5], a: 'r', b: true, c: RED })] }));
+          rows.push(new TableRow({ children: [cellB(String(window.hpPavLongD ? hpPavLongD(r) : r.b || '') + (r.net ? ' (prezzo netto)' : ''), { span: 6 })] })); }
+        body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cw, rows, borders: { top: thin, bottom: thin, left: thin, right: thin, insideHorizontal: none, insideVertical: none } }));
         const T0 = offTot(L0), iva0 = r2(T0.N * 0.22); const tl = (l, v, b, c) => Pp([R(l + '   ', { s: b ? 10 : 8, b, c: b ? DARK : INK }), R(v, { s: b ? 10 : 8, b: true, c: c || DARK })], { a: 'r', after: 2 });
         body.push(Pp(R(''), { after: 4 }), tl('Subtotale', eur(T0.N), false, RED), tl('IVA (22%)', eur(iva0)), tl('Totale offerta', eur(T0.N + iva0), true)); }
       /* copertina «Modulo Conferma d'ordine» */
@@ -71,9 +71,9 @@
     body.push(nl ? img(nl, 52.5, 'l') : img(hik, 60, 'l'), Pp(R('', { s: 10 }), { after: 6 }));
     const cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
-      cell([Pp(R('Partner contrattuale:', { s: pav ? 11 : 8, i: true }), { after: 1 }), Pp(R('HIKVISION ITALY Srl', { s: pav ? 11 : 8.5 }), { after: 1 }), Pp(R('Sede legale: Viale Fulvio Testi, 113', { s: pav ? 11 : 8 }), { after: 1 }), Pp(R('20092 Cinisello Balsamo (MI)', { s: pav ? 11 : 8 }), { after: 0 })], { noB: true, w: 5400 }),
-      cell([Pp(R('Spett.le', { s: pav ? 11 : 8 }), { after: 1 }), ...cl.map(t => Pp(R(t, { s: pav ? 11 : 8.5 }), { after: 1 }))], { noB: true, w: 4506 })] })] }));
-    body.push(Pp(R('Offerta commerciale', { s: pav ? 14 : 13, c: RED }), { before: 14, after: 6 }));
+      cell([Pp(R('Partner contrattuale:', { s: pav ? 10 : 8, i: true }), { after: 1 }), Pp(R('HIKVISION ITALY Srl', { s: pav ? 10 : 8.5 }), { after: 1 }), Pp(R('Sede legale: Viale Fulvio Testi, 113', { s: pav ? 10 : 8 }), { after: 1 }), Pp(R('20092 Cinisello Balsamo (MI)', { s: pav ? 10 : 8 }), { after: 0 })], { noB: true, w: 5400 }),
+      cell([Pp(R('Spett.le', { s: pav ? 10 : 8 }), { after: 1 }), ...cl.map(t => Pp(R(t, { s: pav ? 10 : 8.5 }), { after: 1 }))], { noB: true, w: 4506 })] })] }));
+    body.push(Pp(R('Offerta commerciale', { s: pav ? 11 : 13, c: RED }), { before: 14, after: 6 }));
     const kv = (k, v) => Pp([R(k + '  ', { s: pav ? 10 : 8, b: true }), R(v, { s: pav ? 10 : 8 })], { after: 2 });
     body.push(kv('Offerta numero:', num + ' del ' + dt), kv('Redatta da:', [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean).join(' · ')), rif ? kv('Riferimento:', rif) : null);
     body.push(Pp(R('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', { s: 8 }), { before: 8, after: 2 }));
