@@ -195,7 +195,7 @@
     const imgs = withImg ? await Promise.all(rows.map(r => r.img ? imgData(r.img) : null)) : [];
     const H = withImg ? ['', ...H0] : H0;
     if (withImg) rows.forEach(r => { if (r.cells) r.cells = [{ text: '' }, ...r.cells]; });
-    const doc = new jsPDF({ orientation: H.length > 5 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+    const doc = new jsPDF({ orientation: H.length > 5 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' }); if (window.hpPdfFont) await hpPdfFont(doc);
     const W = doc.internal.pageSize.getWidth();
     const t = title(tbl);
     // intestazione con il logo ufficiale Hikvision

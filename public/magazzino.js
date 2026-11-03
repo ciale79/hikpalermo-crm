@@ -651,7 +651,7 @@
   async function demoPdf(dm) {
     let jsPDF; try { jsPDF = await pdfLibs(); } catch (e) { toast('Non riesco a caricare il generatore PDF: controlla la connessione.', 'bad'); return; }
     toast('Preparo il PDF…');
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth();
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' }); if (window.hpPdfFont) await hpPdfFont(doc); const W = doc.internal.pageSize.getWidth();
     const c = S.clienti.get(dm.clienteId) || {}, cm = dm.commessaId ? S.commesse.get(dm.commessaId) : null;
     header(doc, 'CONSEGNA MATERIALE IN ' + (dm.tipo === 'poc' ? 'POC' : dm.tipo === 'visione' ? 'CONTO VISIONE' : 'DEMO'), dm.n, fKs(dm.consegna));
     const bw = (W - 28 - 6) / 2;
@@ -676,7 +676,7 @@
   }
   async function blankPdf() {
     let jsPDF; try { jsPDF = await pdfLibs(); } catch (e) { toast('Non riesco a caricare il generatore PDF: controlla la connessione.', 'bad'); return; }
-    const doc = new jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth();
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' }); if (window.hpPdfFont) await hpPdfFont(doc); const W = doc.internal.pageSize.getWidth();
     header(doc, 'CONSEGNA MATERIALE IN DEMO / POC', '', '');
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...INK);
     doc.text('[   ] Demo        [   ] POC (prova di funzionamento)        [   ] Conto visione', 14, 36);

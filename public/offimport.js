@@ -376,7 +376,7 @@
       if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
       if (!window.jspdf.jsPDF.API.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
     } catch (e) { toast('Non riesco a caricare il generatore PDF.', 'bad'); return; }
-    const doc = window.hpPdfSafeDoc(new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' })); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
+    const doc = window.hpPdfSafeDoc(new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' })); if (window.hpPdfFont) await hpPdfFont(doc); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
     const RED = [200, 16, 46], INK = [64, 64, 64], GREY = [128, 128, 128];
     const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P = o.pdf || {}; const M = P.meta || {}; const C = P.cliente || {};
     const logo = await imgData('/brand-hikvision.png', 1200) || await imgData('/hik-logo.png', 1200);

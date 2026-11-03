@@ -23,7 +23,8 @@
     const me = (S.team && S.team.get(o.by || S.me)) || {}; const red = { n: M.redatto || (typeof nm === 'function' ? nm(o.by || S.me) : ''), e: M.redattoEmail || me.email || (typeof mailOf === 'function' ? mailOf(o.by || S.me) : '') || '', t: M.redattoTel || me.tel || '' };
     const hik = await png('/brand-hikvision.png', 900) || await png('/hik-logo.png', 900); const mark = pav ? await png('/proav-mark.png', 900, true) : null; const nl = pav ? await png('/proav-hik-logo.png', 1200) : null;
 
-    const R = (t, op = {}) => new TextRun({ text: String(t ?? ''), font: 'Arial', size: Math.round((op.s || 9) * 2), bold: !!op.b, italics: !!op.i, color: op.c || INK, allCaps: !!op.caps });
+    const FONT = 'Open Sans';
+    const R = (t, op = {}) => new TextRun({ text: String(t ?? ''), font: FONT, size: Math.round((op.s || 9) * 2), bold: !!op.b, italics: !!op.i, color: op.c || INK, allCaps: !!op.caps });
     const Pp = (runs, op = {}) => new Paragraph({ children: Array.isArray(runs) ? runs : [runs], alignment: op.a === 'c' ? AlignmentType.CENTER : op.a === 'r' ? AlignmentType.RIGHT : AlignmentType.LEFT, spacing: { before: Math.round((op.before || 0) * 20), after: Math.round((op.after ?? 4) * 20), ...(op.img ? {} : { line: op.line || 276 }) } });
     const img = (im, wMm, a) => im ? Pp(new ImageRun({ type: 'png', data: im.data, transformation: { width: Math.round(wMm * 3.78), height: Math.round(wMm * im.r * 3.78) } }), { a: a || 'c', after: 2, img: true }) : null;
     const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, thin = { style: BorderStyle.SINGLE, size: 4, color: LINE };
@@ -93,7 +94,11 @@
     body.push(Pp(R('NOTE AGGIUNTIVE', { s: 8, b: true, c: RED }), { before: 6, after: 4 }));
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, rows: [new TableRow({ children: [cell((note ? note.split('\n') : ['', '', '']).map(l => Pp(R(l, { s: 8 }), { after: 2 })), { w: 9906 })] })] }));
 
-    const docx = new Document({ creator: 'HIK PALERMO', title: 'Offerta ' + num, styles: { default: { document: { run: { font: 'Arial' } } } },
+    // Open Sans incorporato nel file: il documento si vede uguale anche dove il font non è installato
+    const FD = window.hpPdfFontData ? await hpPdfFontData() : {}; const fonts = [];
+    const u8 = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
+    if (FD.normal) fonts.push({ name: 'Open Sans', data: u8(FD.normal), characterSet: X.CharacterSet ? X.CharacterSet.ANSI : undefined });
+    const docx = new Document({ creator: 'HIK PALERMO', title: 'Offerta ' + num, fonts, styles: { default: { document: { run: { font: FONT } } } },
       sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1000, bottom: 1000, left: 1000, right: 1000 } } },
         footers: { default: new X.Footer({ children: [Pp(R('HIKVISION ITALY Srl - Viale Fulvio Testi, 113 - 20092 Cinisello Balsamo (MI) - P.IVA 07757250969', { s: 6.5, c: GREY }), { a: 'c', after: 0 })] }) },
         children: body.filter(Boolean) }] });
