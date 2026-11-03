@@ -170,7 +170,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
 
     /* 1 · copertina */
     let y = 16;
-    { const w = 96; y = lockup((W - w) / 2, y, w) + 14; }
+    { const w = 56; y = lockup(14, y, w) + 26; }
     T('Offerta riservata per', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 8;
     fitCaps(cliName, W / 2, y, 15, DARK, true, W - 40); y += 19;
     if (rif) { T('Riferimento', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 50); rl.slice(0, 2).forEach(l => { T(l, W / 2, y, { a: 'center', s: 12, c: DARK }); y += 6.5; }); y += 5; }
@@ -216,7 +216,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
 
     /* 3 · copertina «Modulo Conferma d'ordine» */
     doc.addPage(); y = 70;
-    { const w = 110; y = lockup((W - w) / 2, y, w) + 30; }
+    { const w = 56; const y0 = y; lockup(14, 14, w); y = y0 + 40; }
     T('Modulo Conferma d\'ordine', W / 2, y, { a: 'center', s: 24, b: true, c: DARK }); y += 12;
     fitCaps(cliName, W / 2, y, 12, GREY, false, W - 40); y += 7; T('Offerta ' + num + ' del ' + dt, W / 2, y, { a: 'center', s: 9, c: GREY });
 

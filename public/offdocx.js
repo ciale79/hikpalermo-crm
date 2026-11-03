@@ -32,7 +32,7 @@
 
     const body = [];
     /* 1 · copertina */
-    body.push(img(hik, 100), mark ? img(mark, 100 * (0.693 - 0.228)) : null,
+    body.push(img(hik, pav ? 56 : 100, pav ? 'l' : 'c'), mark ? new Paragraph({ children: [new ImageRun({ type: 'png', data: mark.data, transformation: { width: Math.round(56 * (0.693 - 0.228) * 3.78), height: Math.round(56 * (0.693 - 0.228) * mark.r * 3.78) } })], indent: { left: Math.round(56 * 0.228 * 56.7) }, spacing: { after: 300 } }) : null,
       pav ? null : Pp(R('TVCC  |  INTRUSIONE  |  INTERCOM  |  CONTROLLO ACCESSI', { s: 10, c: GREY }), { a: 'c', after: 0 }),
       Pp(R('Offerta riservata per', { s: 8, c: GREY }), { a: 'c', before: 40, after: 6 }),
       Pp(R(cliName.toUpperCase(), { s: 17, b: true, c: DARK }), { a: 'c', after: 22 }),
