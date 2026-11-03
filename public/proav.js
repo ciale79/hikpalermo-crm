@@ -122,6 +122,19 @@
   const SRC0 = SRC.filter(x => x.L !== 'pav').length;
   window.hpPavDetail = rowDetail;
   let injKey = '';
+  /* kit descritto come un unico articolo: «Display LED serie Ultra P0.9 COB da interno, composto da: 4× modulo LED … e 1× struttura cabinet …» */
+  const capF = s => s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : '';
+  function kitDesc(r) {
+    const tp = String(r.tip || '').split(/\s+-\s+/).map(x => x.trim()).filter(x => x && !/^hikvision$/i.test(x));
+    const ser = tp[0] ? 'serie ' + tp[0].split(/\s+/).map(capF).join(' ') : '';
+    const spec = (tp[1] || '').replace(/\bINDOOR\b/i, 'da interno').replace(/\bOUTDOOR\b/i, 'da esterno').trim();
+    const cat = String(r.cat || '').toUpperCase();
+    const head = (/LED/.test(cat) ? 'Display LED' : /VIDEOWALL|LCD/.test(cat) ? 'Videowall' : r.cat ? capF(r.cat) : 'Kit') + [ser, spec].filter(Boolean).map(x => ' ' + x).join('');
+    const nameOf = k => { const f = String(k.d || '').split(/[.,;]/)[0].trim(); const n = f.split(/\s+(?:per|da|con|in)\s+/i)[0].trim(); return (n || k.d2 || 'componente').replace(/^./, ch => ch.toLowerCase()); };
+    const parts = r.kit.map(k => k.q + '× ' + nameOf(k) + ' ' + k.c);
+    const list = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' e ' + parts[parts.length - 1] : parts[0] || '';
+    return { b: head + ', composto da: ' + list, d: head + ', composto da:\n' + r.kit.map(k => '• ' + k.q + '× ' + k.c + ' — ' + (k.d || k.d2 || '')).join('\n') };
+  }
   function injectPav() {
     if (!S.cat || !S.cat.length || !S.pavList) return;
     const ready = S.pavList.filter(m => S.pavRows.has(m.id));
@@ -133,8 +146,8 @@
       const s = SRC.length; SRC.push({ L: 'pav', tag: 'PROAV', name: m.nome, per: fmtP(m.periodo), key: 'pav:' + m.id });
       for (const r of itemsOf(m)) {
         const nets = {}; for (const [h, v] of r.n || []) { if (/1 ?pz/i.test(h)) continue; if (/distribut/i.test(h) && nets.dist == null) nets.dist = v; else if (/dealer/i.test(h) && nets.dealer == null) nets.dealer = v; else if (/install|\bsi\b|system/i.test(h) && nets.si == null) nets.si = v; }
-        const c = r.c, b = r.kit ? 'KIT: ' + r.kit.map(k => k.q + '× ' + k.c).join(' + ') : (r.d2 || r.tip || String(r.d || '').slice(0, 110));
-        const d = r.kit ? (r.kit.map(k => k.q + '× ' + k.c + ' — ' + (k.d || k.d2 || '')).join('\n')) : (r.d || r.d2 || '');
+        const c = r.c, kd = r.kit ? kitDesc(r) : null, b = kd ? kd.b : (r.d2 || r.tip || String(r.d || '').slice(0, 110));
+        const d = kd ? kd.d : (r.d || r.d2 || '');
         S.cat.push({ i: i0++, s, sap: r.kit ? (r.kit[0].sap || '') : (r.sap || ''), c, sz: r.cat || 'PROAV', fm: r.tip || '', b, d, p: r.p != null ? r.p : 0, noPrice: r.p == null, inf: /new/i.test(r.var || '') ? 'NEW' : '', st: '', m: r.moq || '', n: r.note || '', im: (im => im ? (String(im).startsWith('/') ? im : '/_blob/' + im) : -1)(r.img || (r.kit && (r.kit.find(k => k.img) || {}).img)),
           nets: Object.keys(nets).length ? nets : null, url: r.url || (r.kit && r.kit[0].url) || '', isNet: false, L: 'pav', kitN: r.kit ? r.kit.length : 0, cn: norm(c), hay: [c, r._h].join(' | ').toLowerCase(), pavRef: { m, r } });
       }
