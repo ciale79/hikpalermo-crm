@@ -70,22 +70,24 @@
     body.push(new Paragraph({ children: [new PageBreak()] }));
 
     /* 2 · offerta commerciale */
+    const lines = o.righe || []; const anyLed = pav && !!window.hpLedArea && lines.some(r => hpLedArea(r));
+    // con un LED wall: due fogli di offerta commerciale, a pezzi e con il LED wall a m²
+    const orderW = mq => {
     body.push(nl ? img(nl, 52.5, 'l') : img(hik, 60, 'l'), Pp(R('', { s: 10 }), { after: 6 }));
     const cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
       cell([Pp(R('Partner contrattuale:', { s: pav ? 10 : 8, i: true }), { after: 1 }), Pp(R('HIKVISION ITALY Srl', { s: pav ? 10 : 8.5 }), { after: 1 }), Pp(R('Sede legale: Viale Fulvio Testi, 113', { s: pav ? 10 : 8 }), { after: 1 }), Pp(R('20092 Cinisello Balsamo (MI)', { s: pav ? 10 : 8 }), { after: 0 })], { noB: true, w: 5400 }),
       cell([Pp(R('Spett.le', { s: pav ? 10 : 8 }), { after: 1 }), ...cl.map(t => Pp(R(t, { s: pav ? 10 : 8.5 }), { after: 1 }))], { noB: true, w: 4506 })] })] }));
-    body.push(Pp(R('Offerta commerciale', { s: pav ? 11 : 13, c: RED }), { before: 14, after: 6 }));
+    body.push(Pp(R('Offerta commerciale' + (anyLed ? (mq ? ' · LED wall a metro quadro' : ' · a pezzi') : ''), { s: pav ? 11 : 13, c: RED }), { before: 14, after: 6 }));
     const kv = (k, v) => Pp([R(k + '  ', { s: pav ? 10 : 8, b: true }), R(v, { s: pav ? 10 : 8 })], { after: 2 });
     body.push(kv('Offerta numero:', num + ' del ' + dt), kv('Redatta da:', [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean).join(' · ')), rif ? kv('Riferimento:', rif) : null);
     body.push(Pp(R('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', { s: 8 }), { before: 8, after: 2 }));
     if (pav) body.push(Pp(R('Resta escluso quanto non esplicitamente descritto.', { s: 8, b: true }), { after: 6 }));
 
     // tabella righe: le colonne di sconto vuote non compaiono; le righe «netto cliente» mostrano solo il netto
-    const lines = o.righe || [];
     const anySc = lines.some(r => !(r.net || r.noList) && +(r.sc1 ?? r.sc) > 0), anyEx = lines.some(r => !(r.net || r.noList) && +r.sc2 > 0);
     const sL = lst && lines.some(r => !r.noList && +r.p > 0), sS = sc && anySc, sE = sc && anyEx;
-    const cols = [['Codice', pav ? 2100 : 1750], ['Descrizione', 0], ['Q.tà', 560, 'c'], ...(sL ? [['Listino Cad.', 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), ['Prezzo Cad.', 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
+    const cols = [['Codice', pav ? 2100 : 1750], ['Descrizione', 0], [mq ? 'Q.tà / m²' : 'Q.tà', mq ? 900 : 560, 'c'], ...(sL ? [[mq ? 'Listino' : 'Listino Cad.', mq ? 1400 : 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), [mq ? 'Prezzo unit.' : 'Prezzo Cad.', mq ? 1400 : 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
     cols[1][1] = 9906 - cols.reduce((a, c) => a + c[1], 0);
     const longD = r => { if (r.dx && !pav) return r.dx; if (pav) return String(r.b || (fc(r.c, r.L) || {}).b || ''); const it = fc(r.c, r.L); return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
     const rows = [new TableRow({ tableHeader: true, children: cols.map(([h, w, a]) => cell(h, { head: true, fill: pav ? 'DEE0E4' : '808080', c: pav ? DARK : undefined, b: pav, w, a: a || 'c' })) })];
@@ -93,7 +95,8 @@
     for (const r of lines) {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) rows.push(new TableRow({ children: [cell(sez, { b: true, fill: pav ? 'F6F7F8' : 'F0F0F0', span: cols.length })] })); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
-      const v = [r.c, longD(r) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(sL ? [net ? '' : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), eur(t.unit), eur(t.netto)];
+      const A = mq && window.hpLedArea ? hpLedArea(r) : null;
+      const v = [r.c, longD(r) + (r.net ? ' (prezzo netto)' : '') + (A ? ' — ' + r.q + ' pz da ' + hpMqA(A) + ' m²' : ''), A ? hpMq((+r.q || 0) * A) + ' m²' : String(r.q), ...(sL ? [net ? '' : A ? eur(r.p / A) + '/m²' : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), A ? eur(t.unit / A) + '/m²' : eur(t.unit), eur(t.netto)];
       rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(k === 0 && pav && window.hpCodeLines ? hpCodeLines(x) : x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
     }
     const T = offTot(lines), iva = r2(T.N * 0.22);
@@ -105,6 +108,8 @@
       cell([nl ? img(nl, 32) : img(hik, 36), Pp(R('HIKVISION ITALY SRL', { s: 7 }), { a: 'c', after: 0 })].filter(Boolean), { noB: true, w: 3600 }),
       cell([Pp(R('______________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Luogo e data', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 2600 }),
       cell([Pp(R('________________________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Il committente (timbro/firma)', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 3706 })] })] }));
+    };
+    orderW(false); if (anyLed) { body.push(new Paragraph({ children: [new PageBreak()] })); orderW(true); }
 
     /* 3 · condizioni */
     body.push(new Paragraph({ children: [new PageBreak()] }));

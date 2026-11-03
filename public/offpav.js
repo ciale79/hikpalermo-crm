@@ -228,7 +228,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: 7, styles: { fontStyle: 'bold', fillColor: SECF, textColor: DARK } }]); }
       const it = fc(r.c, r.L) || {}; const t = lineTot(r);
       imgAt.set(body.length, thumbs[i]);
-      body.push(['', { content: it.sap || r.sap || '', styles: { fontStyle: 'normal' } }, { content: r.c, styles: { fontStyle: 'bold', textColor: DARK } }, { content: String(r.q), styles: { halign: 'center' } }, { content: eur(t.unit), styles: { halign: 'right' } }, { content: eur(t.netto), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }, { content: '', rowSpan: 2, styles: { cellPadding: 0 } }]);
+      body.push(['', { content: it.sap || r.sap || '', styles: { fontStyle: 'normal' } }, { content: r.c, styles: { fontStyle: 'bold', textColor: DARK } }, { content: String(r.q) + (window.hpLedArea && hpLedArea(r) ? '\n' + hpMq((+r.q || 0) * hpLedArea(r)) + ' m²' : ''), styles: { halign: 'center' } }, { content: eur(t.unit) + (window.hpLedArea && hpLedArea(r) ? '\n' + eur(t.unit / hpLedArea(r)) + '/m²' : ''), styles: { halign: 'right' } }, { content: eur(t.netto), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }, { content: '', rowSpan: 2, styles: { cellPadding: 0 } }]);
       body.push([{ content: longD(r) + (r.net ? ' (prezzo netto)' : ''), colSpan: 6, styles: { fontSize: 7.5, textColor: INK, cellPadding: { top: 0.9, bottom: 2.2, left: 1.4, right: 1.4 } } }]);
     });
     tb = {}; doc.autoTable({ startY: y2, head: [['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale', { content: '', styles: { cellPadding: 0 } }]], body, margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
@@ -250,31 +250,35 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     y = PARA(cliName.toUpperCase(), y, { s: 14, b: true, c: DARK }); y = PARA('Offerta ' + num + ' del ' + dt, y, { s: 8, c: GREY });
 
     /* 4 · modulo d'ordine (come il modello Word) */
+    // con un LED wall: due fogli di offerta commerciale, uno a pezzi e uno con il LED wall a m² (prezzo al m² calcolato dalla superficie del cabinet)
+    const anyLed = !!window.hpLedArea && lines.some(r => hpLedArea(r)); let cl;
+    const orderForm = mq => {
     doc.addPage(); y = MG;
     y = logoAt(MG, y, 52.5) + 2 * PT; y = BLANK(y, 10, 1.15, 6);
-    const cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
+    cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
     { const cx1 = MG + 1.4, cx2 = MG + 95.25 + 1.4, cw2 = CW - 95.25 - 2.8; let ya = y + 0.9, yb = y + 0.9; const o11 = { s: 10, mult: 1.15, after: 1 };
       ya = PARA('Partner contrattuale:', ya, { ...o11, i: true, x: cx1 }); for (const t of ['HIKVISION ITALY Srl', 'Sede legale: Viale Fulvio Testi, 113', '20092 Cinisello Balsamo (MI)']) ya = PARA(t, ya, { ...o11, x: cx1 });
       yb = PARA('Spett.le', yb, { ...o11, x: cx2, w: cw2 }); for (const t of cl) yb = PARA(t, yb, { ...o11, x: cx2, w: cw2 });
       y = Math.max(ya, yb) + 0.9; }
-    y = PARA('Offerta commerciale', y, { s: 11, c: RED, mult: 1.15, before: 14, after: 6 });
+    y = PARA('Offerta commerciale' + (anyLed ? (mq ? ' · LED wall a metro quadro' : ' · a pezzi') : ''), y, { s: 11, c: RED, mult: 1.15, before: 14, after: 6 });
     const kv = (k, v) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(10); const kw = doc.getTextWidth(k + '  '); PARA(k, y, { s: 10, b: true, mult: 1.15 }); y = PARA(v, y, { s: 10, mult: 1.15, after: 2, x: MG + kw, w: CW - kw }); };
     kv('Offerta numero:', num + ' del ' + dt); kv('Redatta da:', [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean).join(' · ')); if (rif) kv('Riferimento:', rif);
     y = PARA('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', y, { s: 8, mult: 1.15, before: 8, after: 2 });
     y = PARA('Resta escluso quanto non esplicitamente descritto.', y, { s: 8, b: true, mult: 1.15, after: 6 });
     const anySc = lines.some(r => !(r.net || r.noList) && (+(r.sc1 ?? r.sc) > 0)); const anyEx = lines.some(r => +r.sc2 > 0);
     const showSc = opt.sc && anySc, showEx = opt.sc && anyEx, showL = opt.lst && lines.some(r => !r.noList && +r.p > 0);
-    const head = ['Codice', 'Descrizione', 'Q.tà', ...(showL ? ['Listino Cad.'] : []), ...(showSc ? ['Sc %'] : []), ...(showEx ? ['Ex %'] : []), 'Prezzo Cad.', 'Prezzo Tot.'];
+    const head = ['Codice', 'Descrizione', mq ? 'Q.tà / m²' : 'Q.tà', ...(showL ? [mq ? 'Listino' : 'Listino Cad.'] : []), ...(showSc ? ['Sc %'] : []), ...(showEx ? ['Ex %'] : []), mq ? 'Prezzo unit.' : 'Prezzo Cad.', 'Prezzo Tot.'];
     const nC = head.length; const sb = []; sez = null;
     for (const r of lines) {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) sb.push([{ content: sez, colSpan: nC, styles: { fontStyle: 'bold', fillColor: SECF } }]); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
-      sb.push([hpCodeLines(r.c).join('\n'), String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(showL ? [net ? '' : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), eur(t.unit), eur(t.netto)]);
+      const A = mq && window.hpLedArea ? hpLedArea(r) : null;
+      sb.push([hpCodeLines(r.c).join('\n'), String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160) + (r.net ? ' (prezzo netto)' : '') + (A ? '\n' + String(r.q) + ' pz da ' + hpMqA(A) + ' m²' : ''), A ? hpMq((+r.q || 0) * A) + ' m²' : String(r.q), ...(showL ? [net ? '' : A ? eur(r.p / A) + '/m²' : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), A ? eur(t.unit / A) + '/m²' : eur(t.unit), eur(t.netto)]);
     }
     const lab = (t, extra) => ({ content: t, colSpan: nC - 1, styles: { halign: 'right', fontStyle: 'normal', fontSize: 8, textColor: INK, ...(extra || {}) } });
     const foot = [[lab('Subtotale'), { content: eur(Tt.N), styles: { halign: 'right', textColor: RED, fontStyle: 'bold', fontSize: 8 } }], [lab('IVA (22%)'), { content: eur(iva), styles: { halign: 'right', fontStyle: 'bold', fontSize: 8 } }],
       [lab('Totale offerta', { fillColor: TOTF, fontStyle: 'bold', textColor: DARK, fontSize: 9 }), { content: eur(Tt.N + iva), styles: { halign: 'right', fontStyle: 'bold', fillColor: TOTF, textColor: DARK, fontSize: 9 } }]];
-    const cs = { 0: { cellWidth: 37, fontStyle: 'bold', overflow: 'visible' }, 2: { cellWidth: 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
+    const cs = { 0: { cellWidth: 37, fontStyle: 'bold', overflow: 'visible' }, 2: { cellWidth: mq ? 15 : 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
     tb = {}; doc.autoTable({ didDrawCell: tHooks.didDrawCell, startY: y, head: [head], body: [...sb, ...foot], margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
       styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'top' },
       headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 }, columnStyles: cs });
@@ -284,6 +288,8 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       let ys = logoAt(c1 + (w1 - 32) / 2, y + 0.9, 32) + 2 * PT; PARA('HIKVISION ITALY SRL', ys, { s: 7, a: 'c', x: c1, w: w1, mult: 1.15 });
       const yl = y + 0.9 + 30 * PT + 8 * PT * LH * 1.15 - 1.2; doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(c2 + 8, yl, c2 + w2 - 8, yl); doc.line(c3 + 9, yl, c3 + w3 - 9, yl);
       PARA('Luogo e data', yl + 1, { s: 7, a: 'c', x: c2, w: w2, mult: 1.15 }); PARA('Il committente (timbro/firma)', yl + 1, { s: 7, a: 'c', x: c3, w: w3, mult: 1.15 }); }
+    };
+    orderForm(false); if (anyLed) orderForm(true);
 
     /* 5 · condizioni, con il riquadro delle note */
     doc.addPage(); y = MG;
