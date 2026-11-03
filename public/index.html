@@ -951,7 +951,13 @@ async function put(col,id,data){if(!db){toast('Dati condivisi non disponibili in
 async function patch(col,id,data){if(!db)return false;try{await ref(col,id).update(data);return true;}catch(e){toast(errMsg(e),'bad');return false;}}
 async function remove(col,id){if(!db)return false;try{await ref(col,id).delete();return true;}catch(e){toast(errMsg(e),'bad');return false;}}
 async function feed(t,msg,refo,to){if(!db||!S.me)return;try{await db.collection('feed').add({t,msg,ref:refo||null,to:to||[],by:S.me,at:Date.now()});}catch(e){}}
-let rq=0;function changed(){if(rq)return;rq=requestAnimationFrame(()=>{rq=0;renderNav();renderBell();VIEWS[S.view]?.update?.();checkLock();});}
+// aggiornamento della vista: i dati arrivano a raffiche (una raccolta alla volta) e ogni ridisegno sposta gli elementi:
+// all'avvio si aspetta che la raffica si calmi (al massimo ~1,2 s), poi al più un ridisegno ogni 350 ms
+let rq=0,rqT=0,rqFirst=0,rqLast=0;const T0=Date.now();
+function doRender(){rq=0;rqT=0;rqFirst=0;rqLast=Date.now();renderNav();renderBell();VIEWS[S.view]?.update?.();checkLock();}
+function changed(){const now=Date.now();const boot=now-T0<5000;if(!rqFirst)rqFirst=now;
+  if(!boot&&now-rqLast>350){if(!rq&&!rqT)rq=requestAnimationFrame(doRender);return;}
+  clearTimeout(rqT);const wait=boot?Math.max(0,Math.min(280,1200-(now-rqFirst))):Math.max(16,350-(now-rqLast));rqT=setTimeout(()=>requestAnimationFrame(doRender),wait);}
 function subMap(col,key,q){(q||db.collection(col)).onSnapshot(s=>{const m=new Map();s.docs.forEach(d=>m.set(d.id,{id:d.id,...d.data()}));S[key]=m;changed();namesSoon();},e=>dbErr(e));}
 function dbErr(e){if(e&&e.code==='revoked'){S.dbState='off';changed();}}
 const namesSoon=debounce(async()=>{if(!user)return;const ids=new Set([...S.team.keys(),...Object.keys((S.ruoli&&S.ruoli.ruoli)||{})]);S.feed.forEach(f=>f.by&&ids.add(f.by));S.eventi.forEach(e=>{e.by&&ids.add(e.by);(e.part||[]).forEach(p=>ids.add(p));});S.commesse.forEach(c=>c.resp&&ids.add(c.resp));if(S.me)ids.add(S.me);if(!ids.size)return;try{S.names=await user.profiles([...ids]);changed();}catch(e){}},250);
