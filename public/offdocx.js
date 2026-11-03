@@ -70,7 +70,7 @@
     body.push(new Paragraph({ children: [new PageBreak()] }));
 
     /* 2 · offerta commerciale */
-    const lines = o.righe || []; const anyLed = pav && !!window.hpLedArea && lines.some(r => hpLedArea(r));
+    const lines = o.righe || []; const anyLed = pav && !!window.hpLedInfo && lines.some(r => hpLedInfo(r));
     // con un LED wall: due fogli di offerta commerciale, a pezzi e con il LED wall a m²
     const orderW = mq => {
     body.push(nl ? img(nl, 52.5, 'l') : img(hik, 60, 'l'), Pp(R('', { s: 10 }), { after: 6 }));
@@ -87,7 +87,7 @@
     // tabella righe: le colonne di sconto vuote non compaiono; le righe «netto cliente» mostrano solo il netto
     const anySc = lines.some(r => !(r.net || r.noList) && +(r.sc1 ?? r.sc) > 0), anyEx = lines.some(r => !(r.net || r.noList) && +r.sc2 > 0);
     const sL = lst && lines.some(r => !r.noList && +r.p > 0), sS = sc && anySc, sE = sc && anyEx;
-    const cols = [['Codice', pav ? 2100 : 1750], ['Descrizione', 0], [mq ? 'Q.tà / m²' : 'Q.tà', mq ? 900 : 560, 'c'], ...(sL ? [[mq ? 'Listino' : 'Listino Cad.', mq ? 1400 : 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), [mq ? 'Prezzo unit.' : 'Prezzo Cad.', mq ? 1400 : 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
+    const cols = [['Codice', pav ? 2100 : 1750], ['Descrizione', 0], [mq ? 'Q.tà / m²' : 'Q.tà', anyLed ? 900 : 560, 'c'], ...(sL ? [[mq ? 'Listino' : 'Listino Cad.', mq ? 1400 : 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), [mq ? 'Prezzo unit.' : 'Prezzo Cad.', mq ? 1400 : 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
     cols[1][1] = 9906 - cols.reduce((a, c) => a + c[1], 0);
     const longD = r => { if (r.dx && !pav) return r.dx; if (pav) return String(r.b || (fc(r.c, r.L) || {}).b || ''); const it = fc(r.c, r.L); return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
     const rows = [new TableRow({ tableHeader: true, children: cols.map(([h, w, a]) => cell(h, { head: true, fill: pav ? 'DEE0E4' : '808080', c: pav ? DARK : undefined, b: pav, w, a: a || 'c' })) })];
@@ -95,8 +95,8 @@
     for (const r of lines) {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) rows.push(new TableRow({ children: [cell(sez, { b: true, fill: pav ? 'F6F7F8' : 'F0F0F0', span: cols.length })] })); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
-      const A = mq && window.hpLedArea ? hpLedArea(r) : null;
-      const v = [r.c, longD(r) + (r.net ? ' (prezzo netto)' : '') + (A ? ' — ' + r.q + ' pz da ' + hpMqA(A) + ' m²' : ''), A ? hpMq((+r.q || 0) * A) + ' m²' : String(r.q), ...(sL ? [net ? '' : A ? eur(r.p / A) + '/m²' : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), A ? eur(t.unit / A) + '/m²' : eur(t.unit), eur(t.netto)];
+      const LC = pav && window.hpLedCells ? hpLedCells(r, t.unit, mq, eur) : null;
+      const v = [r.c, longD(r) + (r.net ? ' (prezzo netto)' : '') + (LC ? ' — ' + LC.d : ''), LC ? LC.q : String(r.q), ...(sL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)];
       rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(k === 0 && pav && window.hpCodeLines ? hpCodeLines(x) : x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
     }
     const T = offTot(lines), iva = r2(T.N * 0.22);
