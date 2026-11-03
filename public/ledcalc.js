@@ -55,14 +55,18 @@
   window.hpLedQty = function (r, qIn, onChange) {
     const i = window.hpLedInfo(r); if (!i) return null;
     const info = el('small', { class: 'hint hp-mqinfo' });
-    if (i.kit) { // quantità in m²; si può scrivere anche il numero di cabinet
-      qIn.step = '0.01'; qIn.title = 'Metri quadri del LED wall (il prezzo del kit è al m²)';
-      const cabIn = el('input', { type: 'number', min: 0, step: 1, class: 'ln-in hp-mqin', 'aria-label': 'Numero di cabinet', title: 'Scrivi i cabinet: i m² si calcolano dalla superficie del cabinet (' + n4(i.A) + ' m²)' });
-      const upd = () => { const x = window.hpLedQ(r); if (document.activeElement !== cabIn) cabIn.value = Math.round(x.cab * 100) / 100; info.textContent = nq(x.cab) + ' cabinet' + (x.mods != null ? ' · ' + nq(x.mods) + ' moduli' : '') + ' · ' + n4(i.A) + ' m²/cabinet'; whole.hidden = Math.abs(x.cab - Math.round(x.cab)) < 0.005; };
-      const whole = el('button', { type: 'button', class: 'hp-dedit', title: 'Arrotonda per eccesso a cabinet interi', onclick: () => { const c = Math.ceil(window.hpLedQ(r).cab - 1e-9); r.q = Math.round(c * i.A * 10000) / 10000; qIn.value = r.q; upd(); onChange(); } }, '↑ cabinet interi');
-      cabIn.addEventListener('input', () => { const c = +cabIn.value || 0; r.q = Math.round(c * i.A * 10000) / 10000; qIn.value = r.q; upd(); onChange(); });
-      qIn.addEventListener('input', upd); upd();
-      return el('div', { class: 'stack', style: 'gap:2px;align-items:flex-end;margin-top:2px' }, el('span', { class: 'hint', style: 'font-size:.66rem' }, 'm²'), el('label', { class: 'row', style: 'gap:4px;flex-wrap:nowrap' }, cabIn, el('span', { class: 'hint' }, 'cab.')), info, whole);
+    if (i.kit) { // il riferimento è il cabinet: i m² scritti si arrotondano a cabinet interi (m² = cabinet × superficie del cabinet)
+      qIn.step = '0.01'; qIn.title = 'Metri quadri del LED wall: si arrotondano a cabinet interi (' + n4(i.A) + ' m² a cabinet); il prezzo del kit è al m²';
+      const cabIn = el('input', { type: 'number', min: 0, step: 1, class: 'ln-in hp-mqin', 'aria-label': 'Numero di cabinet', title: 'Cabinet: i m² si calcolano dalla superficie del cabinet (' + n4(i.A) + ' m²)' });
+      const setCab = c => { c = Math.max(0, Math.round(c)); r.q = Math.round(c * i.A * 10000) / 10000; qIn.value = r.q; };
+      const upd = () => { const x = window.hpLedQ(r); if (document.activeElement !== cabIn) cabIn.value = Math.round(x.cab * 100) / 100; info.textContent = nq(x.cab) + ' cabinet' + (x.mods != null ? ' · ' + nq(x.mods) + ' moduli' : '') + ' · ' + n4(i.A) + ' m²/cabinet' + (r.mqReq != null && Math.abs(r.mqReq - x.mq) > 0.005 ? ' · richiesti ' + n2(r.mqReq) + ' m²' : ''); };
+      // scrivendo i m², all'uscita dal campo si passa al numero intero di cabinet (per eccesso)
+      qIn.addEventListener('input', () => { r.mqReq = +qIn.value || 0; upd(); });
+      qIn.addEventListener('change', () => { const v = +qIn.value || 0; r.mqReq = v; setCab(Math.ceil(v / i.A - 1e-9)); upd(); onChange(); });
+      cabIn.addEventListener('input', () => { r.mqReq = null; setCab(+cabIn.value || 0); upd(); onChange(); });
+      if (Math.abs(r.q / i.A - Math.round(r.q / i.A)) > 0.005) { r.mqReq = r.mqReq ?? r.q; setCab(Math.ceil(r.q / i.A - 1e-9)); }
+      upd();
+      return el('div', { class: 'stack', style: 'gap:2px;align-items:flex-end;margin-top:2px' }, el('span', { class: 'hint', style: 'font-size:.66rem' }, 'm²'), el('label', { class: 'row', style: 'gap:4px;flex-wrap:nowrap' }, cabIn, el('span', { class: 'hint' }, 'cabinet')), info);
     }
     const mq = el('input', { type: 'number', min: 0, step: 0.01, class: 'ln-in hp-mqin', 'aria-label': 'Metri quadri', title: 'Scrivi i m²: i pezzi si calcolano arrotondando per eccesso (' + n4(i.A) + ' m² a pezzo)', value: r.mq != null ? r.mq : Math.round((+r.q || 0) * i.A * 100) / 100 });
     const upd = () => { const tot = (+r.q || 0) * i.A; info.textContent = n4(i.A) + ' m²/pz · ' + n2(tot) + ' m² in offerta' + (r.mq != null && Math.abs(tot - r.mq) > 0.005 ? ' (richiesti ' + n2(r.mq) + ')' : ''); };
