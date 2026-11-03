@@ -147,18 +147,18 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     if (!window.jspdf) await loadScript(JSPDF); if (!window.jspdf.jsPDF.API.autoTable) await loadScript(AT);
     const doc = window.hpPdfSafeDoc ? hpPdfSafeDoc(new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' })) : new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
     const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P0 = o.pdf || {}; const M = P0.meta || {}; const C = P0.cliente || {};
-    const hik = await logo('/brand-hikvision.png', 900) || await logo('/hik-logo.png', 900); const pav = await logo('/proav-mark.png', 1200, true) || await logo('/proav-logo.png', 1200, true);
+    const hik = await logo('/brand-hikvision.png', 900) || await logo('/hik-logo.png', 900); const pav = await logo('/proav-mark.png', 1200, true) || await logo('/proav-logo.png', 1200, true); const nlg = await logo('/proav-hik-logo.png', 1200);
     const num = o.numero || '—'; const dt = o.data ? o.data.split('-').reverse().join('/') : new Date().toLocaleDateString('it-IT');
     const cliName = cli.nome || C.nome || 'Cliente'; const rif = o.titolo || M.riferimento || (com ? com.nome : '');
     const me = (S.team && S.team.get(o.by || S.me)) || {}; const red = { n: M.redatto || nm(o.by || S.me), e: M.redattoEmail || me.email || (typeof mailOf === 'function' ? mailOf(o.by || S.me) : '') || '', t: M.redattoTel || me.tel || '' };
     const T = (txt, x, y, op = {}) => { doc.setFont('helvetica', op.b ? 'bold' : op.i ? 'italic' : 'normal'); doc.setFontSize(op.s || 9); doc.setTextColor(...(op.c || INK)); doc.text(String(txt ?? ''), x, y, op.a ? { align: op.a } : undefined); };
     // maiuscoletto: maiuscole piene per le iniziali, maiuscole ridotte per il resto
-    const smallCaps = (txt, cx, y, size, color, bold) => {
+    const smallCaps = (txt, cx, y, size, color, bold, left) => {
       const parts = []; for (const ch of String(txt)) { const low = ch !== ch.toUpperCase(); parts.push([ch.toUpperCase(), low ? size * 0.78 : size]); }
       doc.setFont('helvetica', bold ? 'bold' : 'normal'); let w = 0; for (const [ch, s] of parts) { doc.setFontSize(s); w += doc.getTextWidth(ch); }
-      let x = cx - w / 2; doc.setTextColor(...color); for (const [ch, s] of parts) { doc.setFontSize(s); doc.text(ch, x, y); x += doc.getTextWidth(ch); }
+      let x = left ? cx : cx - w / 2; doc.setTextColor(...color); for (const [ch, s] of parts) { doc.setFontSize(s); doc.text(ch, x, y); x += doc.getTextWidth(ch); }
     };
-    const fitCaps = (txt, cx, y, size, color, bold, maxW) => { let s = size; doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(s); while (doc.getTextWidth(String(txt).toUpperCase()) * 0.9 > maxW && s > 8) { s -= 0.5; doc.setFontSize(s); } smallCaps(txt, cx, y, s, color, bold); };
+    const fitCaps = (txt, cx, y, size, color, bold, maxW, left) => { let s = size; doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(s); while (doc.getTextWidth(String(txt).toUpperCase()) * 0.9 > maxW && s > 8) { s -= 0.5; doc.setFontSize(s); } smallCaps(txt, cx, y, s, color, bold, left); };
     // tabelle con gli angoli esterni arrotondati: dopo autoTable si coprono gli spigoli e si ridisegna il bordo, pagina per pagina
     const RAD = 2.4; let tb = null;
     const tHooks = { willDrawPage: () => { }, didDrawCell: d => { const p = doc.internal.getCurrentPageInfo().pageNumber; const b = tb[p] || (tb[p] = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 }); b.x0 = Math.min(b.x0, d.cell.x); b.y0 = Math.min(b.y0, d.cell.y); b.x1 = Math.max(b.x1, d.cell.x + d.cell.width); b.y1 = Math.max(b.y1, d.cell.y + d.cell.height); } };
@@ -166,30 +166,31 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const lines = o.righe || [];
     // logo Hikvision con sotto il logo ProAV, largo dalla «K» alla «I» di «sion» (22,8% → 69,3% della larghezza del logo Hikvision)
     const K0 = 0.228, I1 = 0.693;
-    const lockup = (x, y0, w) => { let yy = y0; if (hik) { doc.addImage(hik.d, 'PNG', x, yy, w, w * hik.r); yy += w * hik.r + w * 0.045; } if (pav) { const pw = w * (I1 - K0); doc.addImage(pav.d, 'PNG', x + (w - pw) / 2, yy, pw, pw * pav.r); yy += pw * pav.r; } return yy; };
+    const lockup = (x, y0, w) => { if (nlg) { const ww = w * 0.86; doc.addImage(nlg.d, 'PNG', x, y0, ww, ww * nlg.r); return y0 + ww * nlg.r; } let yy = y0; if (hik) { doc.addImage(hik.d, 'PNG', x, yy, w, w * hik.r); yy += w * hik.r + w * 0.045; } if (pav) { const pw = w * (I1 - K0); doc.addImage(pav.d, 'PNG', x + (w - pw) / 2, yy, pw, pw * pav.r); yy += pw * pav.r; } return yy; };
 
     /* 1 · copertina */
     let y = 16;
     { const w = 56; y = lockup(14, y, w) + 26; }
-    T('Offerta riservata per', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 8;
-    fitCaps(cliName, W / 2, y, 15, DARK, true, W - 40); y += 19;
-    if (rif) { T('Riferimento', W / 2, y, { a: 'center', s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 50); rl.slice(0, 2).forEach(l => { T(l, W / 2, y, { a: 'center', s: 12, c: DARK }); y += 6.5; }); y += 5; }
-    T(num + ' del ' + dt, W / 2, y, { a: 'center', s: 8, c: GREY }); y += 20;
+    const LX = 14;
+    T('Offerta riservata per', LX, y, { s: 8, c: GREY }); y += 8;
+    fitCaps(cliName, LX, y, 15, DARK, true, W - 28, true); y += 19;
+    if (rif) { T('Riferimento', LX, y, { s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 28); rl.slice(0, 2).forEach(l => { T(l, LX, y, { s: 12, c: DARK }); y += 6.5; }); y += 5; }
+    T(num + ' del ' + dt, LX, y, { s: 8, c: GREY }); y += 20;
     const intro = String(o.intro || '').trim();
-    if (intro) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...INK); const lh = 9.5 * 0.3528 * 1.5; for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) { for (const l of doc.splitTextToSize(par, W - 56)) { doc.text(l, 28, y); y += lh; } y += lh * 0.6; } y += 6; }
+    if (intro) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...INK); const lh = 9.5 * 0.3528 * 1.5; for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) { for (const l of doc.splitTextToSize(par, W - 28)) { doc.text(l, 14, y); y += lh; } y += lh * 0.6; } y += 6; }
     // immagini dei prodotti (fino a 4, i prodotti principali per valore)
     say('Cerco le immagini dei prodotti…');
     const covList = Array.isArray(o.cov) ? o.cov : autoCov(o);
     const covImgs = (await Promise.all(covList.slice(0, COVMAX).map(x => covImage(x, o).catch(() => null)))).filter(Boolean);
     if (covImgs.length) {
       const n = covImgs.length; const gap = 6; const room = Math.max(30, PH - 24 - y); const sz = Math.min(42, (W - 40 - gap * (n - 1)) / n, room);
-      let x = (W - (n * sz + (n - 1) * gap)) / 2; const yy = Math.min(PH - 22 - sz, Math.max(y, PH - 30 - sz - 10));
+      let x = 14; const yy = Math.min(PH - 22 - sz, Math.max(y, PH - 30 - sz - 10));
       for (const d of covImgs) { doc.setDrawColor(225, 228, 234); doc.setLineWidth(.2); doc.roundedRect(x, yy, sz, sz, 2, 2); doc.addImage(d, 'JPEG', x + 1, yy + 1, sz - 2, sz - 2); x += sz + gap; }
     }
 
     /* 2 · offerta con anteprime */
     doc.addPage(); y = 16;
-    lockup(W - 14 - 52, 10, 52);
+    lockup(14, 10, 52);
     T('Offerta', 14, 34, { s: 13, c: RED }); T(num + ' del ' + dt + (rif ? ' · ' + rif : ''), 14, 40, { s: 8, c: GREY });
     say('Preparo le anteprime…');
     const thumbs = await Promise.all(lines.map(r => productImage({ ...r, c: mainC(r.c) }, false)));
@@ -217,8 +218,8 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     /* 3 · copertina «Modulo Conferma d'ordine» */
     doc.addPage(); y = 70;
     { const w = 56; const y0 = y; lockup(14, 14, w); y = y0 + 40; }
-    T('Modulo Conferma d\'ordine', W / 2, y, { a: 'center', s: 24, b: true, c: DARK }); y += 12;
-    fitCaps(cliName, W / 2, y, 12, GREY, false, W - 40); y += 7; T('Offerta ' + num + ' del ' + dt, W / 2, y, { a: 'center', s: 9, c: GREY });
+    T('Modulo Conferma d\'ordine', 14, y, { s: 24, b: true, c: DARK }); y += 12;
+    fitCaps(cliName, 14, y, 12, GREY, false, W - 28, true); y += 7; T('Offerta ' + num + ' del ' + dt, 14, y, { s: 9, c: GREY });
 
     /* 4 · modulo d'ordine */
     doc.addPage();

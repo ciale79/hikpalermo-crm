@@ -21,7 +21,7 @@
     const num = o.numero || '—'; const dt = o.data ? o.data.split('-').reverse().join('/') : new Date().toLocaleDateString('it-IT');
     const cliName = cli.nome || C.nome || 'Cliente'; const rif = o.titolo || M.riferimento || (com ? com.nome : '');
     const me = (S.team && S.team.get(o.by || S.me)) || {}; const red = { n: M.redatto || (typeof nm === 'function' ? nm(o.by || S.me) : ''), e: M.redattoEmail || me.email || (typeof mailOf === 'function' ? mailOf(o.by || S.me) : '') || '', t: M.redattoTel || me.tel || '' };
-    const hik = await png('/brand-hikvision.png', 900) || await png('/hik-logo.png', 900); const mark = pav ? await png('/proav-mark.png', 900, true) : null;
+    const hik = await png('/brand-hikvision.png', 900) || await png('/hik-logo.png', 900); const mark = pav ? await png('/proav-mark.png', 900, true) : null; const nl = pav ? await png('/proav-hik-logo.png', 1200) : null;
 
     const R = (t, op = {}) => new TextRun({ text: String(t ?? ''), font: 'Arial', size: Math.round((op.s || 9) * 2), bold: !!op.b, italics: !!op.i, color: op.c || INK, allCaps: !!op.caps });
     const Pp = (runs, op = {}) => new Paragraph({ children: Array.isArray(runs) ? runs : [runs], alignment: op.a === 'c' ? AlignmentType.CENTER : op.a === 'r' ? AlignmentType.RIGHT : AlignmentType.LEFT, spacing: { before: Math.round((op.before || 0) * 20), after: Math.round((op.after ?? 4) * 20), ...(op.img ? {} : { line: op.line || 276 }) } });
@@ -32,18 +32,18 @@
 
     const body = [];
     /* 1 · copertina */
-    body.push(img(hik, pav ? 56 : 100, pav ? 'l' : 'c'), mark ? new Paragraph({ children: [new ImageRun({ type: 'png', data: mark.data, transformation: { width: Math.round(56 * (0.693 - 0.228) * 3.78), height: Math.round(56 * (0.693 - 0.228) * mark.r * 3.78) } })], indent: { left: Math.round(56 * 0.228 * 56.7) }, spacing: { after: 300 } }) : null,
+    body.push(nl ? img(nl, 48, 'l') : img(hik, 100), nl ? Pp(R(''), { after: 10 }) : null,
       pav ? null : Pp(R('TVCC  |  INTRUSIONE  |  INTERCOM  |  CONTROLLO ACCESSI', { s: 10, c: GREY }), { a: 'c', after: 0 }),
-      Pp(R('Offerta riservata per', { s: 8, c: GREY }), { a: 'c', before: 40, after: 6 }),
-      Pp(R(cliName.toUpperCase(), { s: 17, b: true, c: DARK }), { a: 'c', after: 22 }),
-      rif ? Pp(R('Riferimento', { s: 8, c: GREY }), { a: 'c', after: 4 }) : null, rif ? Pp(R(rif, { s: 13, c: DARK, b: !pav }), { a: 'c', after: 14 }) : null,
-      Pp(R(num + ' del ' + dt, { s: 8, c: GREY }), { a: 'c', after: 26 }));
+      Pp(R('Offerta riservata per', { s: 8, c: GREY }), { a: pav ? 'l' : 'c', before: 40, after: 6 }),
+      Pp(R(cliName.toUpperCase(), { s: 17, b: true, c: DARK }), { a: pav ? 'l' : 'c', after: 22 }),
+      rif ? Pp(R('Riferimento', { s: 8, c: GREY }), { a: pav ? 'l' : 'c', after: 4 }) : null, rif ? Pp(R(rif, { s: 13, c: DARK, b: !pav }), { a: pav ? 'l' : 'c', after: 14 }) : null,
+      Pp(R(num + ' del ' + dt, { s: 8, c: GREY }), { a: pav ? 'l' : 'c', after: 26 }));
     const intro = String(o.intro || '').trim();
     if (pav && intro) intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(Pp(R(par, { s: 10 }), { after: 8, line: 330 })));
     body.push(new Paragraph({ children: [new PageBreak()] }));
 
     /* 2 · offerta commerciale */
-    body.push(img(hik, 60, 'l'), mark ? new Paragraph({ children: [new ImageRun({ type: 'png', data: mark.data, transformation: { width: Math.round(60 * (0.693 - 0.228) * 3.78), height: Math.round(60 * (0.693 - 0.228) * mark.r * 3.78) } })], indent: { left: Math.round(60 * 0.228 * 56.7) }, spacing: { after: 160 } }) : null);
+    body.push(nl ? img(nl, 50, 'l') : img(hik, 60, 'l'), Pp(R(''), { after: 6 }));
     const cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
       cell([Pp(R('Partner contrattuale:', { s: 8, i: true }), { after: 1 }), Pp(R('HIKVISION ITALY Srl', { s: 8.5 }), { after: 1 }), Pp(R('Sede legale: Viale Fulvio Testi, 113', { s: 8 }), { after: 1 }), Pp(R('20092 Cinisello Balsamo (MI)', { s: 8 }), { after: 0 })], { noB: true, w: 5400 }),
@@ -75,7 +75,7 @@
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cols.map(c => c[1]), rows }));
     // firme
     body.push(Pp(R(''), { before: 20 }), new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
-      cell([img(hik, 36), mark ? img(mark, 36 * (0.693 - 0.228)) : null, Pp(R('HIKVISION ITALY SRL', { s: 7 }), { a: 'c', after: 0 })].filter(Boolean), { noB: true, w: 3600 }),
+      cell([nl ? img(nl, 32) : img(hik, 36), Pp(R('HIKVISION ITALY SRL', { s: 7 }), { a: 'c', after: 0 })].filter(Boolean), { noB: true, w: 3600 }),
       cell([Pp(R('______________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Luogo e data', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 2600 }),
       cell([Pp(R('________________________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Il committente (timbro/firma)', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 3706 })] })] }));
 
