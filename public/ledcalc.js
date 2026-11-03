@@ -61,7 +61,7 @@
       const cabIn = el('input', { type: 'number', min: 0, step: 1, class: 'ln-in hp-mqin', 'aria-label': 'Numero di cabinet ' + (i.cabC || ''), title: 'Cabinet ' + (i.cabC || '') + ': i m² si calcolano dalla superficie del cabinet (' + n4(i.A) + ' m²)' });
       const modIn = i.nMod ? el('input', { type: 'number', min: 0, step: i.nMod, class: 'ln-in hp-mqin', 'aria-label': 'Numero di moduli ' + (i.modC || ''), title: 'Moduli ' + (i.modC || '') + ' (' + i.nMod + ' per cabinet): si arrotondano a cabinet interi' }) : null;
       const setCab = c => { c = Math.max(0, Math.round(c)); r.q = Math.round(c * i.A * 10000) / 10000; qIn.value = r.q; };
-      const upd = () => { const x = window.hpLedQ(r); if (document.activeElement !== cabIn) cabIn.value = Math.round(x.cab * 100) / 100; if (modIn && document.activeElement !== modIn) modIn.value = Math.round(x.mods * 100) / 100; info.textContent = n4(i.A) + ' m²/cabinet' + (i.nMod ? ' · ' + i.nMod + ' moduli/cabinet' : '') + (r.mqReq != null && Math.abs(r.mqReq - x.mq) > 0.005 ? ' · richiesti ' + n2(r.mqReq) + ' m²' : ''); };
+      const upd = () => { const x = window.hpLedQ(r); if (document.activeElement !== cabIn) cabIn.value = Math.round(x.cab * 100) / 100; if (modIn && document.activeElement !== modIn) modIn.value = Math.round(x.mods * 100) / 100; info.textContent = r.mqReq != null && Math.abs(r.mqReq - x.mq) > 0.005 ? 'richiesti ' + n2(r.mqReq) + ' m²' : ''; info.title = n4(i.A) + ' m² a cabinet' + (i.nMod ? ' · ' + i.nMod + ' moduli a cabinet' : ''); qIn.title = 'm² totali: si arrotondano a cabinet interi (' + n4(i.A) + ' m² a cabinet' + (i.nMod ? ', ' + i.nMod + ' moduli a cabinet' : '') + '); il prezzo del kit è al m²'; };
       // scrivendo i m², all'uscita dal campo si passa al numero intero di cabinet (per eccesso)
       qIn.addEventListener('input', () => { r.mqReq = +qIn.value || 0; upd(); });
       qIn.addEventListener('change', () => { const v = +qIn.value || 0; r.mqReq = v; setCab(Math.ceil(v / i.A - 1e-9)); upd(); onChange(); });
@@ -69,15 +69,15 @@
       if (modIn) modIn.addEventListener('change', () => { r.mqReq = null; setCab(Math.ceil((+modIn.value || 0) / i.nMod - 1e-9)); upd(); onChange(); });
       if (Math.abs(r.q / i.A - Math.round(r.q / i.A)) > 0.005) { r.mqReq = r.mqReq ?? r.q; setCab(Math.ceil(r.q / i.A - 1e-9)); }
       upd();
-      const lab = (inp, t, code) => el('label', { class: 'row', style: 'gap:4px;flex-wrap:nowrap;justify-content:flex-end', title: code || '' }, inp, el('span', { class: 'hint', style: 'min-width:52px;text-align:left' }, t));
-      return el('div', { class: 'stack', style: 'gap:2px;align-items:flex-end;margin-top:2px' }, el('span', { class: 'hint', style: 'font-size:.66rem' }, 'm² totali'), lab(cabIn, 'cabinet', i.cabC), modIn ? lab(modIn, 'moduli', i.modC) : null, info);
+      cabIn.title = 'Cabinet ' + (i.cabC || ''); if (modIn) modIn.title = 'Moduli ' + (i.modC || '') + ' (' + i.nMod + ' per cabinet)';
+      return { mq: el('div', { class: 'stack', style: 'gap:2px;align-items:flex-end' }, qIn, info), cab: cabIn, pz: modIn };
     }
     const mq = el('input', { type: 'number', min: 0, step: 0.01, class: 'ln-in hp-mqin', 'aria-label': 'Metri quadri', title: 'Scrivi i m²: i pezzi si calcolano arrotondando per eccesso (' + n4(i.A) + ' m² a pezzo)', value: r.mq != null ? r.mq : Math.round((+r.q || 0) * i.A * 100) / 100 });
-    const upd = () => { const tot = (+r.q || 0) * i.A; info.textContent = n4(i.A) + ' m²/pz · ' + n2(tot) + ' m² in offerta' + (r.mq != null && Math.abs(tot - r.mq) > 0.005 ? ' (richiesti ' + n2(r.mq) + ')' : ''); };
+    const upd = () => { const tot = (+r.q || 0) * i.A; info.textContent = r.mq != null && Math.abs(tot - r.mq) > 0.005 ? 'richiesti ' + n2(r.mq) + ' m²' : n4(i.A) + ' m²/pz'; };
     mq.addEventListener('input', () => { const v = +mq.value || 0; r.mq = v; r.q = Math.ceil(v / i.A - 1e-9); qIn.value = r.q; upd(); onChange(); });
     qIn.addEventListener('input', () => { r.mq = null; mq.value = Math.round((+r.q || 0) * i.A * 100) / 100; upd(); });
     upd();
-    return el('div', { class: 'stack', style: 'gap:2px;align-items:flex-end;margin-top:4px' }, el('label', { class: 'row', style: 'gap:4px;flex-wrap:nowrap' }, mq, el('span', { class: 'hint' }, 'm²')), info);
+    return { mq: el('div', { class: 'stack', style: 'gap:2px;align-items:flex-end' }, mq, info), cab: null, pz: qIn };
   };
-  if (!document.getElementById('hpLedCss')) document.head.append(el('style', { id: 'hpLedCss' }, '.hp-mqin{width:78px!important;text-align:right}.hp-mqinfo{font-size:.64rem;white-space:nowrap}.hp-perm2{font-size:.66rem;color:var(--ink-3,#777);white-space:nowrap}'));
+  if (!document.getElementById('hpLedCss')) document.head.append(el('style', { id: 'hpLedCss' }, '.hp-mqin{width:78px!important;text-align:right}.hp-mqinfo{font-size:.62rem;white-space:normal;max-width:130px;text-align:right;line-height:1.25}.hp-perm2{font-size:.66rem;color:var(--ink-3,#777);white-space:nowrap}'));
 })();
