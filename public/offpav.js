@@ -230,7 +230,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: 7, styles: { fontStyle: 'bold', fillColor: SECF, textColor: DARK } }]); }
       const it = fc(r.c, r.L) || {}; const t = lineTot(r);
       imgAt.set(body.length, thumbs[i]);
-      body.push(['', { content: it.sap || r.sap || '', styles: { fontStyle: 'normal' } }, { content: r.c, styles: { fontStyle: 'bold', textColor: DARK } }, ...(() => { const x = window.hpLedQ ? hpLedQ(r) : null; const lp = x && hpLedPrice(r, t.unit); return [{ content: x ? (x.kit ? hpMq(x.mq) + ' m²\n' + hpNq(x.cab) + ' cab.' + (x.mods != null ? '\n' + hpNq(x.mods) + ' mod.' : '') : String(r.q) + '\n' + hpMq(x.mq) + ' m²') : String(r.q), styles: { halign: 'center' } }, { content: x ? eur(lp.perMq) + '/m²\n' + eur(lp.perPz) + (x.kit ? '/cab.' : '/pz') : eur(t.unit), styles: { halign: 'right' } }]; })(), { content: eur(t.netto), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }, { content: '', rowSpan: i === lines.length - 1 ? 3 : 2, styles: { cellPadding: 0 } }]);
+      body.push(['', { content: it.sap || r.sap || '', styles: { fontStyle: 'normal' } }, { content: r.c, styles: { fontStyle: 'bold', textColor: DARK } }, ...(() => { const x = window.hpLedQ ? hpLedQ(r) : null; const lp = x && hpLedPrice(r, t.unit); return [{ content: x ? (x.kit ? hpMq(x.mq) + ' m²\n' + hpNq(x.cab) + ' cab.' + (x.mods != null ? '\n' + hpNq(x.mods) + ' mod.' : '') : String(r.q) + '\n' + hpMq(x.mq) + ' m²') : String(r.q), styles: { halign: 'center' } }, { content: eur(t.unit), styles: { halign: 'right' } }]; })(), { content: eur(t.netto), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }, { content: '', rowSpan: i === lines.length - 1 ? 3 : 2, styles: { cellPadding: 0 } }]);
       body.push([{ content: longD(r) + (r.net ? ' (prezzo netto)' : ''), colSpan: 6, styles: { fontSize: 7.5, textColor: INK, cellPadding: { top: 0.9, bottom: 2.2, left: 1.4, right: 1.4 } } }]);
     });
     // totali dentro il riquadro arrotondato, a tutta larghezza, sulla stessa pagina dell'ultimo articolo
@@ -282,14 +282,10 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       [lab('Totale offerta', { fillColor: TOTF, fontStyle: 'bold', textColor: DARK, fontSize: 9 }), { content: eur(Tt.N + iva), styles: { halign: 'right', fontStyle: 'bold', fillColor: TOTF, textColor: DARK, fontSize: 9 } }]];
     const cs = { 0: { cellWidth: 37, fontStyle: 'bold', overflow: 'visible' }, 2: { cellWidth: anyLed ? 15 : 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
     tb = {}; doc.autoTable({ didDrawCell: tHooks.didDrawCell, startY: y, head: [head], body: [...sb, ...foot], margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
-      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'top' },
+      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'middle' },
       headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 }, columnStyles: cs });
     roundTables();
-    y = doc.lastAutoTable.finalY + 20 * PT + 4 * PT; if (y > PH - 45) { doc.addPage(); y = MG; }
-    { const c1 = MG, w1 = 63.5, c2 = MG + 63.5, w2 = 45.9, c3 = MG + 63.5 + 45.9, w3 = CW - 63.5 - 45.9;
-      let ys = logoAt(c1 + (w1 - 32) / 2, y + 0.9, 32) + 2 * PT; PARA('HIKVISION ITALY SRL', ys, { s: 7, a: 'c', x: c1, w: w1, mult: 1.15 });
-      const yl = y + 0.9 + 30 * PT + 8 * PT * LH * 1.15 - 1.2; doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(c2 + 8, yl, c2 + w2 - 8, yl); doc.line(c3 + 9, yl, c3 + w3 - 9, yl);
-      PARA('Luogo e data', yl + 1, { s: 7, a: 'c', x: c2, w: w2, mult: 1.15 }); PARA('Il committente (timbro/firma)', yl + 1, { s: 7, a: 'c', x: c3, w: w3, mult: 1.15 }); }
+    y = doc.lastAutoTable.finalY + 6; // senza firme
     };
     orderForm(false); if (anyLed) orderForm(true);
 

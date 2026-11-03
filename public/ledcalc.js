@@ -49,7 +49,7 @@
   window.hpLedCells = function (r, unit, mq, eur) {
     const x = window.hpLedQ(r); if (!x) return null;
     if (mq) return x.kit ? { q: n2(x.mq) + ' m²', l: eur(r.p) + '/m²', u: eur(unit) + '/m²', d: window.hpLedPzTxt(r) } : { q: n2(x.mq) + ' m²', l: eur(r.p / x.A) + '/m²', u: eur(unit / x.A) + '/m²', d: window.hpLedPzTxt(r) };
-    return x.kit ? { q: nq(x.cab) + ' cab.' + (x.mods != null ? '\n' + nq(x.mods) + ' mod.' : ''), l: eur(r.p * x.A), u: eur(unit * x.A) + '/cab.', d: window.hpLedPzTxt(r) + ' · ' + n2(x.mq) + ' m²' } : null;
+    return x.kit ? { q: nq(x.cab) + ' cab.' + (x.mods != null ? '\n' + nq(x.mods) + ' mod.' : ''), l: eur(r.p * x.A), u: eur(unit * x.A), d: window.hpLedPzTxt(r) + ' · ' + n2(x.mq) + ' m²' } : null;
   };
   // riquadro sotto la quantità della riga dell'offerta
   window.hpLedQty = function (r, qIn, onChange) {
