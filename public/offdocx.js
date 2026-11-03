@@ -97,7 +97,7 @@
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
       const LC = pav && window.hpLedCells ? hpLedCells(r, t.unit, mq, eur) : null;
       const v = [r.c, longD(r) + (r.net ? ' (prezzo netto)' : '') + (LC ? ' — ' + LC.d : ''), LC ? LC.q : String(r.q), ...(sL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)];
-      rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(k === 0 && pav && window.hpCodeLines ? hpCodeLines(x) : x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
+      rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(k === 0 && pav && window.hpCodeLines ? hpCodeLines(x) : typeof x === 'string' && x.includes('\n') ? x.split('\n') : x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
     }
     const T = offTot(lines), iva = r2(T.N * 0.22);
     const tot = (l, v, op = {}) => new TableRow({ children: [cell(l, { span: cols.length - 1, a: 'r', b: op.b, fill: op.fill, s: op.b ? 9 : 8 }), cell(v, { a: 'r', b: true, c: op.c, fill: op.fill, s: op.b ? 9 : 8 })] });

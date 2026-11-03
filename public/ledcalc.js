@@ -20,7 +20,7 @@
       let A = null; for (const t of [cab.d2, cab.d]) { const m = t && DIM.exec(t); if (m && (A = ar(m))) break; }
       if (!A) { const txt = kit.map(x => (x.d || '') + ' ' + (x.d2 || '')).join(' '); for (const rx of RX) { const m = rx.exec(txt); if (m && (A = ar(m))) break; } }
       const nMod = mods.reduce((a, x) => a + (+x.q || 0), 0) || null;
-      if (A && /led/i.test(kit.map(x => (x.d || '') + (x.d2 || '')).join(' '))) res = { kit: true, A, nMod, cab: cab.c, mod: mods[0] && mods[0].c, cabP: cab.n, modP: mods[0] && mods[0].n };
+      if (A && /led/i.test(kit.map(x => (x.d || '') + (x.d2 || '')).join(' '))) res = { kit: true, A, nMod, cabC: cab.c, modC: mods[0] && mods[0].c };
     } else {
       const txt = [it.d, it.b, ref && ref.d, ref && ref.d2].filter(Boolean).join(' \n ');
       const led = /led/i.test(String(it.sz || '') + ' ' + txt.slice(0, 300)) && !/controller|receiving card|power supply|sensor|bracket|hanger|hanging bar|frame|all-in-one|aio/i.test(String(it.b || '') + ' ' + String(ref && ref.d2 || ''));
@@ -43,13 +43,13 @@
   };
   // prezzi: al m² e al pezzo (cabinet con i suoi moduli, per i kit)
   window.hpLedPrice = function (r, unitNet) { const i = window.hpLedInfo(r); if (!i) return null; return i.kit ? { ...i, perMq: unitNet, perPz: unitNet * i.A } : { ...i, perMq: unitNet / i.A, perPz: unitNet }; };
-  window.hpLedPzTxt = function (r) { const x = window.hpLedQ(r); if (!x) return ''; return x.kit ? nq(x.cab) + ' cabinet' + (x.mods != null ? ' + ' + nq(x.mods) + ' moduli' : '') + ' (' + n4(x.A) + ' m² a cabinet' + (x.nMod ? ', ' + x.nMod + ' moduli a cabinet' : '') + ')' : nq(x.cab) + ' pz da ' + n4(x.A) + ' m²'; };
+  window.hpLedPzTxt = function (r) { const x = window.hpLedQ(r); if (!x) return ''; return x.kit ? nq(x.cab) + ' cabinet ' + (x.cabC || '') + (x.mods != null ? ' + ' + nq(x.mods) + ' moduli ' + (x.modC || '') : '') + ' (' + n4(x.A) + ' m² a cabinet' + (x.nMod ? ', ' + x.nMod + ' moduli a cabinet' : '') + ')' : nq(x.cab) + ' pz da ' + n4(x.A) + ' m²'; };
 
   // celle della riga nei documenti: mq=true foglio «a metro quadro», mq=false foglio «a pezzi» (null = riga normale)
   window.hpLedCells = function (r, unit, mq, eur) {
     const x = window.hpLedQ(r); if (!x) return null;
     if (mq) return x.kit ? { q: n2(x.mq) + ' m²', l: eur(r.p) + '/m²', u: eur(unit) + '/m²', d: window.hpLedPzTxt(r) } : { q: n2(x.mq) + ' m²', l: eur(r.p / x.A) + '/m²', u: eur(unit / x.A) + '/m²', d: window.hpLedPzTxt(r) };
-    return x.kit ? { q: nq(x.cab) + ' cab.', l: eur(r.p * x.A), u: eur(unit * x.A), d: window.hpLedPzTxt(r) + ' · ' + n2(x.mq) + ' m²' } : null;
+    return x.kit ? { q: nq(x.cab) + ' cab.' + (x.mods != null ? '\n' + nq(x.mods) + ' mod.' : ''), l: eur(r.p * x.A), u: eur(unit * x.A) + '/cab.', d: window.hpLedPzTxt(r) + ' · ' + n2(x.mq) + ' m²' } : null;
   };
   // riquadro sotto la quantità della riga dell'offerta
   window.hpLedQty = function (r, qIn, onChange) {
@@ -57,16 +57,20 @@
     const info = el('small', { class: 'hint hp-mqinfo' });
     if (i.kit) { // il riferimento è il cabinet: i m² scritti si arrotondano a cabinet interi (m² = cabinet × superficie del cabinet)
       qIn.step = '0.01'; qIn.title = 'Metri quadri del LED wall: si arrotondano a cabinet interi (' + n4(i.A) + ' m² a cabinet); il prezzo del kit è al m²';
-      const cabIn = el('input', { type: 'number', min: 0, step: 1, class: 'ln-in hp-mqin', 'aria-label': 'Numero di cabinet', title: 'Cabinet: i m² si calcolano dalla superficie del cabinet (' + n4(i.A) + ' m²)' });
+      // composizione di 2 articoli: cabinet e moduli, entrambi visibili e modificabili
+      const cabIn = el('input', { type: 'number', min: 0, step: 1, class: 'ln-in hp-mqin', 'aria-label': 'Numero di cabinet ' + (i.cabC || ''), title: 'Cabinet ' + (i.cabC || '') + ': i m² si calcolano dalla superficie del cabinet (' + n4(i.A) + ' m²)' });
+      const modIn = i.nMod ? el('input', { type: 'number', min: 0, step: i.nMod, class: 'ln-in hp-mqin', 'aria-label': 'Numero di moduli ' + (i.modC || ''), title: 'Moduli ' + (i.modC || '') + ' (' + i.nMod + ' per cabinet): si arrotondano a cabinet interi' }) : null;
       const setCab = c => { c = Math.max(0, Math.round(c)); r.q = Math.round(c * i.A * 10000) / 10000; qIn.value = r.q; };
-      const upd = () => { const x = window.hpLedQ(r); if (document.activeElement !== cabIn) cabIn.value = Math.round(x.cab * 100) / 100; info.textContent = nq(x.cab) + ' cabinet' + (x.mods != null ? ' · ' + nq(x.mods) + ' moduli' : '') + ' · ' + n4(i.A) + ' m²/cabinet' + (r.mqReq != null && Math.abs(r.mqReq - x.mq) > 0.005 ? ' · richiesti ' + n2(r.mqReq) + ' m²' : ''); };
+      const upd = () => { const x = window.hpLedQ(r); if (document.activeElement !== cabIn) cabIn.value = Math.round(x.cab * 100) / 100; if (modIn && document.activeElement !== modIn) modIn.value = Math.round(x.mods * 100) / 100; info.textContent = n4(i.A) + ' m²/cabinet' + (i.nMod ? ' · ' + i.nMod + ' moduli/cabinet' : '') + (r.mqReq != null && Math.abs(r.mqReq - x.mq) > 0.005 ? ' · richiesti ' + n2(r.mqReq) + ' m²' : ''); };
       // scrivendo i m², all'uscita dal campo si passa al numero intero di cabinet (per eccesso)
       qIn.addEventListener('input', () => { r.mqReq = +qIn.value || 0; upd(); });
       qIn.addEventListener('change', () => { const v = +qIn.value || 0; r.mqReq = v; setCab(Math.ceil(v / i.A - 1e-9)); upd(); onChange(); });
       cabIn.addEventListener('input', () => { r.mqReq = null; setCab(+cabIn.value || 0); upd(); onChange(); });
+      if (modIn) modIn.addEventListener('change', () => { r.mqReq = null; setCab(Math.ceil((+modIn.value || 0) / i.nMod - 1e-9)); upd(); onChange(); });
       if (Math.abs(r.q / i.A - Math.round(r.q / i.A)) > 0.005) { r.mqReq = r.mqReq ?? r.q; setCab(Math.ceil(r.q / i.A - 1e-9)); }
       upd();
-      return el('div', { class: 'stack', style: 'gap:2px;align-items:flex-end;margin-top:2px' }, el('span', { class: 'hint', style: 'font-size:.66rem' }, 'm²'), el('label', { class: 'row', style: 'gap:4px;flex-wrap:nowrap' }, cabIn, el('span', { class: 'hint' }, 'cabinet')), info);
+      const lab = (inp, t, code) => el('label', { class: 'row', style: 'gap:4px;flex-wrap:nowrap;justify-content:flex-end', title: code || '' }, inp, el('span', { class: 'hint', style: 'min-width:52px;text-align:left' }, t));
+      return el('div', { class: 'stack', style: 'gap:2px;align-items:flex-end;margin-top:2px' }, el('span', { class: 'hint', style: 'font-size:.66rem' }, 'm² totali'), lab(cabIn, 'cabinet', i.cabC), modIn ? lab(modIn, 'moduli', i.modC) : null, info);
     }
     const mq = el('input', { type: 'number', min: 0, step: 0.01, class: 'ln-in hp-mqin', 'aria-label': 'Metri quadri', title: 'Scrivi i m²: i pezzi si calcolano arrotondando per eccesso (' + n4(i.A) + ' m² a pezzo)', value: r.mq != null ? r.mq : Math.round((+r.q || 0) * i.A * 100) / 100 });
     const upd = () => { const tot = (+r.q || 0) * i.A; info.textContent = n4(i.A) + ' m²/pz · ' + n2(tot) + ' m² in offerta' + (r.mq != null && Math.abs(tot - r.mq) > 0.005 ? ' (richiesti ' + n2(r.mq) + ')' : ''); };

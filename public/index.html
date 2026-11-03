@@ -327,6 +327,7 @@ th.r,td.r{text-align:right}
 .modal{background:var(--surface);border-radius:12px;box-shadow:var(--shadow);width:min(640px,100%);max-height:100%;display:flex;flex-direction:column;min-height:0}
 .modal.wide{width:min(980px,100%)}
 .modal.full{width:min(1280px,100%);height:100%}
+.modal.full.hp-xl{width:min(1760px,100%)}
 .m-head{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line-2)}
 .m-body{padding:16px 18px;overflow:auto;min-height:0;flex:1;display:flex;flex-direction:column;gap:14px}
 .m-foot{display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--line-2);flex-wrap:wrap}
@@ -922,7 +923,7 @@ function mailOf(id){return S.names[id]?.email||S.team.get(id)?.email||'';}
 /* ============ toasts & modali ============ */
 function toast(msg,kind='',onclick){const t=el('div',{class:'toast '+kind,onclick:onclick?()=>{onclick();t.remove();}:null},el('div',{class:'grow'},msg),el('button',{class:'x','aria-label':'Chiudi',onclick:e=>{e.stopPropagation();t.remove();}},'✕'));$('#toasts').append(t);setTimeout(()=>t.remove(),kind==='live'?12000:5000);}
 function modal(title,body,actions,opts={}){
-  const ov=el('div',{class:'ov'});const box=el('div',{class:'modal'+(opts.wide?' wide':'')+(opts.full?' full':''),role:'dialog','aria-modal':'true','aria-label':title});
+  const ov=el('div',{class:'ov'});const box=el('div',{class:'modal'+(opts.wide?' wide':'')+(opts.full?' full':'')+(opts.cls?' '+opts.cls:''),role:'dialog','aria-modal':'true','aria-label':title});
   const foot=el('div',{class:'m-foot'});
   box.append(el('div',{class:'m-head'},el('h2',{text:title}),el('button',{class:'icon-btn',type:'button','aria-label':'Chiudi',onclick:()=>close()},ic('x'))),el('div',{class:'m-body'},body),foot);
   (actions||[]).forEach(a=>foot.append(a));ov.append(box);document.body.append(ov);
@@ -1460,7 +1461,7 @@ function offerEditor(o){const isNew=!o.id;const D=JSON.parse(JSON.stringify(o));
   const table=el('div',{class:'tbl-wrap'},el('table',{},el('thead',{},el('tr',{},['','Codice','Descrizione','Q.tà','Listino unit.','Sconto %','Netto unit.','Tot. listino','Tot. netto',''].map((h,i)=>el('th',{class:i>=3&&i<=8?'r':''},h)))),tbody));
   const body=el('div',{class:'stack'},el('div',{class:'fgrid',style:'grid-template-columns:repeat(auto-fit,minmax(160px,1fr))'},fld('Titolo',f.tit),fld('Numero',f.num),fld('Data',f.data),fld('Stato',f.stato),fld('Validità (giorni)',f.valid),fld('Cliente (sconti)',cliSel),com?null:fld('Commessa',comSel)),cliInfo,tools,table,totBox,fld('Note e condizioni',f.note),window.hpOffIntroBox?hpOffIntroBox(D):null,el('div',{class:'fld full'},el('span',{},'Allegati dell\'offerta'),attIn,attBox));
   drawCli();drawLines();
-  const m=modal((isNew?'Nuova offerta':'Offerta '+(D.numero||''))+(com?' · '+com.nome:''),body,[!isNew?btn('Elimina',async()=>{if(!await ask('Eliminare l\'offerta '+D.numero+'?'))return;if(await remove('offerte',o.id))m.close();},'danger','trash'):null,el('span',{class:'grow'}),downloads?btn('Esporta / stampa',()=>exportOffer(collect()),'','dl'):null,btn('Chiudi',()=>{attUn&&attUn();m.close();}),btn('Salva offerta',async()=>{if(await save()){attUn&&attUn();m.close();}},'pri','check')].filter(Boolean),{full:true,sticky:true});
+  const m=modal((isNew?'Nuova offerta':'Offerta '+(D.numero||''))+(com?' · '+com.nome:''),body,[!isNew?btn('Elimina',async()=>{if(!await ask('Eliminare l\'offerta '+D.numero+'?'))return;if(await remove('offerte',o.id))m.close();},'danger','trash'):null,el('span',{class:'grow'}),downloads?btn('Esporta / stampa',()=>exportOffer(collect()),'','dl'):null,btn('Chiudi',()=>{attUn&&attUn();m.close();}),btn('Salva offerta',async()=>{if(await save()){attUn&&attUn();m.close();}},'pri','check')].filter(Boolean),{full:true,sticky:true,cls:'hp-xl'});
   function collect(){const t=offTot(D.righe);return {...D,righe:D.righe.map(({_ed,...x})=>x),titolo:f.tit.value.trim(),numero:f.num.value.trim(),data:f.data.value,stato:f.stato.value,valid:+f.valid.value||0,note:f.note.value,clienteId:cliSel.value||null,totL:t.L,totN:t.N};}
   async function save(){const o2=collect();const id=o.id||newId('offerte');
     // senza commessa: se c'è il cliente si crea la commessa collegata (come per le offerte importate da PDF)
