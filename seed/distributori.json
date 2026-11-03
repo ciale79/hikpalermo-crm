@@ -1,0 +1,3602 @@
+[
+{
+"key": "SICURIA",
+"nome": "Sicuria s.r.l.",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Campania",
+"tel": "3355212340",
+"email": "apesce@sicuria.it",
+"sito": "sicuria.it",
+"indirizzo": "Via Dei Greci 29",
+"cap": "83055",
+"citta": "Sturno",
+"prov": "AV",
+"sedi": [
+{
+"indirizzo": "Via Dei Greci 29",
+"cap": "83055",
+"citta": "Sturno",
+"prov": "AV",
+"tel": "3355212340",
+"email": "apesce@sicuria.it",
+"label": ""
+}
+]
+},
+{
+"key": "FUTURSOLUTION",
+"nome": "FUTUR SOLUTION SRL",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Sardegna",
+"tel": "329 4081089",
+"email": "info@futursolution.com",
+"sito": "futursolution.com",
+"indirizzo": "ZONA INDUSTRIALE PREDDA NIEDDA STRADA 14",
+"cap": "07100",
+"citta": "Sassari",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "ZONA INDUSTRIALE PREDDA NIEDDA STRADA 14",
+"cap": "07100",
+"citta": "Sassari",
+"prov": "",
+"tel": "329 4081089",
+"email": "info@futursolution.com",
+"label": ""
+},
+{
+"indirizzo": "ZONA IND.LE CALA SACCAIA SETTORE 6 VIA MADAGASCAR",
+"cap": "07026",
+"citta": "Olbia",
+"prov": "",
+"tel": "329 4081089",
+"email": "info@futursolution.com",
+"label": ""
+},
+{
+"indirizzo": "EX SS 131 KM 7,100",
+"cap": "09028",
+"citta": "Sestu",
+"prov": "CA",
+"tel": "329 4081089",
+"email": "info@futursolution.com",
+"label": ""
+}
+]
+},
+{
+"key": "GAM",
+"nome": "GAM SRL",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Campania",
+"tel": "081 7591915",
+"email": "info@gam-service.it",
+"sito": "gam-service.it",
+"indirizzo": "VIA NAZIONALE DELLE PUGLIE, 178",
+"cap": "80026",
+"citta": "Casoria",
+"prov": "NA",
+"sedi": [
+{
+"indirizzo": "VIA NAZIONALE DELLE PUGLIE, 178",
+"cap": "80026",
+"citta": "Casoria",
+"prov": "NA",
+"tel": "081 7591915",
+"email": "info@gam-service.it",
+"label": ""
+}
+]
+},
+{
+"key": "SOGI",
+"nome": "SO.GI. srl",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Calabria",
+"tel": "0961 551807",
+"email": "info@sogi-srl.it",
+"sito": "",
+"indirizzo": "Via Lucrezia della Valle 1",
+"cap": "88100",
+"citta": "Catanzaro",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "Via Lucrezia della Valle 1",
+"cap": "88100",
+"citta": "Catanzaro",
+"prov": "",
+"tel": "0961 551807",
+"email": "info@sogi-srl.it",
+"label": ""
+}
+]
+},
+{
+"key": "TVSITALIA",
+"nome": "TVS ITALIA SRL",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Triveneto",
+"tel": "049 5791126",
+"email": "fabio@tvsitalia.it",
+"sito": "tvsitalia.it",
+"indirizzo": "VIA DELL'ARTIGIANATO, 8/A",
+"cap": "35010",
+"citta": "Loreggia",
+"prov": "PD",
+"sedi": [
+{
+"indirizzo": "VIA DELL'ARTIGIANATO, 8/A",
+"cap": "35010",
+"citta": "Loreggia",
+"prov": "PD",
+"tel": "049 5791126",
+"email": "fabio@tvsitalia.it",
+"label": ""
+},
+{
+"indirizzo": "VIALE DELLA NAVIGAZIONE INTERNA 79",
+"cap": "35129",
+"citta": "Padova",
+"prov": "",
+"tel": "049 774510",
+"email": "daniele@tvsitalia.it",
+"label": ""
+},
+{
+"indirizzo": "VIA ISAAC NEWTON, 25",
+"cap": "31020",
+"citta": "Villorba",
+"prov": "TV",
+"tel": "0422 444525",
+"email": "michele@tvsitalia.it",
+"label": ""
+},
+{
+"indirizzo": "VIALE DEL LAVORO, 6",
+"cap": "36100",
+"citta": "Vicenza",
+"prov": "",
+"tel": "0444 964122",
+"email": "matteo@tvsitalia.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DELL'ARTIGIANATO 6/D",
+"cap": "30020",
+"citta": "Gruaro",
+"prov": "VE",
+"tel": "0421 1896172",
+"email": "info@tvsitalia.it",
+"label": ""
+}
+]
+},
+{
+"key": "WISE",
+"nome": "WISE S.R.L.",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Toscana",
+"tel": "0574 1828252",
+"email": "info@wisesystems.it",
+"sito": "wisesystems.it",
+"indirizzo": "VIA VALENTINI, 29",
+"cap": "59100",
+"citta": "Prato",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA VALENTINI, 29",
+"cap": "59100",
+"citta": "Prato",
+"prov": "",
+"tel": "0574 1828252",
+"email": "info@wisesystems.it",
+"label": ""
+}
+]
+},
+{
+"key": "CDA",
+"nome": "CDA SRL",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Sicilia",
+"tel": "091 6714184",
+"email": "cdapalermo@cdasrl.com",
+"sito": "cdasrl.com",
+"indirizzo": "VIA GIOVANNI PAISIELLO, 33",
+"cap": "90145",
+"citta": "Palermo",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA GIOVANNI PAISIELLO, 33",
+"cap": "90145",
+"citta": "Palermo",
+"prov": "",
+"tel": "091 6714184",
+"email": "cdapalermo@cdasrl.com",
+"label": ""
+},
+{
+"indirizzo": "VIA PENSAVALLE, 9",
+"cap": "95128",
+"citta": "Catania",
+"prov": "",
+"tel": "095 595455",
+"email": "cda@cdasrl.com",
+"label": ""
+},
+{
+"indirizzo": "VIA DOTT. G. MINARDI, 8",
+"cap": "97100",
+"citta": "Ragusa",
+"prov": "",
+"tel": "0932 257737",
+"email": "cdaragusa@cdasrl.com",
+"label": ""
+}
+]
+},
+{
+"key": "DST",
+"nome": "DST SRL",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Lazio, Lombardia",
+"tel": "06 98379093",
+"email": "f.colagrossi@dstsicurezza.it",
+"sito": "dstsicurezza.it",
+"indirizzo": "VIA BOCCEA, 443",
+"cap": "00166",
+"citta": "Roma",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA BOCCEA, 443",
+"cap": "00166",
+"citta": "Roma",
+"prov": "",
+"tel": "06 98379093",
+"email": "f.colagrossi@dstsicurezza.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DEL FORTE TIBURTINO, 160",
+"cap": "00159",
+"citta": "Roma",
+"prov": "",
+"tel": "06 98379092",
+"email": "l.moriconi@dstsicurezza.it",
+"label": ""
+},
+{
+"indirizzo": "VIA CORRADO DEL GRECO, 100",
+"cap": "00121",
+"citta": "Ostia",
+"prov": "",
+"tel": "06 98379098",
+"email": "info@dstsicurezza.it",
+"label": ""
+},
+{
+"indirizzo": "VIA GIORGIO AMENDOLA, 4",
+"cap": "00040",
+"citta": "Marino",
+"prov": "",
+"tel": "06 98379095",
+"email": "m.iaricci@dstsicurezza.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DEL BARCO SNC",
+"cap": "00011",
+"citta": "Tivoli Terme",
+"prov": "",
+"tel": "06 98379091",
+"email": "info@dstsicurezza.it",
+"label": ""
+},
+{
+"indirizzo": "VIA SANTA MARIA, 93",
+"cap": "20093",
+"citta": "Cologno Monzese",
+"prov": "MI",
+"tel": "02 99775552",
+"email": "r.libutti@dstsicurezza.it",
+"label": ""
+}
+]
+},
+{
+"key": "GIUDICIEPOLIDORI",
+"nome": "GIUDICI & POLIDORI SRL",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Marche, Emilia Romagna",
+"tel": "051 6259408",
+"email": "info@giudiciepolidori.it",
+"sito": "giudiciepolidori.it",
+"indirizzo": "VIA PALAZZETTI, 5",
+"cap": "40068",
+"citta": "San Lazzaro Di Savena",
+"prov": "BO",
+"sedi": [
+{
+"indirizzo": "VIA PALAZZETTI, 5",
+"cap": "40068",
+"citta": "San Lazzaro Di Savena",
+"prov": "BO",
+"tel": "051 6259408",
+"email": "info@giudiciepolidori.it",
+"label": ""
+},
+{
+"indirizzo": "STRADA PROVINCIALE VALTESINO, 299/16",
+"cap": "63066",
+"citta": "Grottammare",
+"prov": "AP",
+"tel": "0735 777446",
+"email": "info@giudiciepolidori.it",
+"label": ""
+}
+]
+},
+{
+"key": "HESA",
+"nome": "HESA SPA",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Nazionale",
+"tel": "055 7310549",
+"email": "hesa@hesa.com",
+"sito": "hesa.com",
+"indirizzo": "VIA BARONTINI, 22",
+"cap": "50018",
+"citta": "Scandicci",
+"prov": "FI",
+"sedi": [
+{
+"indirizzo": "VIA BARONTINI, 22",
+"cap": "50018",
+"citta": "Scandicci",
+"prov": "FI",
+"tel": "055 7310549",
+"email": "hesa@hesa.com",
+"label": ""
+},
+{
+"indirizzo": "VIA TRIBONIANO, 25",
+"cap": "20156",
+"citta": "Milano",
+"prov": "MI",
+"tel": "02 380361",
+"email": "hesa@hesa.com",
+"label": ""
+}
+]
+},
+{
+"key": "HISIC",
+"nome": "HI SIC SRL",
+"distCat": [
+"Sicurezza",
+"Solution"
+],
+"distArea": "Lazio",
+"tel": "06 7900007",
+"email": "info@hisic.it",
+"sito": "hisic.it",
+"indirizzo": "VIA SILICELLA, 84",
+"cap": "00169",
+"citta": "Roma",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA SILICELLA, 84",
+"cap": "00169",
+"citta": "Roma",
+"prov": "",
+"tel": "06 7900007",
+"email": "info@hisic.it",
+"label": ""
+}
+]
+},
+{
+"key": "VERROCCHIO",
+"nome": "VERROCCHIO SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Abruzzo, Puglia, Umbria",
+"tel": "085 691399",
+"email": "info@verrocchio.it",
+"sito": "verrocchio.it",
+"indirizzo": "VIA BARNABEI, 69/71",
+"cap": "65126",
+"citta": "Pescara",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA BARNABEI, 69/71",
+"cap": "65126",
+"citta": "Pescara",
+"prov": "",
+"tel": "085 691399",
+"email": "info@verrocchio.it",
+"label": ""
+},
+{
+"indirizzo": "VIA LEPANTO 27",
+"cap": "70043",
+"citta": "Monopoli",
+"prov": "BA",
+"tel": "080 798 4396",
+"email": "marketing@verrocchio.it",
+"label": ""
+},
+{
+"indirizzo": "VIALE DELL'ARTIGIANATO SNC",
+"cap": "70026",
+"citta": "Modugno",
+"prov": "BA",
+"tel": "085 691399",
+"email": "info@verrocchio.it",
+"label": ""
+},
+{
+"indirizzo": "VIA GIUSEPPE FRENGUELLI 63",
+"cap": "06129",
+"citta": "Perugia",
+"prov": "PU",
+"tel": "085 691399",
+"email": "info@verrocchio.it",
+"label": ""
+}
+]
+},
+{
+"key": "AE",
+"nome": "A.E. SRL A SOCIO UNICO",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Umbria",
+"tel": "075 395659",
+"email": "info@aeweb.it",
+"sito": "aeweb.it",
+"indirizzo": "VIA DEL PONTE VECCHIO, 73",
+"cap": "06135",
+"citta": "Ponte San Giovanni",
+"prov": "PG",
+"sedi": [
+{
+"indirizzo": "VIA DEL PONTE VECCHIO, 73",
+"cap": "06135",
+"citta": "Ponte San Giovanni",
+"prov": "PG",
+"tel": "075 395659",
+"email": "info@aeweb.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DELLE TERRE ARNOLFE, 46/N",
+"cap": "05100",
+"citta": "Terni",
+"prov": "TR",
+"tel": "075 395659",
+"email": "info@aeweb.it",
+"label": ""
+}
+]
+},
+{
+"key": "ADRGROUP",
+"nome": "ADR GROUP SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Emilia Romagna, Marche, Abruzzo",
+"tel": "085 8433905",
+"email": "abruzzo@adr-group.it",
+"sito": "adr-group.it",
+"indirizzo": "VIA NENNI, 60",
+"cap": "66020",
+"citta": "San Giovanni Teatino",
+"prov": "CH",
+"sedi": [
+{
+"indirizzo": "VIA NENNI, 60",
+"cap": "66020",
+"citta": "San Giovanni Teatino",
+"prov": "CH",
+"tel": "085 8433905",
+"email": "abruzzo@adr-group.it",
+"label": ""
+},
+{
+"indirizzo": "VIA A.VOLTA, 9",
+"cap": "60027",
+"citta": "Osimo",
+"prov": "AN",
+"tel": "071 7202016",
+"email": "ancona@adr-group.it",
+"label": ""
+},
+{
+"indirizzo": "VIA G. BIZET, 20",
+"cap": "47841",
+"citta": "Cattolica",
+"prov": "RN",
+"tel": "0541 968588",
+"email": "info@adr-group.it",
+"label": ""
+}
+]
+},
+{
+"key": "ASSOSICUREZZA",
+"nome": "ASSO SICUREZZA SPA",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lazio, Campania, Marche, Abruzzo, Umbria",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"sito": "assosicurezza.com",
+"indirizzo": "VIA VAL TIBERINA, 23",
+"cap": "63074",
+"citta": "San Benedetto Del Tronto",
+"prov": "AP",
+"sedi": [
+{
+"indirizzo": "VIA VAL TIBERINA, 23",
+"cap": "63074",
+"citta": "San Benedetto Del Tronto",
+"prov": "AP",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+},
+{
+"indirizzo": "VIA CASILINA, 266",
+"cap": "00038",
+"citta": "Valmontone",
+"prov": "RM",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+},
+{
+"indirizzo": "VIALE VOLSCI, 29",
+"cap": "03100",
+"citta": "Frosinone",
+"prov": "FR",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+},
+{
+"indirizzo": "VIA XX SETTEMBRE, 319",
+"cap": "67051",
+"citta": "Avezzano",
+"prov": "AQ",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+},
+{
+"indirizzo": "VIA GUSTAVO BENUCCI, 153",
+"cap": "06135",
+"citta": "Ponte San Giovanni",
+"prov": "PG",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+},
+{
+"indirizzo": "VIA PONZA, 3",
+"cap": "80026",
+"citta": "Casoria",
+"prov": "NA",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+},
+{
+"indirizzo": "VIA LUIGI EINAUDI, 12",
+"cap": "00043",
+"citta": "Ciampino",
+"prov": "RM",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+},
+{
+"indirizzo": "VIA MAGRA, 32",
+"cap": "04100",
+"citta": "Latina",
+"prov": "LT",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+},
+{
+"indirizzo": "VIA AURELIA, 1051",
+"cap": "00166",
+"citta": "Roma",
+"prov": "RM",
+"tel": "06 79090111",
+"email": "info@assosicurezza.com",
+"label": ""
+}
+]
+},
+{
+"key": "AVSALARMVIDEOSYSTEMS",
+"nome": "AVS ALARM VIDEO SYSTEMS SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Molise",
+"tel": "0874 493027",
+"email": "info@avsdistribuzione.com",
+"sito": "alarmvideosystems.it",
+"indirizzo": "VIA NATALE MOLINARI SNC, Z.I.",
+"cap": "86100",
+"citta": "Campobasso",
+"prov": "CB",
+"sedi": [
+{
+"indirizzo": "VIA NATALE MOLINARI SNC, Z.I.",
+"cap": "86100",
+"citta": "Campobasso",
+"prov": "CB",
+"tel": "0874 493027",
+"email": "info@avsdistribuzione.com",
+"label": ""
+}
+]
+},
+{
+"key": "COMMERGATE",
+"nome": "COMMER GATE SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Campania",
+"tel": "081 7584818",
+"email": "marketing@commergate.it",
+"sito": "commergate.it",
+"indirizzo": "VIA GIOVANNI PASCOLI, SNC C/O COMPLESSO LEMAR",
+"cap": "80026",
+"citta": "Casoria",
+"prov": "NA",
+"sedi": [
+{
+"indirizzo": "VIA GIOVANNI PASCOLI, SNC C/O COMPLESSO LEMAR",
+"cap": "80026",
+"citta": "Casoria",
+"prov": "NA",
+"tel": "081 7584818",
+"email": "marketing@commergate.it",
+"label": ""
+}
+]
+},
+{
+"key": "CPS",
+"nome": "CPS SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Puglia",
+"tel": "080 9303392",
+"email": "info@cpsgroup.it",
+"sito": "cpsgroup.info",
+"indirizzo": "VIA BAIONE, 198/L",
+"cap": "70043",
+"citta": "Monopoli",
+"prov": "BA",
+"sedi": [
+{
+"indirizzo": "VIA BAIONE, 198/L",
+"cap": "70043",
+"citta": "Monopoli",
+"prov": "BA",
+"tel": "080 9303392",
+"email": "info@cpsgroup.it",
+"label": ""
+}
+]
+},
+{
+"key": "DATACOMTECNOLOGIE",
+"nome": "DATACOM TECNOLOGIE SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Toscana",
+"tel": "055 696706",
+"email": "info@datacomtecnologie.it",
+"sito": "datacomtecnologie.it",
+"indirizzo": "VIA ARRIGO DA SETTIMELLO, 5/7",
+"cap": "50135",
+"citta": "Firenze",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA ARRIGO DA SETTIMELLO, 5/7",
+"cap": "50135",
+"citta": "Firenze",
+"prov": "",
+"tel": "055 696706",
+"email": "info@datacomtecnologie.it",
+"label": ""
+}
+]
+},
+{
+"key": "DIGITALSYSTEM",
+"nome": "DIGITAL SYSTEM SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Puglia",
+"tel": "080 4838949",
+"email": "info@digitalsystemsrl.it",
+"sito": "digitalsystemsrl.it",
+"indirizzo": "VIA MOTTOLA KM 2.200 SN, Z.I.",
+"cap": "74015",
+"citta": "Martina Franca",
+"prov": "TA",
+"sedi": [
+{
+"indirizzo": "VIA MOTTOLA KM 2.200 SN, Z.I.",
+"cap": "74015",
+"citta": "Martina Franca",
+"prov": "TA",
+"tel": "080 4838949",
+"email": "info@digitalsystemsrl.it",
+"label": ""
+}
+]
+},
+{
+"key": "DISTRIBUZIONESICUREZZALATINA",
+"nome": "DISTRIBUZIONE SICUREZZA LATINA",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lazio",
+"tel": "0773 624132",
+"email": "info@dslatina.it",
+"sito": "dodic.it",
+"indirizzo": "VIA SCRIVIA, 5",
+"cap": "04100",
+"citta": "Latina",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA SCRIVIA, 5",
+"cap": "04100",
+"citta": "Latina",
+"prov": "",
+"tel": "0773 624132",
+"email": "info@dslatina.it",
+"label": ""
+}
+]
+},
+{
+"key": "DODICADRIATICA",
+"nome": "DODIC ADRIATICA SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lazio, Campania, Umbria, Abruzzo",
+"tel": "085 413579",
+"email": "pescara@dodic.it",
+"sito": "dodic.it",
+"indirizzo": "VIALE EUROPA, 128",
+"cap": "65010",
+"citta": "Spoltore",
+"prov": "PE",
+"sedi": [
+{
+"indirizzo": "VIALE EUROPA, 128",
+"cap": "65010",
+"citta": "Spoltore",
+"prov": "PE",
+"tel": "085 413579",
+"email": "pescara@dodic.it",
+"label": ""
+}
+]
+},
+{
+"key": "DODICELETTRONICA",
+"nome": "DODIC ELETTRONICA SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lazio, Campania, Umbria",
+"tel": "0775 840029",
+"email": "info@dodic.it",
+"sito": "dodic.it",
+"indirizzo": "VIA CASALE, 13",
+"cap": "03100",
+"citta": "Frosinone",
+"prov": "FR",
+"sedi": [
+{
+"indirizzo": "VIA CASALE, 13",
+"cap": "03100",
+"citta": "Frosinone",
+"prov": "FR",
+"tel": "0775 840029",
+"email": "info@dodic.it",
+"label": ""
+},
+{
+"indirizzo": "VIA ROBERTO FANCELLI 177",
+"cap": "00169",
+"citta": "Roma",
+"prov": "",
+"tel": "06  7233614",
+"email": "info@dodic.it",
+"label": ""
+},
+{
+"indirizzo": "VIA CHIESINA UZZANESE, 3",
+"cap": "00138",
+"citta": "Roma",
+"prov": "RM",
+"tel": "06 87465791",
+"email": "info@dodic.it",
+"label": ""
+}
+]
+},
+{
+"key": "DODICTIRRENA",
+"nome": "DODIC TIRRENA SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lazio, Campania, Umbria",
+"tel": "081 5404122",
+"email": "info.tirrena@dodic.it",
+"sito": "dodic.it",
+"indirizzo": "VIA G. PASCOLI, 6",
+"cap": "80026",
+"citta": "Casoria",
+"prov": "NA",
+"sedi": [
+{
+"indirizzo": "VIA G. PASCOLI, 6",
+"cap": "80026",
+"citta": "Casoria",
+"prov": "NA",
+"tel": "081 5404122",
+"email": "info.tirrena@dodic.it",
+"label": ""
+}
+]
+},
+{
+"key": "DOPPLER",
+"nome": "DOPPLER SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Piemonte, Liguria, Valle D'Aosta",
+"tel": "011 6408700",
+"email": "info@doppler.eu",
+"sito": "doppler.eu",
+"indirizzo": "CORSO MATTEOTTI",
+"cap": "10121",
+"citta": "Torino",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "CORSO MATTEOTTI",
+"cap": "10121",
+"citta": "Torino",
+"prov": "",
+"tel": "011 6408700",
+"email": "info@doppler.eu",
+"label": ""
+},
+{
+"indirizzo": "VIA EUGENIO CURIEL, 14",
+"cap": "10024",
+"citta": "Moncalieri",
+"prov": "TO",
+"tel": "011 6408711",
+"email": "info@doppler.eu",
+"label": ""
+},
+{
+"indirizzo": "CORSO LOMBARDIA, 13",
+"cap": "10078",
+"citta": "Venaria",
+"prov": "TO",
+"tel": "011 4530709",
+"email": "venariareale@doppler.eu",
+"label": ""
+},
+{
+"indirizzo": "VIA ACHILLE SCLAVO, 40",
+"cap": "15100",
+"citta": "Alessandria",
+"prov": "",
+"tel": "0131 227406",
+"email": "alessandria@doppler.eu",
+"label": ""
+},
+{
+"indirizzo": "CORSO VENEZIA. 112",
+"cap": "14100",
+"citta": "Asti",
+"prov": "",
+"tel": "0141 320418",
+"email": "asti@doppler.eu",
+"label": ""
+},
+{
+"indirizzo": "VIA BRA, 1",
+"cap": "12100",
+"citta": "Cuneo",
+"prov": "",
+"tel": "0171  417094",
+"email": "cuneo@doppler.eu",
+"label": ""
+}
+]
+},
+{
+"key": "DSAMED",
+"nome": "DSA MED SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Emilia Romagna, Veneto, Toscana",
+"tel": "051 6259633",
+"email": "info@dsamed.it",
+"sito": "dsamed.it",
+"indirizzo": "VIA CICOGNA 103",
+"cap": "40068",
+"citta": "San Lazzaro Di Savena",
+"prov": "BO",
+"sedi": [
+{
+"indirizzo": "VIA CICOGNA 103",
+"cap": "40068",
+"citta": "San Lazzaro Di Savena",
+"prov": "BO",
+"tel": "051 6259633",
+"email": "info@dsamed.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DELLA MECCANICA 1/D",
+"cap": "36100",
+"citta": "Vicenza",
+"prov": "",
+"tel": "0444 1783640",
+"email": "info@dsamed.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DELL'INDUSTRIA 22/B",
+"cap": "37135",
+"citta": "Verona",
+"prov": "",
+"tel": "045 501356",
+"email": "info@dsamed.it",
+"label": ""
+},
+{
+"indirizzo": "VIA NONA STRADA 13",
+"cap": "35129",
+"citta": "Padova",
+"prov": "",
+"tel": "049 8079329",
+"email": "info@dsamed.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DELLA PACE MONDIALE, 22/24",
+"cap": "50018",
+"citta": "Scandicci",
+"prov": "FI",
+"tel": "055 7311441",
+"email": "info@dsamed.it",
+"label": ""
+}
+]
+},
+{
+"key": "ETERBIOMETRICTECHNOLOGIES",
+"nome": "ETER BIOMETRIC TECHNOLOGIES SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Emilia Romagna",
+"tel": "059 7874620",
+"email": "info@eter.it",
+"sito": "eter.it",
+"indirizzo": "VIA ENRICO MATTEI, 21",
+"cap": "41043",
+"citta": "Casinalbo Di Formigine",
+"prov": "MO",
+"sedi": [
+{
+"indirizzo": "VIA ENRICO MATTEI, 21",
+"cap": "41043",
+"citta": "Casinalbo Di Formigine",
+"prov": "MO",
+"tel": "059 7874620",
+"email": "info@eter.it",
+"label": ""
+}
+]
+},
+{
+"key": "EXAD",
+"nome": "Exad S.p.A.",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Piemonte, Lombardia, Valle D'Aosta",
+"tel": "011 274 5925",
+"email": "info@exad-group.com",
+"sito": "exad-group.com",
+"indirizzo": "VIA ANDREA SANSOVINO, 243/55G",
+"cap": "10151",
+"citta": "Torino",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA ANDREA SANSOVINO, 243/55G",
+"cap": "10151",
+"citta": "Torino",
+"prov": "",
+"tel": "011 274 5925",
+"email": "info@exad-group.com",
+"label": ""
+},
+{
+"indirizzo": "VIA DELLA MOIA, 1",
+"cap": "20044",
+"citta": "Arese",
+"prov": "MI",
+"tel": "02 9358 0706",
+"email": "info@exad-group.com",
+"label": ""
+}
+]
+},
+{
+"key": "FUTURTEC",
+"nome": "FUTURTEC SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lombardia, Emilia Romagna, Piemonte",
+"tel": "0362 364465",
+"email": "novamilanese@futurtec.it",
+"sito": "futurtec.it",
+"indirizzo": "VIA SARAGAT, 18",
+"cap": "20834",
+"citta": "Nova Milanese",
+"prov": "MI",
+"sedi": [
+{
+"indirizzo": "VIA SARAGAT, 18",
+"cap": "20834",
+"citta": "Nova Milanese",
+"prov": "MI",
+"tel": "0362 364465",
+"email": "novamilanese@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "CORSO MILANO, 189",
+"cap": "28883",
+"citta": "Gravellona Toce",
+"prov": "VB",
+"tel": "0323 840994",
+"email": "gravellona@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DELL'INDUSTRIA, 396",
+"cap": "41058",
+"citta": "Vignola",
+"prov": "MO",
+"tel": "059 769657",
+"email": "vignola@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA CICOGNA, 39",
+"cap": "40068",
+"citta": "San Lazzaro Di Savena",
+"prov": "BO",
+"tel": "051 0412911",
+"email": "bologna@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA ANTONIO MASETTI, 56/58",
+"cap": "47122",
+"citta": "Forli'",
+"prov": "FC",
+"tel": "0543 724001",
+"email": "forli@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA ANTONIO DELFINI, 14",
+"cap": "41122",
+"citta": "Modena",
+"prov": "MO",
+"tel": "059 825951",
+"email": "modena@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA FRANCHI MAGGI, 106/108",
+"cap": "20089",
+"citta": "Rozzano",
+"prov": "MI",
+"tel": "02 5751855",
+"email": "rozzano@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA BELLAFINO, 6",
+"cap": "24126",
+"citta": "Bergamo",
+"prov": "BG",
+"tel": "035 319334",
+"email": "bergamo@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA CESARE BATTISTI, 3",
+"cap": "21045",
+"citta": "Gazzada Schianno",
+"prov": "VA",
+"tel": "0332 335329",
+"email": "gazzada@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA BUONARROTI, 17/B",
+"cap": "21013",
+"citta": "Gallarate",
+"prov": "VA",
+"tel": "0331 795785",
+"email": "gallarate@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA STEPHENSON, 91",
+"cap": "20157",
+"citta": "Milano",
+"prov": "",
+"tel": "02 97160187",
+"email": "milano@futurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA GORIZIA, 45",
+"cap": "21047",
+"citta": "Saronno",
+"prov": "VA",
+"tel": "02 96701118",
+"email": "saronno@futurtec.it",
+"label": ""
+}
+]
+},
+{
+"key": "HDIDISTRIBUZIONE",
+"nome": "HDI DISTRIBUZIONE SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Emilia Romagna, Toscana, Umbria",
+"tel": "0521 1912450",
+"email": "info@hdidistribuzione.it",
+"sito": "hdidistribuzione.it",
+"indirizzo": "VIA N. MORIGI, 9/A",
+"cap": "43122",
+"citta": "Parma",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA N. MORIGI, 9/A",
+"cap": "43122",
+"citta": "Parma",
+"prov": "",
+"tel": "0521 1912450",
+"email": "info@hdidistribuzione.it",
+"label": ""
+},
+{
+"indirizzo": "VIA A. EINSTEIN, 45/49",
+"cap": "52100",
+"citta": "Arezzo",
+"prov": "",
+"tel": "0575 1828401",
+"email": "info@hdidistribuzione.it",
+"label": ""
+},
+{
+"indirizzo": "VIA BASTIA, 10",
+"cap": "06080",
+"citta": "Assisi",
+"prov": "PG",
+"tel": "07 58005288",
+"email": "info@hdidistribuzione.it",
+"label": ""
+},
+{
+"indirizzo": "VIA C. COLOMBO, 77/22",
+"cap": "40131",
+"citta": "Bologna",
+"prov": "",
+"tel": "051 372300",
+"email": "info@hdidistribuzione.it",
+"label": ""
+},
+{
+"indirizzo": "VIA FLAMINIA, 282",
+"cap": "47924",
+"citta": "Rimini",
+"prov": "",
+"tel": "0541 1571525",
+"email": "info@hdidistribuzione.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DI MEZZO, 26/R",
+"cap": "56012",
+"citta": "Calcinaia",
+"prov": "PI",
+"tel": "0587 488220",
+"email": "info@hdidistribuzione.it",
+"label": ""
+},
+{
+"indirizzo": "VIA DI PONTASSIEVE, 2",
+"cap": "50142",
+"citta": "Firenze",
+"prov": "",
+"tel": "055 9030107",
+"email": "info@hdidistribuzione.it",
+"label": ""
+}
+]
+},
+{
+"key": "ITALTEC",
+"nome": "ITALTEC SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lazio",
+"tel": "06 6623891",
+"email": "info@italtec.biz",
+"sito": "italtec.biz",
+"indirizzo": "PIAZZA DI VILLA CARPEGNA 55/56",
+"cap": "00165",
+"citta": "Roma",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "PIAZZA DI VILLA CARPEGNA 55/56",
+"cap": "00165",
+"citta": "Roma",
+"prov": "",
+"tel": "06 6623891",
+"email": "info@italtec.biz",
+"label": ""
+}
+]
+},
+{
+"key": "LOGIN",
+"nome": "LOGIN S.R.L",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Toscana",
+"tel": "055 7355640",
+"email": "info@loginsecurity.it",
+"sito": "loginsecurity.it",
+"indirizzo": "VIA CASALPIANO, 21",
+"cap": "53048",
+"citta": "Sinalunga",
+"prov": "SI",
+"sedi": [
+{
+"indirizzo": "VIA CASALPIANO, 21",
+"cap": "53048",
+"citta": "Sinalunga",
+"prov": "SI",
+"tel": "055 7355640",
+"email": "info@loginsecurity.it",
+"label": ""
+}
+]
+},
+{
+"key": "MIFARELETTRONICA",
+"nome": "MIFAR ELETTRONICA SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lombardia",
+"tel": "02 471408",
+"email": "mifarelettronica@mifar.it",
+"sito": "mifar.it",
+"indirizzo": "VIA CURIO DENTATO 2",
+"cap": "20146",
+"citta": "Milano",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA CURIO DENTATO 2",
+"cap": "20146",
+"citta": "Milano",
+"prov": "",
+"tel": "02 471408",
+"email": "mifarelettronica@mifar.it",
+"label": ""
+}
+]
+},
+{
+"key": "MOVITECH",
+"nome": "MOVITECH SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lombardia",
+"tel": "031 764275",
+"email": "info@movitech.it",
+"sito": "movitech.it",
+"indirizzo": "VIA VITTORIO VENETO, 63",
+"cap": "22060",
+"citta": "Carugo",
+"prov": "CO",
+"sedi": [
+{
+"indirizzo": "VIA VITTORIO VENETO, 63",
+"cap": "22060",
+"citta": "Carugo",
+"prov": "CO",
+"tel": "031 764275",
+"email": "info@movitech.it",
+"label": ""
+}
+]
+},
+{
+"key": "SECURITYHOMESERVICE",
+"nome": "SECURITY HOME SERVICE SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lazio",
+"tel": "06 51962885",
+"email": "sicurezza@shssecurity.com",
+"sito": "shssecurity.com",
+"indirizzo": "VIA A. CECHOV, 12G",
+"cap": "00142",
+"citta": "Roma",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA A. CECHOV, 12G",
+"cap": "00142",
+"citta": "Roma",
+"prov": "",
+"tel": "06 51962885",
+"email": "sicurezza@shssecurity.com",
+"label": ""
+}
+]
+},
+{
+"key": "SICURTECBRESCIA",
+"nome": "SICURTEC BRESCIA SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lombardia",
+"tel": "030 3532006",
+"email": "info@sicurtecbrescia.it",
+"sito": "sicurtecbrescia.it",
+"indirizzo": "VIA LORENZO BERNINI 14",
+"cap": "25010",
+"citta": "San Zeno Naviglio",
+"prov": "BS",
+"sedi": [
+{
+"indirizzo": "VIA LORENZO BERNINI 14",
+"cap": "25010",
+"citta": "San Zeno Naviglio",
+"prov": "BS",
+"tel": "030 3532006",
+"email": "info@sicurtecbrescia.it",
+"label": ""
+}
+]
+},
+{
+"key": "SICURTEC",
+"nome": "SICURTEC S.r.l.",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lombardia",
+"tel": "035 316600",
+"email": "info@sicurtec.it",
+"sito": "sicurtec.it",
+"indirizzo": "VIA ZANICA, 52",
+"cap": "24126",
+"citta": "Bergamo",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA ZANICA, 52",
+"cap": "24126",
+"citta": "Bergamo",
+"prov": "",
+"tel": "035 316600",
+"email": "info@sicurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA MILANO, 32",
+"cap": "24047",
+"citta": "Treviglio",
+"prov": "BG",
+"tel": "0363 303553",
+"email": "treviglio@sicurtec.it",
+"label": ""
+},
+{
+"indirizzo": "CORSO CARLO ALBERTO, 108",
+"cap": "23900",
+"citta": "Lecco",
+"prov": "LC",
+"tel": "0341 288522",
+"email": "lecco@sicurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA ZANELLI, 33",
+"cap": "25036",
+"citta": "Palazzolo Sull'Oglio",
+"prov": "BS",
+"tel": "030 7402968",
+"email": "palazzolo@sicurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA MONTE GRAPPA, 39",
+"cap": "24060",
+"citta": "Rogno",
+"prov": "BG",
+"tel": "035 967879",
+"email": "rogno@sicurtec.it",
+"label": ""
+},
+{
+"indirizzo": "VIA C.A. DALLA CHIESA, 1",
+"cap": "27028",
+"citta": "San Martino Siccomario",
+"prov": "PV",
+"tel": "0382 490430",
+"email": "sanmartino.pavia@sicurtec.it",
+"label": ""
+}
+]
+},
+{
+"key": "SIMASOL",
+"nome": "SIMASOL SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Piemonte, Liguria, Valle D'Aosta",
+"tel": "0173 231693",
+"email": "info@simasol.it",
+"sito": "simasol.it",
+"indirizzo": "Via dell'Artigianato 4",
+"cap": "12060",
+"citta": "Grinzane Cavour",
+"prov": "CN",
+"sedi": [
+{
+"indirizzo": "Via dell'Artigianato 4",
+"cap": "12060",
+"citta": "Grinzane Cavour",
+"prov": "CN",
+"tel": "0173 231693",
+"email": "info@simasol.it",
+"label": ""
+},
+{
+"indirizzo": "VIA ACHILLE GRANDI, 3",
+"cap": "10095",
+"citta": "Grugliasco",
+"prov": "TO",
+"tel": "011 7706060",
+"email": "torino@simasol.it",
+"label": ""
+},
+{
+"indirizzo": "VIA ACHILLE SCLAVO 80",
+"cap": "15121",
+"citta": "Alessandria",
+"prov": "",
+"tel": "0131 227435",
+"email": "alessandria@simasol.it",
+"label": ""
+},
+{
+"indirizzo": "VIA MONTE NERO 67/69",
+"cap": "28066",
+"citta": "Galliate",
+"prov": "NO",
+"tel": "0321 806782",
+"email": "novara@simasol.it",
+"label": ""
+},
+{
+"indirizzo": "CORSO VITTORIO VENETO 244/R",
+"cap": "17100",
+"citta": "Savona",
+"prov": "",
+"tel": "019 2160239",
+"email": "savona@simasol.it",
+"label": ""
+}
+]
+},
+{
+"key": "TECNOCITY",
+"nome": "TECNOCITY SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lombardia",
+"tel": "02 66043013",
+"email": "info@tecnocitysrl.it",
+"sito": "tecnocitysrl.it",
+"indirizzo": "VIA LINCOLN, 59",
+"cap": "20092",
+"citta": "Cinisello Balsamo",
+"prov": "MI",
+"sedi": [
+{
+"indirizzo": "VIA LINCOLN, 59",
+"cap": "20092",
+"citta": "Cinisello Balsamo",
+"prov": "MI",
+"tel": "02 66043013",
+"email": "info@tecnocitysrl.it",
+"label": ""
+}
+]
+},
+{
+"key": "TROLESE",
+"nome": "TROLESE SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Veneto, Trentino Alto Adige, Emilia Romagna, Toscana",
+"tel": "049 8641940",
+"email": "commerciale@trolese.it",
+"sito": "trolese.it",
+"indirizzo": "VIA NONA STRADA, 56",
+"cap": "35129",
+"citta": "Padova",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA NONA STRADA, 56",
+"cap": "35129",
+"citta": "Padova",
+"prov": "",
+"tel": "049 8641940",
+"email": "commerciale@trolese.it",
+"label": ""
+},
+{
+"indirizzo": "VIA CURZIO MALAPARTE 29/3",
+"cap": "50145",
+"citta": "Firenze",
+"prov": "",
+"tel": "055 213993",
+"email": "commerciale@trolese.it",
+"label": ""
+},
+{
+"indirizzo": "VIA FERRARESE, 108",
+"cap": "40128",
+"citta": "Bologna",
+"prov": "",
+"tel": "051 355817",
+"email": "commerciale.bo@trolese.it",
+"label": ""
+},
+{
+"indirizzo": "VIA LUIGI GALVANI, 13/A",
+"cap": "39100",
+"citta": "Bolzano",
+"prov": "",
+"tel": "0471 378715",
+"email": "commerciale.bz@trolese.it",
+"label": ""
+},
+{
+"indirizzo": "VIA GERMANIA 2",
+"cap": "37136",
+"citta": "Verona",
+"prov": "",
+"tel": "045 584477",
+"email": "commerciale.vr@trolese.it",
+"label": ""
+}
+]
+},
+{
+"key": "AIKOMTECHNOLOGY",
+"nome": "AIKOM TECHNOLOGY SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "0541 648894",
+"email": "info@aikomtech.com",
+"sito": "aikomtech.com",
+"indirizzo": "VIA LAMBRUSCO, 1",
+"cap": "47838",
+"citta": "Riccione",
+"prov": "RN",
+"sedi": [
+{
+"indirizzo": "VIA LAMBRUSCO, 1",
+"cap": "47838",
+"citta": "Riccione",
+"prov": "RN",
+"tel": "0541 648894",
+"email": "info@aikomtech.com",
+"label": ""
+},
+{
+"indirizzo": "VIA E. DE AMICIS, 67 C/O CENTRO ALDO PALAZZI",
+"cap": "20092",
+"citta": "Cinisello Balsamo",
+"prov": "MI",
+"tel": "0541 648894",
+"email": "info@aikomtech.com",
+"label": ""
+}
+]
+},
+{
+"key": "ELMAT",
+"nome": "ELMAT SPA",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "049 7623011",
+"email": "info@elmat.com",
+"sito": "elmat.com",
+"indirizzo": "VIA URUGUAY, 15",
+"cap": "35127",
+"citta": "Padova",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA URUGUAY, 15",
+"cap": "35127",
+"citta": "Padova",
+"prov": "",
+"tel": "049 7623011",
+"email": "info@elmat.com",
+"label": ""
+}
+]
+},
+{
+"key": "FIORE",
+"nome": "FIORE SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "02 9900151",
+"email": "info@fioresrl.com",
+"sito": "fioresrl.com",
+"indirizzo": "VIA CARBONARI, 14",
+"cap": "20037",
+"citta": "Paderno Dugnano",
+"prov": "MI",
+"sedi": [
+{
+"indirizzo": "VIA CARBONARI, 14",
+"cap": "20037",
+"citta": "Paderno Dugnano",
+"prov": "MI",
+"tel": "02 9900151",
+"email": "info@fioresrl.com",
+"label": ""
+}
+]
+},
+{
+"key": "GESER",
+"nome": "GESER SOC. COOP.",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "0523 330426",
+"email": "max@casadellantenna.it",
+"sito": "casadellantenna.it",
+"indirizzo": "Via XXI Aprile 76",
+"cap": "29100",
+"citta": "Piacenza",
+"prov": "PC",
+"sedi": [
+{
+"indirizzo": "Via XXI Aprile 76",
+"cap": "29100",
+"citta": "Piacenza",
+"prov": "PC",
+"tel": "0523 330426",
+"email": "max@casadellantenna.it",
+"label": "Casa dell'Antenna Srl"
+},
+{
+"indirizzo": "Via G. Ceruti 2/4",
+"cap": "",
+"citta": "Como",
+"prov": "CO",
+"tel": "031 507489",
+"email": "mattia@rtvelettronic.it",
+"label": "RTV Elettronic Srl"
+},
+{
+"indirizzo": "Via Codignole 32",
+"cap": "",
+"citta": "Brescia",
+"prov": "BS",
+"tel": "030 3531725",
+"email": "info@videocomponenti.com",
+"label": "Video Componenti Srl"
+},
+{
+"indirizzo": "VIA FRATELLI CAIROLI 3",
+"cap": "20835",
+"citta": "Muggio'",
+"prov": "MB",
+"tel": "039 2780897",
+"email": "commerciale@geser.tv",
+"label": ""
+}
+]
+},
+{
+"key": "NEXTMEDIA",
+"nome": "NEXTMEDIA SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "0547 385611",
+"email": "info@nextmedia.it",
+"sito": "nextmedia.it",
+"indirizzo": "VIA QUINTO BUCCI 80",
+"cap": "47521",
+"citta": "Cesena",
+"prov": "FC",
+"sedi": [
+{
+"indirizzo": "VIA QUINTO BUCCI 80",
+"cap": "47521",
+"citta": "Cesena",
+"prov": "FC",
+"tel": "0547 385611",
+"email": "info@nextmedia.it",
+"label": ""
+}
+]
+},
+{
+"key": "SECURMATICA",
+"nome": "Secur Matica",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Lazio",
+"tel": "06 6521608",
+"email": "",
+"sito": "",
+"indirizzo": "PASSO BUOLE 115/D",
+"cap": "00054",
+"citta": "Fiumicino",
+"prov": "RM",
+"sedi": [
+{
+"indirizzo": "PASSO BUOLE 115/D",
+"cap": "00054",
+"citta": "Fiumicino",
+"prov": "RM",
+"tel": "06 6521608",
+"email": "",
+"label": ""
+}
+]
+},
+{
+"key": "SETIK",
+"nome": "SETIK SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "0362 1855440",
+"email": "sales@setik.biz",
+"sito": "setik.biz/it",
+"indirizzo": "VIA CIMABUE, 35",
+"cap": "20851",
+"citta": "Lissone",
+"prov": "MB",
+"sedi": [
+{
+"indirizzo": "VIA CIMABUE, 35",
+"cap": "20851",
+"citta": "Lissone",
+"prov": "MB",
+"tel": "0362 1855440",
+"email": "sales@setik.biz",
+"label": ""
+}
+]
+},
+{
+"key": "SICE",
+"nome": "SICE SPA",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "0583 980787",
+"email": "info@sicetelecom.it",
+"sito": "sicetelecom.it",
+"indirizzo": "VIA TAZIO NUVOLARI",
+"cap": "55061",
+"citta": "Carraia",
+"prov": "LU",
+"sedi": [
+{
+"indirizzo": "VIA TAZIO NUVOLARI",
+"cap": "55061",
+"citta": "Carraia",
+"prov": "LU",
+"tel": "0583 980787",
+"email": "info@sicetelecom.it",
+"label": ""
+}
+]
+},
+{
+"key": "SIRTEL",
+"nome": "SIR.TEL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "0442 510467",
+"email": "info@sirtel.it",
+"sito": "sirtel.it",
+"indirizzo": "VIA MOLINO DI SOPRA, 55A",
+"cap": "37054",
+"citta": "Nogara",
+"prov": "VR",
+"sedi": [
+{
+"indirizzo": "VIA MOLINO DI SOPRA, 55A",
+"cap": "37054",
+"citta": "Nogara",
+"prov": "VR",
+"tel": "0442 510467",
+"email": "info@sirtel.it",
+"label": ""
+}
+]
+},
+{
+"key": "SIRIUS",
+"nome": "SIRIUS SPA",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Nazionale",
+"tel": "011 0627111",
+"email": "info@siriusspa.it",
+"sito": "compasstech.it",
+"indirizzo": "STRADA DEL PORTONE, 159",
+"cap": "10095",
+"citta": "Grugliasco",
+"prov": "TO",
+"sedi": [
+{
+"indirizzo": "STRADA DEL PORTONE, 159",
+"cap": "10095",
+"citta": "Grugliasco",
+"prov": "TO",
+"tel": "011 0627111",
+"email": "info@siriusspa.it",
+"label": ""
+}
+]
+},
+{
+"key": "MARI",
+"nome": "MARI SRL",
+"distCat": [
+"Sicurezza"
+],
+"distArea": "Emilia Romagna",
+"tel": "0521 293604",
+"email": "shop@marisrl.it",
+"sito": "shopmarisrl.it",
+"indirizzo": "Viale Giolitti 9/A",
+"cap": "43126",
+"citta": "Parma",
+"prov": "PR",
+"sedi": [
+{
+"indirizzo": "Viale Giolitti 9/A",
+"cap": "43126",
+"citta": "Parma",
+"prov": "PR",
+"tel": "0521 293604",
+"email": "shop@marisrl.it",
+"label": ""
+},
+{
+"indirizzo": "Via Agnoletti 17/C",
+"cap": "42124",
+"citta": "Reggio Emilia",
+"prov": "RE",
+"tel": "0521 293604",
+"email": "shop@marisrl.it",
+"label": ""
+}
+]
+},
+{
+"key": "COMET",
+"nome": "COMET SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Emilia Romagna",
+"tel": "051 60 79 201",
+"email": "comet@pec.gruppocomet.it",
+"sito": "gruppocomet.it",
+"indirizzo": "VIA MICHELINO, 105",
+"cap": "40127",
+"citta": "Bologna",
+"prov": "",
+"sedi": [
+{
+"indirizzo": "VIA MICHELINO, 105",
+"cap": "40127",
+"citta": "Bologna",
+"prov": "",
+"tel": "051 60 79 201",
+"email": "comet@pec.gruppocomet.it",
+"label": ""
+}
+]
+},
+{
+"key": "GRUPPOGIOVANNINI",
+"nome": "Gruppo Giovannini Srl",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Veneto, Trentino Alto Adige, Lombardia",
+"tel": "+39 0471 557111",
+"email": "bolzano@gruppogiovannini.it",
+"sito": "gruppogiovannini.it",
+"indirizzo": "Via Giotto, 1",
+"cap": "",
+"citta": "Bolzano",
+"prov": "BZ",
+"sedi": [
+{
+"indirizzo": "Via Giotto, 1",
+"cap": "",
+"citta": "Bolzano",
+"prov": "BZ",
+"tel": "+39 0471 557111",
+"email": "bolzano@gruppogiovannini.it",
+"label": "Bolzano Electroself"
+},
+{
+"indirizzo": "Viale dell'industria, 38",
+"cap": "",
+"citta": "Caldiero",
+"prov": "VR",
+"tel": "+39 045-6153711",
+"email": "caldieroes@gruppogiovannini.it",
+"label": "Caldiero Electroself"
+},
+{
+"indirizzo": "Via Artigiani, 22",
+"cap": "",
+"citta": "Camponogara",
+"prov": "VE",
+"tel": "+39 041-5170327",
+"email": "camponogaraes@gruppogiovannini.it",
+"label": "Camponogara Electroself"
+},
+{
+"indirizzo": "Via Campotrentino, 50",
+"cap": "",
+"citta": "Trento",
+"prov": "TN",
+"tel": "+39 0461 404120",
+"email": "casaelucees@gruppogiovannini.it",
+"label": "Casa & Luce"
+},
+{
+"indirizzo": "Via T. Speri, 19",
+"cap": "",
+"citta": "Cassola",
+"prov": "VI",
+"tel": "+39 0424 566949",
+"email": "cassolaes@gruppogiovannini.it",
+"label": "Cassola Electroself"
+},
+{
+"indirizzo": "Via Venezia",
+"cap": "",
+"citta": "Castelnuovo del Garda",
+"prov": "VR",
+"tel": "+39 045 757 1373",
+"email": "castelnuovoes@gruppogiovannini.it",
+"label": "Castelnuovo Electroself"
+},
+{
+"indirizzo": "Via Trento, 99/2",
+"cap": "",
+"citta": "Cles",
+"prov": "TN",
+"tel": "+39 0463 424449",
+"email": "cleses@gruppogiovannini.it",
+"label": "Cles Electroself"
+},
+{
+"indirizzo": "Viale Trieste, 16/A",
+"cap": "",
+"citta": "Cornedo Vicentino",
+"prov": "VI",
+"tel": "+39 0445 446334",
+"email": "cornedoes@gruppogiovannini.it",
+"label": "Cornedo Electroself"
+},
+{
+"indirizzo": "Viale dell'industria, 14",
+"cap": "",
+"citta": "San Pietro di Legnago",
+"prov": "VR",
+"tel": "+39 0442 629119",
+"email": "legnagoes@gruppogiovannini.it",
+"label": "Legnago Electroself"
+},
+{
+"indirizzo": "Via Salgarelle, 2 A/B",
+"cap": "",
+"citta": "Lonigo",
+"prov": "VI",
+"tel": "+39 0444 720800",
+"email": "clonigo@gruppogiovannini.it",
+"label": "Lonigo Electroself"
+},
+{
+"indirizzo": "Via Lombardia, 37",
+"cap": "",
+"citta": "Manerbio",
+"prov": "BS",
+"tel": "+39 030 9380518",
+"email": "manerbioes@gruppogiovannini.it",
+"label": "Manerbio Electroself"
+},
+{
+"indirizzo": "Via Vivenza, 48",
+"cap": "",
+"citta": "Mantova",
+"prov": "MN",
+"tel": "+39 0376 381100",
+"email": "mantovaes@gruppogiovannini.it",
+"label": "Mantova Electroself"
+},
+{
+"indirizzo": "Via Zuegg, 72",
+"cap": "",
+"citta": "Merano",
+"prov": "BZ",
+"tel": "+39 0473 445946",
+"email": "meranoes@gruppogiovannini.it",
+"label": "Merano Electroself"
+},
+{
+"indirizzo": "Via Trento, 69/3",
+"cap": "",
+"citta": "Mezzolombardo",
+"prov": "TN",
+"tel": "+39 0461 600237",
+"email": "mezzolombardoes@gruppogiovannini.it",
+"label": "Mezzolombardo Electroself"
+},
+{
+"indirizzo": "Viale della Regione Veneto, 25",
+"cap": "",
+"citta": "Padova",
+"prov": "PD",
+"tel": "+39 049 8534500",
+"email": "padovaes@gruppogiovannini.it",
+"label": "Padova Electroself"
+},
+{
+"indirizzo": "Via Stazione di Mori, 11",
+"cap": "",
+"citta": "Rovereto",
+"prov": "TN",
+"tel": "+39 0464 424234",
+"email": "roveretoes@gruppogiovannini.it",
+"label": "Rovereto Electroself"
+},
+{
+"indirizzo": "Via Buonarroti, 1",
+"cap": "",
+"citta": "San Zeno Naviglio",
+"prov": "BS",
+"tel": "+39 030 2106762",
+"email": "bresciaes@gruppogiovannini.it",
+"label": "San Zeno Naviglio Electroself"
+},
+{
+"indirizzo": "Via di Campotrentino, 50",
+"cap": "",
+"citta": "Trento",
+"prov": "TN",
+"tel": "+39 0461 404000",
+"email": "giovannini@gruppogiovannini.it",
+"label": "Trento"
+},
+{
+"indirizzo": "Via Fermi",
+"cap": "",
+"citta": "Verona",
+"prov": "VR",
+"tel": "+39 045 8270300",
+"email": "verona@gruppogiovannini.it",
+"label": "Verona"
+},
+{
+"indirizzo": "Via della Scienza, 16/A",
+"cap": "",
+"citta": "Vicenza",
+"prov": "VI",
+"tel": "+39 0444 960797",
+"email": "vicenzaes@gruppogiovannini.it",
+"label": "Vicenza Electroself"
+},
+{
+"indirizzo": "Vicolo Verdi, 38",
+"cap": "",
+"citta": "Villorba",
+"prov": "TV",
+"tel": "+39 0422 919441",
+"email": "villorbaes@gruppogiovannini.it",
+"label": "Villorba Electroself"
+}
+]
+},
+{
+"key": "ELETTROVOLTDICANGEMIVINCENZOEC",
+"nome": "Elettrovolt di Cangemi Vincenzo & C. Sas",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Calabria",
+"tel": "0966 711056",
+"email": "elettrovoltsas@libero.it",
+"sito": "",
+"indirizzo": "Via Contrada Carozzo 14",
+"cap": "89025",
+"citta": "Rosarno",
+"prov": "RC",
+"sedi": [
+{
+"indirizzo": "Via Contrada Carozzo 14",
+"cap": "89025",
+"citta": "Rosarno",
+"prov": "RC",
+"tel": "0966 711056",
+"email": "elettrovoltsas@libero.it",
+"label": ""
+}
+]
+},
+{
+"key": "STRANO",
+"nome": "Strano Spa",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Sicilia, Calabria, Malta",
+"tel": "095523411",
+"email": "",
+"sito": "strano.it",
+"indirizzo": "Zona Industriale 3A Strada 36",
+"cap": "95121",
+"citta": "Catania",
+"prov": "CT",
+"sedi": [
+{
+"indirizzo": "Zona Industriale 3A Strada 36",
+"cap": "95121",
+"citta": "Catania",
+"prov": "CT",
+"tel": "095523411",
+"email": "",
+"label": ""
+}
+]
+},
+{
+"key": "CAREDDURAIMONDO",
+"nome": "Careddu Raimondo Srl",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Sardegna",
+"tel": "070 288108",
+"email": "info@elettrocr.it",
+"sito": "elettrocr.it",
+"indirizzo": "VIA SEGRE', 22",
+"cap": "09067",
+"citta": "Elmas",
+"prov": "CA",
+"sedi": [
+{
+"indirizzo": "VIA SEGRE', 22",
+"cap": "09067",
+"citta": "Elmas",
+"prov": "CA",
+"tel": "070 288108",
+"email": "info@elettrocr.it",
+"label": ""
+}
+]
+},
+{
+"key": "SACCHIGIUSEPPE",
+"nome": "SACCHI GIUSEPPE SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Nazionale",
+"tel": "0362 6351",
+"email": "info@sacchi.it",
+"sito": "sacchi.it",
+"indirizzo": "VIA GEROLAMO SACCHI",
+"cap": "23891",
+"citta": "Barzano'",
+"prov": "LC",
+"sedi": [
+{
+"indirizzo": "VIA GEROLAMO SACCHI",
+"cap": "23891",
+"citta": "Barzano'",
+"prov": "LC",
+"tel": "0362 6351",
+"email": "info@sacchi.it",
+"label": ""
+}
+]
+},
+{
+"key": "ALFIERI",
+"nome": "ALFIERI SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Campania",
+"tel": "0823 446411",
+"email": "info@alfierispa.it",
+"sito": "alfierispa.it",
+"indirizzo": "STRADA STATALE 265 KM 27+400",
+"cap": "81025",
+"citta": "Marcianise",
+"prov": "CE",
+"sedi": [
+{
+"indirizzo": "STRADA STATALE 265 KM 27+400",
+"cap": "81025",
+"citta": "Marcianise",
+"prov": "CE",
+"tel": "0823 446411",
+"email": "info@alfierispa.it",
+"label": "Marcianise"
+}
+]
+},
+{
+"key": "ANSE2000SCPD",
+"nome": "ANSE 2000 S.C.P.D.",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Nazionale",
+"tel": "051 728702",
+"email": "anse2000@anse2000.it",
+"sito": "anse2000.it",
+"indirizzo": "VIA BIZZARRI",
+"cap": "40012",
+"citta": "Calderara Di Reno",
+"prov": "BO",
+"sedi": [
+{
+"indirizzo": "VIA BIZZARRI",
+"cap": "40012",
+"citta": "Calderara Di Reno",
+"prov": "BO",
+"tel": "051 728702",
+"email": "anse2000@anse2000.it",
+"label": ""
+}
+]
+},
+{
+"key": "BARCELLAELETTROFORNITURE",
+"nome": "BARCELLA ELETTROFORNITURE SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Nazionale",
+"tel": "035539011",
+"email": "info@barcella.it",
+"sito": "barcella.it",
+"indirizzo": "VIA SAN MARTINO",
+"cap": "24052",
+"citta": "Azzano San Paolo",
+"prov": "BG",
+"sedi": [
+{
+"indirizzo": "VIA SAN MARTINO",
+"cap": "24052",
+"citta": "Azzano San Paolo",
+"prov": "BG",
+"tel": "035539011",
+"email": "info@barcella.it",
+"label": ""
+}
+]
+},
+{
+"key": "BIESSE",
+"nome": "BIESSE SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Nazionale",
+"tel": "0172 693347",
+"email": "bsitalia@bi-esse.com",
+"sito": "bi-esse.com",
+"indirizzo": "VIA CHIARINI",
+"cap": "12045",
+"citta": "Fossano",
+"prov": "CN",
+"sedi": [
+{
+"indirizzo": "VIA CHIARINI",
+"cap": "12045",
+"citta": "Fossano",
+"prov": "CN",
+"tel": "0172 693347",
+"email": "bsitalia@bi-esse.com",
+"label": ""
+}
+]
+},
+{
+"key": "CASILLO",
+"nome": "CASILLO SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Campania",
+"tel": "0813385785",
+"email": "casilloelettro@libero.it",
+"sito": "casillosrl.it",
+"indirizzo": "CORSO LEONARDO DA VINCI",
+"cap": "80040",
+"citta": "Terzigno",
+"prov": "NA",
+"sedi": [
+{
+"indirizzo": "CORSO LEONARDO DA VINCI",
+"cap": "80040",
+"citta": "Terzigno",
+"prov": "NA",
+"tel": "0813385785",
+"email": "casilloelettro@libero.it",
+"label": ""
+}
+]
+},
+{
+"key": "CIOFFIRENATO",
+"nome": "CIOFFI RENATO SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Puglia",
+"tel": "0833 505420",
+"email": "cre@cioffirenato.it",
+"sito": "cioffirenato.it",
+"indirizzo": "Z.I. LOTTO 14",
+"cap": "73042",
+"citta": "Casarano",
+"prov": "LE",
+"sedi": [
+{
+"indirizzo": "Z.I. LOTTO 14",
+"cap": "73042",
+"citta": "Casarano",
+"prov": "LE",
+"tel": "0833 505420",
+"email": "cre@cioffirenato.it",
+"label": ""
+}
+]
+},
+{
+"key": "CRELETTROFORNITURE",
+"nome": "CR ELETTROFORNITURE SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Puglia",
+"tel": "0803145892",
+"email": "cr.elettroforniture@tin.it",
+"sito": "crelettroforniture.com",
+"indirizzo": "VIA GRAVINA",
+"cap": "70022",
+"citta": "Altamura",
+"prov": "BA",
+"sedi": [
+{
+"indirizzo": "VIA GRAVINA",
+"cap": "70022",
+"citta": "Altamura",
+"prov": "BA",
+"tel": "0803145892",
+"email": "cr.elettroforniture@tin.it",
+"label": ""
+}
+]
+},
+{
+"key": "DIMER",
+"nome": "DI.M.E.R. SCARL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Sicilia",
+"tel": "095 9704025",
+"email": "dimer@dimer.it",
+"sito": "dimer.it",
+"indirizzo": "VIA R. CUSCONA - Z.A. TREPUNTI",
+"cap": "95014",
+"citta": "Giarre",
+"prov": "CT",
+"sedi": [
+{
+"indirizzo": "VIA R. CUSCONA - Z.A. TREPUNTI",
+"cap": "95014",
+"citta": "Giarre",
+"prov": "CT",
+"tel": "095 9704025",
+"email": "dimer@dimer.it",
+"label": ""
+}
+]
+},
+{
+"key": "ELETEKSISTEMI",
+"nome": "ELETEK SISTEMI SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Calabria",
+"tel": "0966 611 057",
+"email": "eletek@eletek.it",
+"sito": "eletek.it",
+"indirizzo": "VIA GUGLIELMO MARCONI",
+"cap": "89024",
+"citta": "Polistena",
+"prov": "RC",
+"sedi": [
+{
+"indirizzo": "VIA GUGLIELMO MARCONI",
+"cap": "89024",
+"citta": "Polistena",
+"prov": "RC",
+"tel": "0966 611 057",
+"email": "eletek@eletek.it",
+"label": "Polistena"
+}
+]
+},
+{
+"key": "ELETTRICACORDANI",
+"nome": "ELETTRICA CORDANI SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Lombardia",
+"tel": "035401610",
+"email": "info@elettricacordani.it",
+"sito": "elettricacordani.it",
+"indirizzo": "VIA F.LLI BANDIERA",
+"cap": "24127",
+"citta": "Bergamo",
+"prov": "BG",
+"sedi": [
+{
+"indirizzo": "VIA F.LLI BANDIERA",
+"cap": "24127",
+"citta": "Bergamo",
+"prov": "BG",
+"tel": "035401610",
+"email": "info@elettricacordani.it",
+"label": ""
+}
+]
+},
+{
+"key": "ELETTROSUD",
+"nome": "ELETTROSUD SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Sicilia",
+"tel": "0941 561296",
+"email": "info@elettrosud.it",
+"sito": "elettrosud.it",
+"indirizzo": "CONTRADA SIRO' SNC",
+"cap": "98061",
+"citta": "Brolo",
+"prov": "ME",
+"sedi": [
+{
+"indirizzo": "CONTRADA SIRO' SNC",
+"cap": "98061",
+"citta": "Brolo",
+"prov": "ME",
+"tel": "0941 561296",
+"email": "info@elettrosud.it",
+"label": ""
+}
+]
+},
+{
+"key": "ELETTROVENETA",
+"nome": "ELETTROVENETA SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Veneto, Friuli Venezia Giulia",
+"tel": "049/8280811",
+"email": "info@elettroveneta.it",
+"sito": "elettroveneta.it",
+"indirizzo": "",
+"cap": "",
+"citta": "",
+"prov": "",
+"sedi": []
+},
+{
+"key": "FLLICAPPADONNA",
+"nome": "F.LLI CAPPADONNA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Sicilia",
+"tel": "0933 981551",
+"email": "amministrazione@cappadonna.it",
+"sito": "cappadonna.it",
+"indirizzo": "C/DA PIANO BRUSCATO",
+"cap": "95044",
+"citta": "Mineo",
+"prov": "CT",
+"sedi": [
+{
+"indirizzo": "C/DA PIANO BRUSCATO",
+"cap": "95044",
+"citta": "Mineo",
+"prov": "CT",
+"tel": "0933 981551",
+"email": "amministrazione@cappadonna.it",
+"label": ""
+}
+]
+},
+{
+"key": "FEVAL",
+"nome": "FEVAL SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Lombardia",
+"tel": "0342 483048",
+"email": "info@feval.it",
+"sito": "feval.it",
+"indirizzo": "VIA VITTOR PISANI",
+"cap": "20124",
+"citta": "Milano",
+"prov": "MI",
+"sedi": [
+{
+"indirizzo": "VIA VITTOR PISANI",
+"cap": "20124",
+"citta": "Milano",
+"prov": "MI",
+"tel": "0342 483048",
+"email": "info@feval.it",
+"label": ""
+}
+]
+},
+{
+"key": "FOGLIANI",
+"nome": "Fogliani S.p.A.",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Lombardia",
+"tel": "0331 696911",
+"email": "info@fogliani.it",
+"sito": "fogliani.it",
+"indirizzo": "Via per Cassano, 157",
+"cap": "21052",
+"citta": "Busto Arsizio",
+"prov": "VA",
+"sedi": [
+{
+"indirizzo": "Via per Cassano, 157",
+"cap": "21052",
+"citta": "Busto Arsizio",
+"prov": "VA",
+"tel": "0331 696911",
+"email": "info@fogliani.it",
+"label": ""
+}
+]
+},
+{
+"key": "GALLIEZIO",
+"nome": "GALLI EZIO SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Lombardia",
+"tel": "0341283182",
+"email": "gallicom@gallieziospa.it",
+"sito": "gallieziospa.it",
+"indirizzo": "",
+"cap": "",
+"citta": "",
+"prov": "",
+"sedi": []
+},
+{
+"key": "IFEL",
+"nome": "I.F.EL. SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Toscana",
+"tel": "0575 357849",
+"email": "info@ifel.it",
+"sito": "ifel.it",
+"indirizzo": "VIA GENOVA",
+"cap": "52100",
+"citta": "Arezzo",
+"prov": "AR",
+"sedi": [
+{
+"indirizzo": "VIA GENOVA",
+"cap": "52100",
+"citta": "Arezzo",
+"prov": "AR",
+"tel": "0575 357849",
+"email": "info@ifel.it",
+"label": ""
+}
+]
+},
+{
+"key": "IACOLINO",
+"nome": "IACOLINO SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Sicilia",
+"tel": "092220609",
+"email": "acquisti@iacolinosrl.it",
+"sito": "iacolinosrl.it",
+"indirizzo": "CONTRADA SAN BIAGIO SNC",
+"cap": "92100",
+"citta": "Agrigento",
+"prov": "AG",
+"sedi": [
+{
+"indirizzo": "CONTRADA SAN BIAGIO SNC",
+"cap": "92100",
+"citta": "Agrigento",
+"prov": "AG",
+"tel": "092220609",
+"email": "acquisti@iacolinosrl.it",
+"label": ""
+}
+]
+},
+{
+"key": "IMESUD",
+"nome": "IMESUD SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Campania",
+"tel": "089 953026",
+"email": "imesud1985@gmail.com",
+"sito": "imesudsrl.it",
+"indirizzo": "VIA GIOVANNI AGNELLI",
+"cap": "84081",
+"citta": "Baronissi",
+"prov": "SA",
+"sedi": [
+{
+"indirizzo": "VIA GIOVANNI AGNELLI",
+"cap": "84081",
+"citta": "Baronissi",
+"prov": "SA",
+"tel": "089 953026",
+"email": "imesud1985@gmail.com",
+"label": ""
+}
+]
+},
+{
+"key": "INNAMORATOGROUP",
+"nome": "INNAMORATO GROUP SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Puglia",
+"tel": "0804785006",
+"email": "info@luxama.com",
+"sito": "luxama.com",
+"indirizzo": "VIA CARMINE",
+"cap": "70016",
+"citta": "Noicattaro",
+"prov": "BA",
+"sedi": [
+{
+"indirizzo": "VIA CARMINE",
+"cap": "70016",
+"citta": "Noicattaro",
+"prov": "BA",
+"tel": "0804785006",
+"email": "info@luxama.com",
+"label": ""
+}
+]
+},
+{
+"key": "MCELETTRICI",
+"nome": "M.C. ELETTRICI SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Nazionale",
+"tel": "02 8939171",
+"email": "assistenza@mcelettrici.com",
+"sito": "glielettrici.it",
+"indirizzo": "VIA B. BUOZZI",
+"cap": "20072",
+"citta": "Pieve Emanuele",
+"prov": "MI",
+"sedi": [
+{
+"indirizzo": "VIA B. BUOZZI",
+"cap": "20072",
+"citta": "Pieve Emanuele",
+"prov": "MI",
+"tel": "02 8939171",
+"email": "assistenza@mcelettrici.com",
+"label": ""
+}
+]
+},
+{
+"key": "NEONTOMAILLUMINAZIONE",
+"nome": "NEON TOMA ILLUMINAZIONE SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Puglia",
+"tel": "0836 428071",
+"email": "info@neontoma.it",
+"sito": "neontoma.it",
+"indirizzo": "VIA DE MAGGIO",
+"cap": "73024",
+"citta": "Maglie",
+"prov": "LE",
+"sedi": [
+{
+"indirizzo": "VIA DE MAGGIO",
+"cap": "73024",
+"citta": "Maglie",
+"prov": "LE",
+"tel": "0836 428071",
+"email": "info@neontoma.it",
+"label": ""
+}
+]
+},
+{
+"key": "REMATARLAZZI",
+"nome": "REMATARLAZZI SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Nazionale",
+"tel": "0733 203205",
+"email": "info@rematarlazzi.it",
+"sito": "rematarlazzi.it",
+"indirizzo": "VIA F.LLI KENNEDY 7/9",
+"cap": "62100",
+"citta": "Macerata",
+"prov": "MC",
+"sedi": [
+{
+"indirizzo": "VIA F.LLI KENNEDY 7/9",
+"cap": "62100",
+"citta": "Macerata",
+"prov": "MC",
+"tel": "0733 203205",
+"email": "info@rematarlazzi.it",
+"label": ""
+}
+]
+},
+{
+"key": "REXELITALIA",
+"nome": "REXEL ITALIA SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Nazionale",
+"tel": "02251112",
+"email": "rexel@rexel.it",
+"sito": "rexel.it",
+"indirizzo": "VIA BILBAO",
+"cap": "20099",
+"citta": "Sesto San Giovanni",
+"prov": "MI",
+"sedi": [
+{
+"indirizzo": "VIA BILBAO",
+"cap": "20099",
+"citta": "Sesto San Giovanni",
+"prov": "MI",
+"tel": "02251112",
+"email": "rexel@rexel.it",
+"label": ""
+}
+]
+},
+{
+"key": "SCARNATIFRATELLI",
+"nome": "SCARNATI FRATELLI SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Calabria",
+"tel": "0984 402402",
+"email": "rende@scarnati.it",
+"sito": "scarnati.it",
+"indirizzo": "VIALE TRIESTE, 15/17",
+"cap": "87100",
+"citta": "Cosenza",
+"prov": "CS",
+"sedi": [
+{
+"indirizzo": "VIALE TRIESTE, 15/17",
+"cap": "87100",
+"citta": "Cosenza",
+"prov": "CS",
+"tel": "0984 402402",
+"email": "rende@scarnati.it",
+"label": ""
+}
+]
+},
+{
+"key": "SEMARELETTRICITÀDISEBASTIANOMARRAEC",
+"nome": "SEMAR Elettricità di Sebastiano Marra & C. sas",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Calabria",
+"tel": "0965 640667",
+"email": "info@semarelettricita.it",
+"sito": "semarelettricita.it",
+"indirizzo": "VIA RAVAGNESE SUPERIORE, 263",
+"cap": "89131",
+"citta": "Reggio Calabria",
+"prov": "RC",
+"sedi": [
+{
+"indirizzo": "VIA RAVAGNESE SUPERIORE, 263",
+"cap": "89131",
+"citta": "Reggio Calabria",
+"prov": "RC",
+"tel": "0965 640667",
+"email": "info@semarelettricita.it",
+"label": ""
+}
+]
+},
+{
+"key": "SIMEPOINT",
+"nome": "SIME POINT SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Campania",
+"tel": "0825 449731",
+"email": "info@simepoint.it",
+"sito": "sime.av.it",
+"indirizzo": "CONTRADA TRANZANO",
+"cap": "83031",
+"citta": "Ariano Irpino",
+"prov": "AV",
+"sedi": [
+{
+"indirizzo": "CONTRADA TRANZANO",
+"cap": "83031",
+"citta": "Ariano Irpino",
+"prov": "AV",
+"tel": "0825 449731",
+"email": "info@simepoint.it",
+"label": ""
+}
+]
+},
+{
+"key": "SIMEVIGNUDA",
+"nome": "SIMEVIGNUDA SPA",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Veneto, Friuli Venezia Giulia",
+"tel": "045/8270827",
+"email": "simevignuda@gruppocomet.it",
+"sito": "simevignuda.it",
+"indirizzo": "",
+"cap": "",
+"citta": "",
+"prov": "",
+"sedi": []
+},
+{
+"key": "VITALESUD",
+"nome": "VITALE SUD",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Calabria",
+"tel": "0968 457111",
+"email": "info.vs@vitalesud.it",
+"sito": "vitalesud.it",
+"indirizzo": "Via del Progresso, 471",
+"cap": "88046",
+"citta": "Lamezia Terme",
+"prov": "CZ",
+"sedi": [
+{
+"indirizzo": "Via del Progresso, 471",
+"cap": "88046",
+"citta": "Lamezia Terme",
+"prov": "CZ",
+"tel": "0968 457111",
+"email": "info.vs@vitalesud.it",
+"label": ""
+}
+]
+},
+{
+"key": "SCS",
+"nome": "S.C.S. SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Sicilia",
+"tel": "091 528808",
+"email": "info@scs-srl.it",
+"sito": "soluzioniconsicurezza.it",
+"indirizzo": "VIALE DELLA REGIONE SICILIANA NORD OVEST 7731/7735",
+"cap": "90146",
+"citta": "Palermo",
+"prov": "PA",
+"sedi": [
+{
+"indirizzo": "VIALE DELLA REGIONE SICILIANA NORD OVEST 7731/7735",
+"cap": "90146",
+"citta": "Palermo",
+"prov": "PA",
+"tel": "091 528808",
+"email": "info@scs-srl.it",
+"label": ""
+}
+]
+},
+{
+"key": "APRILE",
+"nome": "APRILE S.P.A.",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Campania, Lazio",
+"tel": "081 5038000",
+"email": "info@aprilespa.it",
+"sito": "aprilespa.it",
+"indirizzo": "Via Vito di Jasi 89",
+"cap": "81031",
+"citta": "Aversa",
+"prov": "CE",
+"sedi": [
+{
+"indirizzo": "Via Vito di Jasi 89",
+"cap": "81031",
+"citta": "Aversa",
+"prov": "CE",
+"tel": "081 5038000",
+"email": "info@aprilespa.it",
+"label": ""
+}
+]
+},
+{
+"key": "ASCOMEL",
+"nome": "As.co.m.el. S.r.l.",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Lombardia",
+"tel": "02 9904 0938",
+"email": "",
+"sito": "ascomel.it",
+"indirizzo": "Via Jacopo Ruffini, 3/C",
+"cap": "20037",
+"citta": "Paderno Dugnano",
+"prov": "MI",
+"sedi": [
+{
+"indirizzo": "Via Jacopo Ruffini, 3/C",
+"cap": "20037",
+"citta": "Paderno Dugnano",
+"prov": "MI",
+"tel": "02 9904 0938",
+"email": "",
+"label": ""
+}
+]
+},
+{
+"key": "CIMELSUD",
+"nome": "C.I.M.E.L. SUD SRL",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Sicilia",
+"tel": "0932 510247",
+"email": "",
+"sito": "",
+"indirizzo": "VIA SAN MARTINO, 549/A",
+"cap": "97019",
+"citta": "Vittoria",
+"prov": "RG",
+"sedi": [
+{
+"indirizzo": "VIA SAN MARTINO, 549/A",
+"cap": "97019",
+"citta": "Vittoria",
+"prov": "RG",
+"tel": "0932 510247",
+"email": "",
+"label": ""
+}
+]
+},
+{
+"key": "ELCOINGROSS",
+"nome": "ELCO INGROSS",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Calabria",
+"tel": "0961 367091",
+"email": "",
+"sito": "elcoingross.it",
+"indirizzo": "Via dei Conti Falluc, 2/1",
+"cap": "88100",
+"citta": "Catanzaro",
+"prov": "CZ",
+"sedi": [
+{
+"indirizzo": "Via dei Conti Falluc, 2/1",
+"cap": "88100",
+"citta": "Catanzaro",
+"prov": "CZ",
+"tel": "0961 367091",
+"email": "",
+"label": ""
+}
+]
+},
+{
+"key": "FOREL",
+"nome": "FOREL S.R.L.",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Puglia",
+"tel": "0804391817",
+"email": "info@forelfasano.com",
+"sito": "forelfasano.com",
+"indirizzo": "C.da S. Angelo (ZI Sud)",
+"cap": "72015",
+"citta": "Fasano",
+"prov": "BR",
+"sedi": [
+{
+"indirizzo": "C.da S. Angelo (ZI Sud)",
+"cap": "72015",
+"citta": "Fasano",
+"prov": "BR",
+"tel": "0804391817",
+"email": "info@forelfasano.com",
+"label": ""
+}
+]
+},
+{
+"key": "IANNICELLIGIUSEPPE",
+"nome": "IANNICELLI GIUSEPPE",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Calabria",
+"tel": "0981 26277",
+"email": "dittaiannicelligiuseppe@gmail.com",
+"sito": "iannicelligiuseppe.it",
+"indirizzo": "Via Roma 96-98",
+"cap": "87012",
+"citta": "Castrovillari",
+"prov": "CS",
+"sedi": [
+{
+"indirizzo": "Via Roma 96-98",
+"cap": "87012",
+"citta": "Castrovillari",
+"prov": "CS",
+"tel": "0981 26277",
+"email": "dittaiannicelligiuseppe@gmail.com",
+"label": ""
+}
+]
+},
+{
+"key": "MEB",
+"nome": "MEB S.r.l.",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Triveneto, Emilia Romagna, Lombardia",
+"tel": "0424887226",
+"email": "meb.schio@mebelettroforniture.it",
+"sito": "mebelettroforniture.it",
+"indirizzo": "Via Lago di Costanza 1",
+"cap": "36015",
+"citta": "Schio",
+"prov": "VI",
+"sedi": [
+{
+"indirizzo": "Via Lago di Costanza 1",
+"cap": "36015",
+"citta": "Schio",
+"prov": "VI",
+"tel": "0424887226",
+"email": "meb.schio@mebelettroforniture.it",
+"label": ""
+}
+]
+},
+{
+"key": "NOVELETTRA",
+"nome": "Novelettra S.r.l.",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Lombardia",
+"tel": "02 9727 0892",
+"email": "santostefano@novelettra.com",
+"sito": "novelettra.com",
+"indirizzo": "Via Salvatore Quasimodo, 14",
+"cap": "20010",
+"citta": "S. Stefano Ticino",
+"prov": "MI",
+"sedi": [
+{
+"indirizzo": "Via Salvatore Quasimodo, 14",
+"cap": "20010",
+"citta": "S. Stefano Ticino",
+"prov": "MI",
+"tel": "02 9727 0892",
+"email": "santostefano@novelettra.com",
+"label": ""
+}
+]
+},
+{
+"key": "TELMOTOR",
+"nome": "Telmotor S.p.A.",
+"distCat": [
+"Materiale elettrico"
+],
+"distArea": "Lombardia",
+"tel": "035 325 111",
+"email": "info@telmotor.it",
+"sito": "telmotor.it",
+"indirizzo": "Via Zanica 91",
+"cap": "24126",
+"citta": "Bergamo",
+"prov": "BG",
+"sedi": [
+{
+"indirizzo": "Via Zanica 91",
+"cap": "24126",
+"citta": "Bergamo",
+"prov": "BG",
+"tel": "035 325 111",
+"email": "info@telmotor.it",
+"label": ""
+}
+]
+},
+{
+"key": "BREVI",
+"nome": "BREVI SPA",
+"distCat": [
+"IT"
+],
+"distArea": "Nazionale",
+"tel": "",
+"email": "info@brevi.it",
+"sito": "brevi.it",
+"indirizzo": "VIA ORIO AL SERIO 20",
+"cap": "24050",
+"citta": "Grassobbio",
+"prov": "BG",
+"sedi": [
+{
+"indirizzo": "VIA ORIO AL SERIO 20",
+"cap": "24050",
+"citta": "Grassobbio",
+"prov": "BG",
+"tel": "",
+"email": "info@brevi.it",
+"label": ""
+}
+]
+},
+{
+"key": "COMETA",
+"nome": "COMETA S.p.A.",
+"distCat": [
+"IT"
+],
+"distArea": "Nazionale",
+"tel": "0923557744",
+"email": "info@cometa.it",
+"sito": "cometa.it",
+"indirizzo": "VIA F. CULCASI 17",
+"cap": "91100",
+"citta": "Trapani",
+"prov": "TP",
+"sedi": [
+{
+"indirizzo": "VIA F. CULCASI 17",
+"cap": "91100",
+"citta": "Trapani",
+"prov": "TP",
+"tel": "0923557744",
+"email": "info@cometa.it",
+"label": ""
+}
+]
+},
+{
+"key": "COMPUTERGROSS",
+"nome": "COMPUTER GROSS SPA",
+"distCat": [
+"IT"
+],
+"distArea": "Nazionale",
+"tel": "0571 9977",
+"email": "info@computergross.it",
+"sito": "computergross.it",
+"indirizzo": "VIA DEL PINO 1",
+"cap": "50053",
+"citta": "Empoli",
+"prov": "FI",
+"sedi": [
+{
+"indirizzo": "VIA DEL PINO 1",
+"cap": "50053",
+"citta": "Empoli",
+"prov": "FI",
+"tel": "0571 9977",
+"email": "info@computergross.it",
+"label": ""
+}
+]
+},
+{
+"key": "RUNNER",
+"nome": "RUNNER SPA",
+"distCat": [
+"IT"
+],
+"distArea": "Nazionale",
+"tel": "0332 465001",
+"email": "info@runner.it",
+"sito": "runner.it",
+"indirizzo": "VIA ADUA 11",
+"cap": "21045",
+"citta": "Gazzada Schianno",
+"prov": "VA",
+"sedi": [
+{
+"indirizzo": "VIA ADUA 11",
+"cap": "21045",
+"citta": "Gazzada Schianno",
+"prov": "VA",
+"tel": "0332 465001",
+"email": "info@runner.it",
+"label": ""
+}
+]
+},
+{
+"key": "SCREENLINE",
+"nome": "SCREENLINE SRL",
+"distCat": [
+"Commercial Display & EDU"
+],
+"distArea": "Nazionale",
+"tel": "0464 830003",
+"email": "info@screenline.it",
+"sito": "screenline.it",
+"indirizzo": "VIA NAZIONALE 1/N-A/U",
+"cap": "38060",
+"citta": "Besenello",
+"prov": "TN",
+"sedi": [
+{
+"indirizzo": "VIA NAZIONALE 1/N-A/U",
+"cap": "38060",
+"citta": "Besenello",
+"prov": "TN",
+"tel": "0464 830003",
+"email": "info@screenline.it",
+"label": ""
+}
+]
+},
+{
+"key": "DECIBEL",
+"nome": "DECIBEL SRL",
+"distCat": [
+"Commercial Display & EDU"
+],
+"distArea": "Nazionale",
+"tel": "091 512 666",
+"email": "info@decibelpro.it",
+"sito": "decibel.it",
+"indirizzo": "VIA U. GIORDANO 35",
+"cap": "90144",
+"citta": "Palermo",
+"prov": "PA",
+"sedi": [
+{
+"indirizzo": "VIA U. GIORDANO 35",
+"cap": "90144",
+"citta": "Palermo",
+"prov": "PA",
+"tel": "091 512 666",
+"email": "info@decibelpro.it",
+"label": ""
+}
+]
+},
+{
+"key": "LIGRADS",
+"nome": "LIGRA DS SRL",
+"distCat": [
+"Commercial Display & EDU"
+],
+"distArea": "Nazionale",
+"tel": "0523 872014",
+"email": "servizioclienti@ligra.it",
+"sito": "ligra.it",
+"indirizzo": "VIA ARTIGIANI 29/31",
+"cap": "29020",
+"citta": "Vigolzone",
+"prov": "PC",
+"sedi": [
+{
+"indirizzo": "VIA ARTIGIANI 29/31",
+"cap": "29020",
+"citta": "Vigolzone",
+"prov": "PC",
+"tel": "0523 872014",
+"email": "servizioclienti@ligra.it",
+"label": ""
+}
+]
+},
+{
+"key": "VIDEOMOBILE",
+"nome": "VIDEOMOBILE SRL",
+"distCat": [
+"Commercial Display & EDU"
+],
+"distArea": "Nazionale",
+"tel": "0434 632472",
+"email": "info@videomobile.it",
+"sito": "videomobile.it",
+"indirizzo": "VIA PEPERATE 27",
+"cap": "33082",
+"citta": "Azzano Decimo",
+"prov": "PN",
+"sedi": [
+{
+"indirizzo": "VIA PEPERATE 27",
+"cap": "33082",
+"citta": "Azzano Decimo",
+"prov": "PN",
+"tel": "0434 632472",
+"email": "info@videomobile.it",
+"label": ""
+}
+]
+},
+{
+"key": "EDUGROUP",
+"nome": "EDUGROUP SRL",
+"distCat": [
+"Commercial Display & EDU"
+],
+"distArea": "Nazionale",
+"tel": "030 6729700",
+"email": "info@edugroup.it",
+"sito": "edugroup.it",
+"indirizzo": "VIA LAMARMORA 185/A",
+"cap": "25124",
+"citta": "Brescia",
+"prov": "BS",
+"sedi": [
+{
+"indirizzo": "VIA LAMARMORA 185/A",
+"cap": "25124",
+"citta": "Brescia",
+"prov": "BS",
+"tel": "030 6729700",
+"email": "info@edugroup.it",
+"label": ""
+}
+]
+},
+{
+"key": "ZZIPPGROUP",
+"nome": "ZZiPP Group S.p.A.",
+"distCat": [
+"Commercial Display & EDU"
+],
+"distArea": "Nazionale",
+"tel": "0429 617888",
+"email": "gm@zzippgroup.com",
+"sito": "zzippgroup.com",
+"indirizzo": "Via Caldevigo 23/d",
+"cap": "35042",
+"citta": "Este",
+"prov": "PD",
+"sedi": [
+{
+"indirizzo": "Via Caldevigo 23/d",
+"cap": "35042",
+"citta": "Este",
+"prov": "PD",
+"tel": "0429 617888",
+"email": "gm@zzippgroup.com",
+"label": ""
+}
+]
+}
+]
