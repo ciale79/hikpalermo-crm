@@ -79,8 +79,49 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       catch (e) { toast('Testo non generato: ' + e.message, 'bad'); b.lastChild.textContent = t0; }
       b.disabled = false;
     }, 'sm', 'spark');
-    return el('div', { class: 'fld full' }, el('span', { class: 'row between', style: 'gap:8px' }, el('span', {}, 'Testo introduttivo (copertina dell\'offerta ProAV)'), b), ta);
+    return el('div', { class: 'stack', style: 'grid-column:1/-1' }, el('div', { class: 'fld full' }, el('span', { class: 'row between', style: 'gap:8px' }, el('span', {}, 'Testo introduttivo (copertina dell\'offerta ProAV)'), b), ta), covBox(D));
   };
+
+  /* ---------- immagini di copertina: automatiche (i 4 prodotti principali per valore) o scelte nella scheda offerta ---------- */
+  const COVMAX = 6;
+  const autoCov = D => [...new Map((D.righe || []).filter(r => r.c).slice().sort((a, b) => lineTot(b).netto - lineTot(a).netto).map(r => [mainC(r.c), r])).values()].slice(0, 4).map(r => ({ k: 'art', c: mainC(r.c), L: r.L }));
+  const covImgCache = new Map();
+  const covImage = async (x, D) => {
+    if (x.k === 'img') return square('/_blob/' + x.id, 600);
+    const key = x.c + '|' + (x.L || ''); if (covImgCache.has(key)) return covImgCache.get(key);
+    const r = (D.righe || []).find(y => mainC(y.c) === x.c) || { c: x.c, L: x.L };
+    const p = productImage({ ...r, c: x.c }, true); covImgCache.set(key, p); return p;
+  };
+  function covBox(D) {
+    const box = el('div', { class: 'hp-covgrid' }); const hint = el('span', { class: 'hint' });
+    const fIn = el('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+    const addSel = el('select', { 'aria-label': 'Aggiungi l\'immagine di un articolo', style: 'width:auto;max-width:280px' });
+    const list = () => Array.isArray(D.cov) ? D.cov : autoCov(D);
+    const own = () => { if (!Array.isArray(D.cov)) D.cov = autoCov(D); return D.cov; };
+    const draw = () => {
+      const L = list(); hint.textContent = Array.isArray(D.cov) ? 'Scelte a mano · ' + L.length + ' di ' + COVMAX : 'Automatiche: i prodotti principali per valore';
+      box.replaceChildren(...(L.length ? L.map((x, i) => {
+        const im = el('div', { class: 'hp-covimg' }, el('span', { class: 'spin' }));
+        covImage(x, D).then(d => im.replaceChildren(d ? el('img', { src: d, alt: x.k === 'img' ? x.name || 'immagine' : x.c }) : el('span', { class: 'hint' }, 'nessuna immagine')));
+        const mv = (dlt) => { const a = own(); const j = i + dlt; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; draw(); };
+        return el('div', { class: 'hp-covit' }, im, el('small', { class: 'mono', style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.68rem', title: x.k === 'img' ? x.name : x.c }, x.k === 'img' ? '📎 ' + (x.name || 'immagine') : x.c), el('div', { class: 'row', style: 'gap:2px;justify-content:center;flex-wrap:nowrap' },
+          el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Sposta a sinistra', disabled: i === 0, onclick: () => mv(-1) }, '←'),
+          el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Sposta a destra', disabled: i === L.length - 1, onclick: () => mv(1) }, '→'),
+          el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Togli dalla copertina', title: 'Togli dalla copertina', onclick: () => { own().splice(i, 1); draw(); } }, '✕')));
+      }) : [el('p', { class: 'hint', style: 'margin:0' }, 'Nessuna immagine in copertina.')]));
+      const used = new Set(L.filter(x => x.k === 'art').map(x => x.c));
+      const codes = [...new Map((D.righe || []).filter(r => r.c && !used.has(mainC(r.c))).map(r => [mainC(r.c), r])).values()];
+      addSel.replaceChildren(el('option', { value: '' }, codes.length ? '+ Immagine di un articolo…' : 'Tutti gli articoli sono già in copertina'), ...codes.map(r => el('option', { value: mainC(r.c) }, mainC(r.c))));
+      addSel.disabled = !codes.length || L.length >= COVMAX;
+    };
+    addSel.addEventListener('change', () => { const c = addSel.value; if (!c) return; const r = (D.righe || []).find(y => mainC(y.c) === c); const a = own(); if (a.length >= COVMAX) { toast('In copertina ci stanno al massimo ' + COVMAX + ' immagini.', 'bad'); return; } a.push({ k: 'art', c, L: r && r.L }); draw(); });
+    fIn.addEventListener('change', async () => { const fs = [...fIn.files]; fIn.value = ''; for (const f of fs) { const a = own(); if (a.length >= COVMAX) { toast('In copertina ci stanno al massimo ' + COVMAX + ' immagini.', 'bad'); break; }
+      try { const r = await assets.upload(f, { type: f.type || 'image/jpeg' }); a.push({ k: 'img', id: r.id, name: f.name }); draw(); } catch (e) { toast('Caricamento di «' + f.name + '» non riuscito', 'bad'); } } });
+    draw();
+    return el('div', { class: 'fld full' }, el('span', { class: 'row between', style: 'gap:8px;flex-wrap:wrap' }, el('span', {}, 'Immagini di copertina ', hint),
+      el('span', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, addSel, typeof assets !== 'undefined' && assets ? btn('Carica immagine', () => fIn.click(), 'sm ghost', 'up') : null, btn('Automatiche', () => { D.cov = null; draw(); }, 'sm ghost', 'spark'))), box, fIn);
+  }
+  if (!document.getElementById('hpCovCss')) document.head.append(el('style', { id: 'hpCovCss' }, '.hp-covgrid{display:flex;gap:10px;flex-wrap:wrap}.hp-covit{width:132px;display:flex;flex-direction:column;gap:4px}.hp-covimg{width:132px;height:132px;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;overflow:hidden;background:#fff}.hp-covimg img{width:100%;height:100%;object-fit:contain}.hp-covit .icon-btn{width:26px;height:26px;min-width:26px}'));
 
   /* ---------- PDF allegati (schede tecniche, disegni, report): pagine disegnate in coda all'offerta ---------- */
   async function pdfPagesFrom(buf, say, label) {
@@ -138,8 +179,8 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     if (intro) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...INK); const lh = 9.5 * 0.3528 * 1.5; for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) { for (const l of doc.splitTextToSize(par, W - 56)) { doc.text(l, 28, y); y += lh; } y += lh * 0.6; } y += 6; }
     // immagini dei prodotti (fino a 4, i prodotti principali per valore)
     say('Cerco le immagini dei prodotti…');
-    const top = [...new Map(lines.slice().sort((a, b) => lineTot(b).netto - lineTot(a).netto).map(r => [mainC(r.c), r])).values()].slice(0, 4);
-    const covImgs = (await Promise.all(top.map(r => productImage({ ...r, c: mainC(r.c) }, true)))).filter(Boolean);
+    const covList = Array.isArray(o.cov) ? o.cov : autoCov(o);
+    const covImgs = (await Promise.all(covList.slice(0, COVMAX).map(x => covImage(x, o).catch(() => null)))).filter(Boolean);
     if (covImgs.length) {
       const n = covImgs.length; const gap = 6; const room = Math.max(30, PH - 24 - y); const sz = Math.min(42, (W - 40 - gap * (n - 1)) / n, room);
       let x = (W - (n * sz + (n - 1) * gap)) / 2; const yy = Math.min(PH - 22 - sz, Math.max(y, PH - 30 - sz - 10));
