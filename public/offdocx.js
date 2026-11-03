@@ -85,7 +85,7 @@
     const lines = o.righe || [];
     const anySc = lines.some(r => !(r.net || r.noList) && +(r.sc1 ?? r.sc) > 0), anyEx = lines.some(r => !(r.net || r.noList) && +r.sc2 > 0);
     const sL = lst && lines.some(r => !r.noList && +r.p > 0), sS = sc && anySc, sE = sc && anyEx;
-    const cols = [['Codice', 1750], ['Descrizione', 0], ['Q.tà', 560, 'c'], ...(sL ? [['Listino Cad.', 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), ['Prezzo Cad.', 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
+    const cols = [['Codice', pav ? 2100 : 1750], ['Descrizione', 0], ['Q.tà', 560, 'c'], ...(sL ? [['Listino Cad.', 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), ['Prezzo Cad.', 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
     cols[1][1] = 9906 - cols.reduce((a, c) => a + c[1], 0);
     const longD = r => { if (r.dx && !pav) return r.dx; if (pav) return String(r.b || (fc(r.c, r.L) || {}).b || ''); const it = fc(r.c, r.L); return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
     const rows = [new TableRow({ tableHeader: true, children: cols.map(([h, w, a]) => cell(h, { head: true, fill: pav ? 'DEE0E4' : '808080', c: pav ? DARK : undefined, b: pav, w, a: a || 'c' })) })];
@@ -94,7 +94,7 @@
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) rows.push(new TableRow({ children: [cell(sez, { b: true, fill: pav ? 'F6F7F8' : 'F0F0F0', span: cols.length })] })); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
       const v = [r.c, longD(r) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(sL ? [net ? '' : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), eur(t.unit), eur(t.netto)];
-      rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
+      rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(k === 0 && pav && window.hpCodeLines ? hpCodeLines(x) : x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
     }
     const T = offTot(lines), iva = r2(T.N * 0.22);
     const tot = (l, v, op = {}) => new TableRow({ children: [cell(l, { span: cols.length - 1, a: 'r', b: op.b, fill: op.fill, s: op.b ? 9 : 8 }), cell(v, { a: 'r', b: true, c: op.c, fill: op.fill, s: op.b ? 9 : 8 })] });

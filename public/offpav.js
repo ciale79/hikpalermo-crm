@@ -35,6 +35,8 @@
   const dsKey = c => (window.hpDsKey ? hpDsKey(c) : String(c || '').toUpperCase().replace(/[^A-Z0-9]+/g, '-'));
   let DSMAN = new Map();
   try { claude.use('db').then(db => { if (db) db.collection('dsman').onSnapshot(sn => { const m = new Map(); sn.docs.forEach(d => m.set(d.id, { id: d.id, ...d.data() })); DSMAN = m; }, () => { }); }); } catch (e) { }
+  // codice nel modulo d'ordine: a capo dopo il «+» dei kit e comunque ogni 22 caratteri
+  window.hpCodeLines = c => String(c || '').split(/\s*\+\s*/).flatMap((p, i, a) => { const t = p + (i < a.length - 1 ? ' +' : ''); const out = []; for (let k = 0; k < t.length; k += 22) out.push(t.slice(k, k + 22)); return out.length ? out : ['']; });
   const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
   // immagine del prodotto: prima quella della pagina ufficiale ProAV (og:image della scheda prodotto), altrimenti quella del listino
   async function productImage(r, big) {
@@ -261,12 +263,12 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     for (const r of lines) {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) sb.push([{ content: sez, colSpan: nC, styles: { fontStyle: 'bold', fillColor: SECF } }]); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
-      sb.push([r.c, String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(showL ? [net ? '' : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), eur(t.unit), eur(t.netto)]);
+      sb.push([hpCodeLines(r.c).join('\n'), String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(showL ? [net ? '' : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), eur(t.unit), eur(t.netto)]);
     }
     const lab = (t, extra) => ({ content: t, colSpan: nC - 1, styles: { halign: 'right', fontStyle: 'normal', fontSize: 8, textColor: INK, ...(extra || {}) } });
     const foot = [[lab('Subtotale'), { content: eur(Tt.N), styles: { halign: 'right', textColor: RED, fontStyle: 'bold', fontSize: 8 } }], [lab('IVA (22%)'), { content: eur(iva), styles: { halign: 'right', fontStyle: 'bold', fontSize: 8 } }],
       [lab('Totale offerta', { fillColor: TOTF, fontStyle: 'bold', textColor: DARK, fontSize: 9 }), { content: eur(Tt.N + iva), styles: { halign: 'right', fontStyle: 'bold', fillColor: TOTF, textColor: DARK, fontSize: 9 } }]];
-    const cs = { 0: { cellWidth: 30.9, fontStyle: 'bold' }, 2: { cellWidth: 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
+    const cs = { 0: { cellWidth: 37, fontStyle: 'bold', overflow: 'visible' }, 2: { cellWidth: 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
     tb = {}; doc.autoTable({ didDrawCell: tHooks.didDrawCell, startY: y, head: [head], body: [...sb, ...foot], margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
       styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'top' },
       headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 }, columnStyles: cs });
