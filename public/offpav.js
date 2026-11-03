@@ -10,6 +10,8 @@
   const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', PDFW = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const HQ = 'HIKVISION ITALY Srl - Viale Fulvio Testi, 113 - 20092 Cinisello Balsamo (MI) - P.IVA 07757250969';
   const RED = [200, 16, 46], INK = [64, 64, 64], GREY = [128, 128, 128], DARK = [51, 51, 51];
+  // celle colorate in grigio chiaro: intestazioni, sezioni, totale
+  const HEADF = [222, 224, 228], SECF = [246, 247, 248], TOTF = [240, 241, 243], LINEC = [170, 174, 182];
   const eur = v => '€ ' + (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fc = (c, L) => { try { return typeof findCode === 'function' ? findCode(c, L) : null; } catch (e) { return null; } };
   const mainC = c => String(c || '').split(' + ')[0];
@@ -168,111 +170,127 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const K0 = 0.228, I1 = 0.693;
     const lockup = (x, y0, w) => { if (nlg) { const ww = w * 0.86; doc.addImage(nlg.d, 'PNG', x, y0, ww, ww * nlg.r); return y0 + ww * nlg.r; } let yy = y0; if (hik) { doc.addImage(hik.d, 'PNG', x, yy, w, w * hik.r); yy += w * hik.r + w * 0.045; } if (pav) { const pw = w * (I1 - K0); doc.addImage(pav.d, 'PNG', x + (w - pw) / 2, yy, pw, pw * pav.r); yy += pw * pav.r; } return yy; };
 
+    /* misure prese dal modello Word dell'offerta: margini 17,6 mm, interlinea «multipla» di Word, spaziature in punti */
+    const PT = 25.4 / 72, MG = 17.64, CW = W - 2 * MG, LH = 1.362; // LH: altezza riga singola di Open Sans in em
+    const PARA = (txt, y0, op = {}) => { // paragrafo: restituisce la y sotto il paragrafo (spazio dopo incluso)
+      const s = op.s || 10, mult = op.mult || 1, x = op.x ?? MG, w = op.w ?? CW, lh = s * PT * LH * mult; let yy = y0 + (op.before || 0) * PT;
+      doc.setFont('helvetica', op.b ? 'bold' : op.i ? 'italic' : 'normal'); doc.setFontSize(s); doc.setTextColor(...(op.c || INK));
+      const pars = String(txt ?? '').split('\n');
+      for (const par of pars) { const ls = par ? doc.splitTextToSize(par, w) : ['']; ls.forEach((l, k) => { const base = yy + s * PT * (1.069 + (mult - 1) * LH * 0.5);
+        if (op.a === 'j' && k < ls.length - 1 && /\s/.test(l.trim())) { const ws = l.trim().split(/\s+/); const tw = ws.reduce((a, q) => a + doc.getTextWidth(q), 0); const gap = (w - tw) / (ws.length - 1); let xx = x; ws.forEach(q => { doc.text(q, xx, base); xx += doc.getTextWidth(q) + gap; }); }
+        else doc.text(l, op.a === 'c' ? x + w / 2 : op.a === 'r' ? x + w : x, base, op.a === 'c' ? { align: 'center' } : op.a === 'r' ? { align: 'right' } : undefined);
+        yy += lh; }); }
+      return yy + (op.after || 0) * PT; };
+    const BLANK = (y0, s = 10, mult = 1, after = 0) => y0 + s * PT * LH * mult + after * PT;
+    const logoAt = (x, y0, w) => { if (nlg) { doc.addImage(nlg.d, 'PNG', x, y0, w, w * nlg.r); return y0 + w * nlg.r; } return lockup(x, y0, w / 0.86); };
+
     /* 1 · copertina */
-    let y = 16;
-    { const w = 56; y = lockup(14, y, w) + 26; }
-    const LX = 14;
-    T('Offerta riservata per', LX, y, { s: 8, c: GREY }); y += 8;
-    fitCaps(cliName, LX, y, 15, DARK, true, W - 28, true); y += 19;
-    if (rif) { T('Riferimento', LX, y, { s: 8, c: GREY }); y += 7; const rl = doc.splitTextToSize(rif, W - 28); rl.slice(0, 2).forEach(l => { T(l, LX, y, { s: 12, c: DARK }); y += 6.5; }); y += 5; }
-    T(num + ' del ' + dt, LX, y, { s: 8, c: GREY }); y += 20;
+    let y = MG;
+    y = logoAt((W - 69.6) / 2, y, 69.6) + 2 * PT;
+    y = BLANK(y, 10, 1.15, 10); y = BLANK(y, 10, 1.15, 10);
+    y = PARA('Offerta riservata per', y, { s: 11, c: GREY });
+    y = PARA(cliName.toUpperCase(), y, { s: 14, b: true, c: DARK });
+    y = BLANK(y, 10);
+    if (rif) { y = PARA('Riferimento', y, { s: 11, c: GREY }); y = PARA(rif, y, { s: 14, c: DARK }); }
+    y = PARA(num + ' del ' + dt, y, { s: 8, c: GREY });
+    y = BLANK(y, 10); y = BLANK(y, 10);
     const intro = String(o.intro || '').trim();
-    if (intro) { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...INK); const lh = 9.5 * 0.3528 * 1.5; for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) { for (const l of doc.splitTextToSize(par, W - 28)) { doc.text(l, 14, y); y += lh; } y += lh * 0.6; } y += 6; }
+    if (intro) for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) y = PARA(par, y, { s: 11, mult: 1.375, a: 'j', after: 8 });
+    y += 4;
     // immagini dei prodotti (fino a 4, i prodotti principali per valore)
     say('Cerco le immagini dei prodotti…');
     const covList = Array.isArray(o.cov) ? o.cov : autoCov(o);
     const covImgs = (await Promise.all(covList.slice(0, COVMAX).map(x => covImage(x, o).catch(() => null)))).filter(Boolean);
     if (covImgs.length) {
-      const n = covImgs.length; const gap = 6; const room = Math.max(30, PH - 24 - y); const sz = Math.min(42, (W - 40 - gap * (n - 1)) / n, room);
-      let x = 14; const yy = Math.min(PH - 22 - sz, Math.max(y, PH - 30 - sz - 10));
+      const n = covImgs.length; const gap = 6; const room = Math.max(30, PH - 24 - y); const sz = Math.min(42, (CW - gap * (n - 1)) / n, room);
+      let x = MG; const yy = Math.min(PH - 22 - sz, Math.max(y, PH - 30 - sz - 10));
       for (const d of covImgs) { doc.setDrawColor(225, 228, 234); doc.setLineWidth(.2); doc.roundedRect(x, yy, sz, sz, 2, 2); doc.addImage(d, 'JPEG', x + 1, yy + 1, sz - 2, sz - 2); x += sz + gap; }
     }
 
     /* 2 · offerta con anteprime */
-    doc.addPage(); y = 16;
-    lockup(14, 10, 52);
-    T('Offerta', 14, 34, { s: 13, c: RED }); T(num + ' del ' + dt + (rif ? ' · ' + rif : ''), 14, 40, { s: 8, c: GREY });
+    doc.addPage(); y = MG;
+    y = logoAt(MG, y, 52.5) + 2 * PT; y = BLANK(y, 10, 1.15, 6);
+    y = PARA('Offerta', y, { s: 14, c: RED, mult: 1.15, after: 2 }); y = PARA(num + ' del ' + dt + (rif ? ' · ' + rif : ''), y, { s: 8, c: GREY, mult: 1.15, after: 6 });
+    const y2 = y;
     say('Preparo le anteprime…');
     const thumbs = await Promise.all(lines.map(r => productImage({ ...r, c: mainC(r.c) }, false)));
     const longD = r => { if (r.dx) return r.dx; const it = fc(r.c, r.L); if (r.c.includes(' + ') && it && it.d) return it.d; return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
     const body = [], imgAt = new Map(); let sez = null;
     lines.forEach((r, i) => {
-      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: 6, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], textColor: DARK } }]); }
+      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: 6, styles: { fontStyle: 'bold', fillColor: SECF, textColor: DARK } }]); }
       const it = fc(r.c, r.L) || {}; const t = lineTot(r);
       imgAt.set(body.length, thumbs[i]);
       body.push(['', { content: it.sap || r.sap || '', styles: { fontStyle: 'normal' } }, { content: r.c, styles: { fontStyle: 'bold', textColor: DARK } }, { content: String(r.q), styles: { halign: 'center' } }, { content: eur(t.unit), styles: { halign: 'right' } }, { content: eur(t.netto), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }]);
-      body.push([{ content: longD(r) + (r.net ? ' (prezzo netto)' : ''), colSpan: 6, styles: { fontSize: 7.3, textColor: [70, 70, 70], cellPadding: { top: 1.6, bottom: 3.2, left: 2, right: 2 } } }]);
+      body.push([{ content: longD(r) + (r.net ? ' (prezzo netto)' : ''), colSpan: 6, styles: { fontSize: 7.5, textColor: INK, cellPadding: { top: 0.9, bottom: 2.2, left: 1.4, right: 1.4 } } }]);
     });
-    tb = {}; doc.autoTable({ startY: 46, head: [['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale']], body, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid', rowPageBreak: 'avoid',
-      styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.8, textColor: [60, 60, 60], lineColor: [205, 208, 214], lineWidth: .15, valign: 'middle' },
-      headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 },
+    tb = {}; doc.autoTable({ startY: y2, head: [['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale']], body, margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
+      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'middle' },
+      headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 },
       columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 24 }, 3: { cellWidth: 13 }, 4: { cellWidth: 26 }, 5: { cellWidth: 28 } },
       didParseCell: d => { if (d.section === 'body' && imgAt.has(d.row.index) && d.column.index === 0) d.cell.styles.minCellHeight = 22; },
       didDrawCell: d => { tHooks.didDrawCell(d); if (d.section === 'body' && d.column.index === 0 && imgAt.get(d.row.index)) { const s = Math.min(d.cell.width, d.cell.height) - 2; doc.addImage(imgAt.get(d.row.index), 'JPEG', d.cell.x + (d.cell.width - s) / 2, d.cell.y + (d.cell.height - s) / 2, s, s); } } });
     roundTables();
     const Tt = offTot(lines); const iva = Math.round(Tt.N * 22) / 100;
     y = doc.lastAutoTable.finalY + 8; if (y > PH - 40) { doc.addPage(); y = 25; }
-    const tot = (l, v, b, vr) => { T(l, W - 50, y, { a: 'right', s: b ? 10.5 : 9.5, c: [80, 80, 80] }); T(v, W - 16, y, { a: 'right', s: b ? 10.5 : 9.5, b: true, c: vr ? RED : INK }); y += 7.5; };
+    const tot = (l, v, b, vr) => { T(l, W - MG - 34, y, { a: 'right', s: b ? 10 : 8, b, c: b ? DARK : INK }); T(v, W - MG, y, { a: 'right', s: b ? 10 : 8, b: true, c: vr ? RED : DARK }); y += b ? 6.5 : 5.2; };
     tot('Subtotale', eur(Tt.N), false, true); tot('IVA (22%)', eur(iva)); tot('Totale offerta', eur(Tt.N + iva), true);
 
     /* 3 · copertina «Modulo Conferma d'ordine» */
-    doc.addPage(); y = 70;
-    { const w = 56; const y0 = y; lockup(14, 14, w); y = y0 + 40; }
-    T('Modulo Conferma d\'ordine', 14, y, { s: 24, b: true, c: DARK }); y += 12;
-    fitCaps(cliName, 14, y, 12, GREY, false, W - 28, true); y += 7; T('Offerta ' + num + ' del ' + dt, 14, y, { s: 9, c: GREY });
+    doc.addPage(); y = MG;
+    logoAt((W - 69.6) / 2, y, 69.6);
+    y = 105; y = PARA('Modulo Conferma d\'ordine', y, { s: 24, b: true, c: DARK, after: 6 });
+    y = PARA(cliName.toUpperCase(), y, { s: 14, b: true, c: DARK }); y = PARA('Offerta ' + num + ' del ' + dt, y, { s: 8, c: GREY });
 
-    /* 4 · modulo d'ordine */
-    doc.addPage();
-    lockup(14, 10, 62);
-    y = 38;
-    T('Partner contrattuale:', 16, y, { i: true, s: 8 }); T('HIKVISION ITALY Srl', 16, y + 5.5, { s: 8.5 }); T('Sede legale:', 16, y + 11, { s: 8 }); T('Viale Fulvio Testi, 113', 16, y + 16, { s: 8 }); T('20092 Cinisello Balsamo (MI)', 16, y + 21, { s: 8 });
-    T('Spett.Le', 125, y, { s: 8 });
+    /* 4 · modulo d'ordine (come il modello Word) */
+    doc.addPage(); y = MG;
+    y = logoAt(MG, y, 52.5) + 2 * PT; y = BLANK(y, 10, 1.15, 6);
     const cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
-    cl.forEach((t, k) => T(doc.splitTextToSize(t, W - 140)[0], 125, y + 5.5 + k * 5, { s: 8.5 }));
-    y = 78; T('Offerta commerciale', 14, y, { s: 12, c: RED });
-    y += 10; T('Offerta numero:', 14, y, { s: 7.5 }); T(num + ' del ' + dt, 40, y, { s: 7.5 });
-    y += 6.5; T('Redatta da:', 14, y, { s: 7.5 }); const rr = [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean); rr.forEach((t, k) => T(t, 40, y + k * 5, { s: 7.5 })); y += 5 * Math.max(1, rr.length) + 1.5;
-    if (rif) { T('Riferimento:', 14, y, { s: 7.5 }); T(doc.splitTextToSize(rif, W - 60)[0], 40, y, { s: 7.5 }); y += 6; }
-    y += 7; T('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', 14, y, { s: 7.5 });
-    y += 4.6; T('Resta escluso quanto non esplicitamente descritto.', 14, y, { s: 7.5, b: true });
+    { const cx1 = MG + 1.4, cx2 = MG + 95.25 + 1.4, cw2 = CW - 95.25 - 2.8; let ya = y + 0.9, yb = y + 0.9; const o11 = { s: 11, mult: 1.15, after: 1 };
+      ya = PARA('Partner contrattuale:', ya, { ...o11, i: true, x: cx1 }); for (const t of ['HIKVISION ITALY Srl', 'Sede legale: Viale Fulvio Testi, 113', '20092 Cinisello Balsamo (MI)']) ya = PARA(t, ya, { ...o11, x: cx1 });
+      yb = PARA('Spett.le', yb, { ...o11, x: cx2, w: cw2 }); for (const t of cl) yb = PARA(t, yb, { ...o11, x: cx2, w: cw2 });
+      y = Math.max(ya, yb) + 0.9; }
+    y = PARA('Offerta commerciale', y, { s: 14, c: RED, mult: 1.15, before: 14, after: 6 });
+    const kv = (k, v) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(10); const kw = doc.getTextWidth(k + '  '); PARA(k, y, { s: 10, b: true, mult: 1.15 }); y = PARA(v, y, { s: 10, mult: 1.15, after: 2, x: MG + kw, w: CW - kw }); };
+    kv('Offerta numero:', num + ' del ' + dt); kv('Redatta da:', [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean).join(' · ')); if (rif) kv('Riferimento:', rif);
+    y = PARA('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', y, { s: 8, mult: 1.15, before: 8, after: 2 });
+    y = PARA('Resta escluso quanto non esplicitamente descritto.', y, { s: 8, b: true, mult: 1.15, after: 6 });
     const anySc = lines.some(r => !(r.net || r.noList) && (+(r.sc1 ?? r.sc) > 0)); const anyEx = lines.some(r => +r.sc2 > 0);
     const showSc = opt.sc && anySc, showEx = opt.sc && anyEx, showL = opt.lst && lines.some(r => !r.noList && +r.p > 0);
     const head = ['Codice', 'Descrizione', 'Q.tà', ...(showL ? ['Listino Cad.'] : []), ...(showSc ? ['Sc %'] : []), ...(showEx ? ['Ex %'] : []), 'Prezzo Cad.', 'Prezzo Tot.'];
     const nC = head.length; const sb = []; sez = null;
     for (const r of lines) {
-      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) sb.push([{ content: sez, colSpan: nC, styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }]); }
+      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) sb.push([{ content: sez, colSpan: nC, styles: { fontStyle: 'bold', fillColor: SECF } }]); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
       sb.push([r.c, String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(showL ? [net ? '' : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), eur(t.unit), eur(t.netto)]);
     }
-    const lab = (t, extra) => ({ content: t, colSpan: nC - 1, styles: { halign: 'right', fontStyle: 'normal', textColor: [80, 80, 80], ...(extra || {}) } });
-    const foot = [[lab('Subtotale'), { content: eur(Tt.N), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }], [lab('IVA (22%)'), { content: eur(iva), styles: { halign: 'right', fontStyle: 'bold' } }],
-      [lab('Totale offerta', { fillColor: [232, 232, 232], fontStyle: 'bold', textColor: DARK, fontSize: 9 }), { content: eur(Tt.N + iva), styles: { halign: 'right', fontStyle: 'bold', fillColor: [232, 232, 232], textColor: DARK, fontSize: 9 } }]];
-    const cs = { 0: { cellWidth: 26 }, 2: { cellWidth: 9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: 18, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 13, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 11, halign: 'center' }; cs[k++] = { cellWidth: 20, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
-    tb = {}; doc.autoTable({ didDrawCell: tHooks.didDrawCell, startY: y + 6, head: [head], body: [...sb, ...foot], margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid', rowPageBreak: 'avoid',
-      styles: { font: 'helvetica', fontSize: 7, cellPadding: 1.6, textColor: [60, 60, 60], lineColor: [90, 90, 90], lineWidth: .15, valign: 'top' },
-      headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 }, columnStyles: cs });
+    const lab = (t, extra) => ({ content: t, colSpan: nC - 1, styles: { halign: 'right', fontStyle: 'normal', fontSize: 8, textColor: INK, ...(extra || {}) } });
+    const foot = [[lab('Subtotale'), { content: eur(Tt.N), styles: { halign: 'right', textColor: RED, fontStyle: 'bold', fontSize: 8 } }], [lab('IVA (22%)'), { content: eur(iva), styles: { halign: 'right', fontStyle: 'bold', fontSize: 8 } }],
+      [lab('Totale offerta', { fillColor: TOTF, fontStyle: 'bold', textColor: DARK, fontSize: 9 }), { content: eur(Tt.N + iva), styles: { halign: 'right', fontStyle: 'bold', fillColor: TOTF, textColor: DARK, fontSize: 9 } }]];
+    const cs = { 0: { cellWidth: 30.9, fontStyle: 'bold' }, 2: { cellWidth: 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
+    tb = {}; doc.autoTable({ didDrawCell: tHooks.didDrawCell, startY: y, head: [head], body: [...sb, ...foot], margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
+      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'top' },
+      headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 }, columnStyles: cs });
     roundTables();
-    y = doc.lastAutoTable.finalY + 14; if (y > PH - 45) { doc.addPage(); y = 30; }
-    y = lockup(32, y, 40) + 5;
-    T('HIKVISION ITALY SRL', 52, y, { a: 'center', s: 7 });
-    doc.setLineDashPattern([0.6, 0.8], 0); doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(85, y - 4, 128, y - 4); doc.line(130, y - 4, 196, y - 4); doc.setLineDashPattern([], 0);
-    T('Luogo e data', 106, y, { a: 'center', s: 7 }); T('Il committente (timbro/firma)', 163, y, { a: 'center', s: 7 });
+    y = doc.lastAutoTable.finalY + 20 * PT + 4 * PT; if (y > PH - 45) { doc.addPage(); y = MG; }
+    { const c1 = MG, w1 = 63.5, c2 = MG + 63.5, w2 = 45.9, c3 = MG + 63.5 + 45.9, w3 = CW - 63.5 - 45.9;
+      let ys = logoAt(c1 + (w1 - 32) / 2, y + 0.9, 32) + 2 * PT; PARA('HIKVISION ITALY SRL', ys, { s: 7, a: 'c', x: c1, w: w1, mult: 1.15 });
+      const yl = y + 0.9 + 30 * PT + 8 * PT * LH * 1.15 - 1.2; doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(c2 + 8, yl, c2 + w2 - 8, yl); doc.line(c3 + 9, yl, c3 + w3 - 9, yl);
+      PARA('Luogo e data', yl + 1, { s: 7, a: 'c', x: c2, w: w2, mult: 1.15 }); PARA('Il committente (timbro/firma)', yl + 1, { s: 7, a: 'c', x: c3, w: w3, mult: 1.15 }); }
 
     /* 5 · condizioni, con il riquadro delle note */
-    doc.addPage(); y = 22;
+    doc.addPage(); y = MG;
     const cond = P0.cond || {}; const cf = (typeof cfg === 'function' ? cfg() : {}) || {};
     const pick = rx => { for (const [kk, v] of Object.entries(cond)) if (rx.test(kk)) return String(v).trim(); return ''; };
-    const block = (title, ls) => { T(title, 14, y, { s: 7.5, b: true, c: RED }); y += 8; ls.forEach(l => doc.splitTextToSize(String(l), W - 28).forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; })); y += 9; };
+    const block = (title, ls) => { y = PARA(title, y, { s: 8, b: true, c: RED, mult: 1.15, before: 6, after: 4 }); ls.forEach(l => { y = PARA(l, y, { s: 8, mult: 1.15, after: 2 }); }); y = BLANK(y, 9, 1.15, 6); };
     block('TEMPI DI CONSEGNA', [o.consegna || pick(/consegn/i) || '---']);
     block('VALIDITÀ DELL\'OFFERTA', [window.hpValidTxt ? hpValidTxt(o) : 'La presente Offerta ha validità ' + (o.valid || 30) + ' giorni.']);
     block('COSTI DI SPEDIZIONE', [o.spedizione || 'Sono esclusi i costi di spedizione se non indicati.']);
     block('CONDIZIONI DI PAGAMENTO', [o.pagamento || pick(/pagament/i) || '-', 'Tutti i prezzi indicati si intendono IVA esclusa.']);
-    T('NOTE AGGIUNTIVE', 14, y, { s: 7.5, b: true, c: RED }); y += 4;
+    y = PARA('NOTE AGGIUNTIVE', y, { s: 8, b: true, c: RED, mult: 1.15, before: 6, after: 4 });
     const note = String(o.note || '').replace(/^(tempi di consegna|validit[aà][^:]*|condizioni di pagamento|banca|iban|beneficiario)\s*:.*$/gim, '').trim();
-    const nl = note ? doc.splitTextToSize(note, W - 36) : []; const bh = Math.max(32, nl.length * 4.6 + 10);
-    doc.setDrawColor(170, 174, 182); doc.setLineWidth(.3); doc.roundedRect(14, y, W - 28, bh, 3, 3);
-    let ny = y + 7; nl.forEach(z => { T(z, 18, ny, { s: 7.5 }); ny += 4.6; }); y += bh + 8;
-    ['Immagini e descrizioni dei prodotti presenti nell\'offerta sono indicativi e potrebbero contenere inesattezze.', 'Per maggiori dettagli, vi preghiamo di consultare le schede tecniche dei prodotti sui siti web ufficiali o di contattare il personale Hikvision e i partner di distribuzione autorizzati.'].forEach(l => doc.splitTextToSize(l, W - 28).forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; }));
+    { const y0 = y; let ny = y + 1.6; if (note) note.split('\n').forEach(l => { ny = PARA(l, ny, { s: 8, mult: 1.15, after: 2, x: MG + 2.4, w: CW - 4.8 }); }); const bh = Math.max(22, ny - y0 + 1.6);
+      doc.setDrawColor(...LINEC); doc.setLineWidth(.3); doc.roundedRect(MG, y0, CW, bh, RAD, RAD); y = y0 + bh + 8; }
+    ['Immagini e descrizioni dei prodotti presenti nell\'offerta sono indicativi e potrebbero contenere inesattezze.', 'Per maggiori dettagli, vi preghiamo di consultare le schede tecniche dei prodotti sui siti web ufficiali o di contattare il personale Hikvision e i partner di distribuzione autorizzati.'].forEach(l => { y = PARA(l, y, { s: 7.5, mult: 1.15, after: 2, c: GREY }); });
 
     // piè di pagina delle pagine dell'offerta (non sulle copertine)
     const nOff = doc.internal.getNumberOfPages(); const covers = new Set([1, 3]);

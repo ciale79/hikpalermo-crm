@@ -33,24 +33,28 @@
 
     const body = [];
     /* 1 · copertina */
-    body.push(nl ? img(nl, 48, 'l') : img(hik, 100), nl ? Pp(R(''), { after: 10 }) : null,
-      pav ? null : Pp(R('TVCC  |  INTRUSIONE  |  INTERCOM  |  CONTROLLO ACCESSI', { s: 10, c: GREY }), { a: 'c', after: 0 }),
-      Pp(R('Offerta riservata per', { s: 8, c: GREY }), { a: pav ? 'l' : 'c', before: 40, after: 6 }),
-      Pp(R(cliName.toUpperCase(), { s: 17, b: true, c: DARK }), { a: pav ? 'l' : 'c', after: 22 }),
-      rif ? Pp(R('Riferimento', { s: 8, c: GREY }), { a: pav ? 'l' : 'c', after: 4 }) : null, rif ? Pp(R(rif, { s: 13, c: DARK, b: !pav }), { a: pav ? 'l' : 'c', after: 14 }) : null,
-      Pp(R(num + ' del ' + dt, { s: 8, c: GREY }), { a: pav ? 'l' : 'c', after: 26 }));
-    const intro = String(o.intro || '').trim();
-    if (pav && intro) intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(Pp(R(par, { s: 10 }), { after: 8, line: 330 })));
+    if (pav) { // copertina ProAV come il modello Word di riferimento
+      const P1 = (t, op) => Pp(R(t, op), { after: 0, img: true }); const E = () => Pp(R('', { s: 10 }), { after: 0, img: true });
+      body.push(nl ? img(nl, 69.6, 'c') : img(hik, 100), Pp(R('', { s: 10 }), { after: 10 }), Pp(R('', { s: 10 }), { after: 10 }),
+        P1('Offerta riservata per', { s: 11, c: GREY }), P1(cliName.toUpperCase(), { s: 14, b: true, c: DARK }), E(),
+        rif ? P1('Riferimento', { s: 11, c: GREY }) : null, rif ? P1(rif, { s: 14, c: DARK }) : null, P1(num + ' del ' + dt, { s: 8, c: GREY }), E(), E());
+      String(o.intro || '').trim().split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(new Paragraph({ children: [R(par, { s: 11 })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 330 } })));
+    } else body.push(img(hik, 100),
+      Pp(R('TVCC  |  INTRUSIONE  |  INTERCOM  |  CONTROLLO ACCESSI', { s: 10, c: GREY }), { a: 'c', after: 0 }),
+      Pp(R('Offerta riservata per', { s: 8, c: GREY }), { a: 'c', before: 40, after: 6 }),
+      Pp(R(cliName.toUpperCase(), { s: 17, b: true, c: DARK }), { a: 'c', after: 22 }),
+      rif ? Pp(R('Riferimento', { s: 8, c: GREY }), { a: 'c', after: 4 }) : null, rif ? Pp(R(rif, { s: 13, c: DARK, b: true }), { a: 'c', after: 14 }) : null,
+      Pp(R(num + ' del ' + dt, { s: 8, c: GREY }), { a: 'c', after: 26 }));
     body.push(new Paragraph({ children: [new PageBreak()] }));
 
     /* 2 · offerta commerciale */
-    body.push(nl ? img(nl, 50, 'l') : img(hik, 60, 'l'), Pp(R(''), { after: 6 }));
+    body.push(nl ? img(nl, 52.5, 'l') : img(hik, 60, 'l'), Pp(R('', { s: 10 }), { after: 6 }));
     const cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
-      cell([Pp(R('Partner contrattuale:', { s: 8, i: true }), { after: 1 }), Pp(R('HIKVISION ITALY Srl', { s: 8.5 }), { after: 1 }), Pp(R('Sede legale: Viale Fulvio Testi, 113', { s: 8 }), { after: 1 }), Pp(R('20092 Cinisello Balsamo (MI)', { s: 8 }), { after: 0 })], { noB: true, w: 5400 }),
-      cell([Pp(R('Spett.le', { s: 8 }), { after: 1 }), ...cl.map(t => Pp(R(t, { s: 8.5 }), { after: 1 }))], { noB: true, w: 4506 })] })] }));
-    body.push(Pp(R('Offerta commerciale', { s: 13, c: RED }), { before: 14, after: 6 }));
-    const kv = (k, v) => Pp([R(k + '  ', { s: 8, b: true }), R(v, { s: 8 })], { after: 2 });
+      cell([Pp(R('Partner contrattuale:', { s: pav ? 11 : 8, i: true }), { after: 1 }), Pp(R('HIKVISION ITALY Srl', { s: pav ? 11 : 8.5 }), { after: 1 }), Pp(R('Sede legale: Viale Fulvio Testi, 113', { s: pav ? 11 : 8 }), { after: 1 }), Pp(R('20092 Cinisello Balsamo (MI)', { s: pav ? 11 : 8 }), { after: 0 })], { noB: true, w: 5400 }),
+      cell([Pp(R('Spett.le', { s: pav ? 11 : 8 }), { after: 1 }), ...cl.map(t => Pp(R(t, { s: pav ? 11 : 8.5 }), { after: 1 }))], { noB: true, w: 4506 })] })] }));
+    body.push(Pp(R('Offerta commerciale', { s: pav ? 14 : 13, c: RED }), { before: 14, after: 6 }));
+    const kv = (k, v) => Pp([R(k + '  ', { s: pav ? 10 : 8, b: true }), R(v, { s: pav ? 10 : 8 })], { after: 2 });
     body.push(kv('Offerta numero:', num + ' del ' + dt), kv('Redatta da:', [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean).join(' · ')), rif ? kv('Riferimento:', rif) : null);
     body.push(Pp(R('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', { s: 8 }), { before: 8, after: 2 }));
     if (pav) body.push(Pp(R('Resta escluso quanto non esplicitamente descritto.', { s: 8, b: true }), { after: 6 }));
@@ -62,17 +66,17 @@
     const cols = [['Codice', 1750], ['Descrizione', 0], ['Q.tà', 560, 'c'], ...(sL ? [['Listino Cad.', 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), ['Prezzo Cad.', 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
     cols[1][1] = 9906 - cols.reduce((a, c) => a + c[1], 0);
     const longD = r => { if (r.dx && !pav) return r.dx; if (pav) return String(r.b || (fc(r.c, r.L) || {}).b || ''); const it = fc(r.c, r.L); return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
-    const rows = [new TableRow({ tableHeader: true, children: cols.map(([h, w, a]) => cell(h, { head: true, fill: '808080', w, a: a || 'c' })) })];
+    const rows = [new TableRow({ tableHeader: true, children: cols.map(([h, w, a]) => cell(h, { head: true, fill: pav ? 'DEE0E4' : '808080', c: pav ? DARK : undefined, b: pav, w, a: a || 'c' })) })];
     let sez = null;
     for (const r of lines) {
-      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) rows.push(new TableRow({ children: [cell(sez, { b: true, fill: 'F0F0F0', span: cols.length })] })); }
+      if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) rows.push(new TableRow({ children: [cell(sez, { b: true, fill: pav ? 'F6F7F8' : 'F0F0F0', span: cols.length })] })); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
       const v = [r.c, longD(r) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(sL ? [net ? '' : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), eur(t.unit), eur(t.netto)];
       rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
     }
     const T = offTot(lines), iva = r2(T.N * 0.22);
     const tot = (l, v, op = {}) => new TableRow({ children: [cell(l, { span: cols.length - 1, a: 'r', b: op.b, fill: op.fill, s: op.b ? 9 : 8 }), cell(v, { a: 'r', b: true, c: op.c, fill: op.fill, s: op.b ? 9 : 8 })] });
-    rows.push(tot('Subtotale', eur(T.N), { c: RED }), tot('IVA (22%)', eur(iva)), tot('Totale offerta', eur(T.N + iva), { b: true, fill: 'E8E8E8' }));
+    rows.push(tot('Subtotale', eur(T.N), { c: RED }), tot('IVA (22%)', eur(iva)), tot('Totale offerta', eur(T.N + iva), { b: true, fill: pav ? 'F0F1F3' : 'E8E8E8' }));
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cols.map(c => c[1]), rows }));
     // firme
     body.push(Pp(R(''), { before: 20 }), new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
