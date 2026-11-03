@@ -203,7 +203,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const covImgs = (await Promise.all(covList.slice(0, COVMAX).map(x => covImage(x, o).catch(() => null)))).filter(Boolean);
     if (covImgs.length) {
       const n = covImgs.length; const gap = 6; const room = Math.max(30, PH - 24 - y); const sz = Math.min(42, (CW - gap * (n - 1)) / n, room);
-      let x = MG; const yy = Math.min(PH - 22 - sz, Math.max(y, PH - 30 - sz - 10));
+      let x = (W - (n * sz + (n - 1) * gap)) / 2; const yy = Math.min(PH - 22 - sz, Math.max(y, PH - 30 - sz - 10));
       for (const d of covImgs) { doc.setDrawColor(225, 228, 234); doc.setLineWidth(.2); doc.roundedRect(x, yy, sz, sz, 2, 2); doc.addImage(d, 'JPEG', x + 1, yy + 1, sz - 2, sz - 2); x += sz + gap; }
     }
 
