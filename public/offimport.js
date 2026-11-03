@@ -405,7 +405,7 @@
     y += 6.5; T('Redatta da:', 14, y, { s: 7.5 }); [red.n, red.e, red.t ? 'Tel. ' + red.t : ''].filter(Boolean).forEach((t, k) => T(t, 40, y + k * 5, { s: 7.5 })); y += 5 * Math.max(1, [red.n, red.e, red.t].filter(Boolean).length) + 1.5;
     if (rif) { T('Riferimento:', 14, y, { s: 7.5 }); T(doc.splitTextToSize(rif, W - 60)[0], 40, y, { s: 7.5 }); y += 6; }
     y += 8; T('Come da vostra gentile richiesta siamo a sottoporre alla vostra attenzione la nostra migliore offerta per la fornitura dei materiali di seguito elencati.', 14, y, { s: 7.5 });
-    const longD = r => { const it = typeof findCode === 'function' ? findCode(r.c, r.L) : null; return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
+    const longD = r => { if (r.dx) return r.dx; const it = typeof findCode === 'function' ? findCode(r.c, r.L) : null; return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
     const head = ['Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Listino Cad.'] : []), ...(sc ? ['Sc %', 'Ex %'] : []), 'Prezzo Cad.', 'Prezzo Tot.'];
     const body = []; let sez = null;
     for (const r of o.righe || []) {

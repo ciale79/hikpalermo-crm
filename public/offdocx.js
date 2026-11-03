@@ -60,7 +60,7 @@
     const sL = lst && lines.some(r => !r.noList && +r.p > 0), sS = sc && anySc, sE = sc && anyEx;
     const cols = [['Codice', 1750], ['Descrizione', 0], ['Q.tà', 560, 'c'], ...(sL ? [['Listino Cad.', 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), ['Prezzo Cad.', 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
     cols[1][1] = 9906 - cols.reduce((a, c) => a + c[1], 0);
-    const longD = r => { if (pav) return String(r.b || (fc(r.c, r.L) || {}).b || ''); const it = fc(r.c, r.L); return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
+    const longD = r => { if (r.dx && !pav) return r.dx; if (pav) return String(r.b || (fc(r.c, r.L) || {}).b || ''); const it = fc(r.c, r.L); return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
     const rows = [new TableRow({ tableHeader: true, children: cols.map(([h, w, a]) => cell(h, { head: true, fill: '808080', w, a: a || 'c' })) })];
     let sez = null;
     for (const r of lines) {

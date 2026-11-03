@@ -193,7 +193,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     T('Offerta', 14, 34, { s: 13, c: RED }); T(num + ' del ' + dt + (rif ? ' · ' + rif : ''), 14, 40, { s: 8, c: GREY });
     say('Preparo le anteprime…');
     const thumbs = await Promise.all(lines.map(r => productImage({ ...r, c: mainC(r.c) }, false)));
-    const longD = r => { const it = fc(r.c, r.L); if (r.c.includes(' + ') && it && it.d) return it.d; return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
+    const longD = r => { if (r.dx) return r.dx; const it = fc(r.c, r.L); if (r.c.includes(' + ') && it && it.d) return it.d; return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
     const body = [], imgAt = new Map(); let sez = null;
     lines.forEach((r, i) => {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: 6, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], textColor: DARK } }]); }
