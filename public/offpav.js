@@ -12,7 +12,7 @@
   const RED = [200, 16, 46], INK = [64, 64, 64], GREY = [128, 128, 128], DARK = [51, 51, 51];
   // celle colorate in grigio chiaro: intestazioni, sezioni, totale
   const HEADF = [222, 224, 228], SECF = [246, 247, 248], TOTF = [240, 241, 243], LINEC = [170, 174, 182];
-  const eur = v => '€ ' + (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const eur = v => '€ ' + (window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const fc = (c, L) => { try { return typeof findCode === 'function' ? findCode(c, L) : null; } catch (e) { return null; } };
   const mainC = c => String(c || '').split(' + ')[0];
 
@@ -367,4 +367,8 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
         }, 'pri', 'doc')], { wide: true });
   };
   window.hpPavOfferBuild = build; window.hpPavProdImg = productImage;
+  // per il Word: immagini di copertina e descrizione estesa come nel PDF
+  window.hpPavCovData = async o => (await Promise.all((Array.isArray(o.cov) ? o.cov : autoCov(o)).slice(0, COVMAX).map(x => covImage(x, o).catch(() => null)))).filter(Boolean);
+  window.hpPavLongD = r => { if (r.dx) return r.dx; const it = fc(r.c, r.L); if (String(r.c).includes(' + ') && it && it.d) return it.d; return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
+  window.hpPavMainC = mainC;
 })();

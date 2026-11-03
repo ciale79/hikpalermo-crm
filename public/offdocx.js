@@ -3,7 +3,7 @@
 (function () {
   const DOCX = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js';
   const RED = 'C8102E', INK = '404040', GREY = '808080', DARK = '333333', LINE = 'AAAEB6';
-  const eur = v => '€ ' + (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const eur = v => '€ ' + (window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const r2 = v => Math.round((+v || 0) * 100) / 100;
   const fc = (c, L) => { try { return typeof findCode === 'function' ? findCode(c, L) : null; } catch (e) { return null; } };
   const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -14,6 +14,7 @@
     const b = await new Promise(r => c.toBlob(r, 'image/png')); return { data: new Uint8Array(await b.arrayBuffer()), r: c.height / c.width };
   }
 
+  const u8url = async d => new Uint8Array(await (await fetch(d)).arrayBuffer());
   window.hpOffDocx = async function (o, sc, lst, pav) {
     try { if (!window.docx) await loadScript(DOCX); } catch (e) { toast('Non riesco a caricare il generatore Word.', 'bad'); return; }
     const X = window.docx; const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType, PageBreak, TableLayoutType } = X;
@@ -39,6 +40,25 @@
         P1('Offerta riservata per', { s: 11, c: GREY }), P1(cliName.toUpperCase(), { s: 14, b: true, c: DARK }), E(),
         rif ? P1('Riferimento', { s: 11, c: GREY }) : null, rif ? P1(rif, { s: 14, c: DARK }) : null, P1(num + ' del ' + dt, { s: 8, c: GREY }), E(), E());
       String(o.intro || '').trim().split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(new Paragraph({ children: [R(par, { s: 11 })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 330 } })));
+      // immagini dei prodotti in copertina, come nel PDF
+      const cov = window.hpPavCovData ? await hpPavCovData(o) : [];
+      if (cov.length) { const sz = Math.min(40, (175 - 6 * (cov.length - 1)) / cov.length); const cw = Math.round((sz + 6) * 56.7);
+        body.push(Pp(R('', { s: 10 }), { after: 30 }), new Table({ width: { size: cw * cov.length, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cov.map(() => cw), rows: [new TableRow({ children: await Promise.all(cov.map(async d => cell(new Paragraph({ children: [new ImageRun({ type: 'jpg', data: await u8url(d), transformation: { width: Math.round(sz * 3.78), height: Math.round(sz * 3.78) } })] }), { noB: true, w: cw }))) })] })); }
+      /* pagina «Offerta» con le anteprime dei prodotti */
+      body.push(new Paragraph({ children: [new PageBreak()] }), nl ? img(nl, 52.5, 'l') : null, Pp(R('', { s: 10 }), { after: 6 }), Pp(R('Offerta', { s: 14, c: RED }), { after: 2 }), Pp(R(num + ' del ' + dt + (rif ? ' · ' + rif : ''), { s: 8, c: GREY }), { after: 6 }));
+      { const L0 = o.righe || []; const thumbs = await Promise.all(L0.map(r => window.hpPavProdImg ? hpPavProdImg({ ...r, c: hpPavMainC(r.c) }, false).catch(() => null) : null));
+        const cw = [1360, 1360, 0, 740, 1470, 1590]; cw[2] = 9906 - cw.reduce((a, b) => a + b, 0);
+        const rows = [new TableRow({ tableHeader: true, children: ['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale'].map((h, k) => cell(h, { head: true, fill: 'DEE0E4', c: DARK, b: true, w: cw[k], a: 'c' })) })]; let sz0 = null;
+        for (let i = 0; i < L0.length; i++) { const r = L0[i]; if ((r.sez || '') !== sz0) { sz0 = r.sez || ''; if (sz0) rows.push(new TableRow({ children: [cell(sz0, { b: true, fill: 'F6F7F8', span: 6 })] })); }
+          const it = fc(r.c, r.L) || {}; const t = lineTot(r); const th = thumbs[i];
+          rows.push(new TableRow({ cantSplit: true, children: [cell(th ? new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(th), transformation: { width: 64, height: 64 } })] }) : '', { w: cw[0] }), cell(it.sap || r.sap || '', { w: cw[1] }), cell(r.c, { w: cw[2], b: true, c: DARK }), cell(String(r.q), { w: cw[3], a: 'c' }), cell(eur(t.unit), { w: cw[4], a: 'r' }), cell(eur(t.netto), { w: cw[5], a: 'r', b: true, c: RED })] }));
+          rows.push(new TableRow({ children: [cell(String(window.hpPavLongD ? hpPavLongD(r) : r.b || '') + (r.net ? ' (prezzo netto)' : ''), { span: 6 })] })); }
+        body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cw, rows }));
+        const T0 = offTot(L0), iva0 = r2(T0.N * 0.22); const tl = (l, v, b, c) => Pp([R(l + '   ', { s: b ? 10 : 8, b, c: b ? DARK : INK }), R(v, { s: b ? 10 : 8, b: true, c: c || DARK })], { a: 'r', after: 2 });
+        body.push(Pp(R(''), { after: 4 }), tl('Subtotale', eur(T0.N), false, RED), tl('IVA (22%)', eur(iva0)), tl('Totale offerta', eur(T0.N + iva0), true)); }
+      /* copertina «Modulo Conferma d'ordine» */
+      body.push(new Paragraph({ children: [new PageBreak()] }), nl ? img(nl, 69.6, 'c') : null, Pp(R(''), { after: 0, before: 160 }),
+        Pp(R('Modulo Conferma d\'ordine', { s: 24, b: true, c: DARK }), { after: 6, img: true }), Pp(R(cliName.toUpperCase(), { s: 14, b: true, c: DARK }), { after: 0, img: true }), Pp(R('Offerta ' + num + ' del ' + dt, { s: 8, c: GREY }), { after: 0, img: true }));
     } else body.push(img(hik, 100),
       Pp(R('TVCC  |  INTRUSIONE  |  INTERCOM  |  CONTROLLO ACCESSI', { s: 10, c: GREY }), { a: 'c', after: 0 }),
       Pp(R('Offerta riservata per', { s: 8, c: GREY }), { a: 'c', before: 40, after: 6 }),
