@@ -313,6 +313,13 @@ const isPavHost = url => /^proav\./i.test(url.hostname);
 async function pavEmails(env) { const d = (await getDoc(env, 'config', 'proav'))?.data; return (d && Array.isArray(d.emails) ? d.emails : PAV_DEF).map(normEmail).filter(Boolean); }
 async function isOwnerU(env, u) { if (!u) return false; if (u.email === normEmail(env.OWNER_EMAIL)) return true; return (await ruoli(env)).owner === u.id; }
 async function isPav(env, u) { if (!u) return false; if (await isOwnerU(env, u)) return true; return (await pavEmails(env)).includes(normEmail(u.email)); }
+const PAV_ADM_DEF = ['antonino.pumilia@hikvision.com'];
+async function pavAdmins(env) { const d = (await getDoc(env, 'config', 'proav'))?.data; return (d && Array.isArray(d.admins) ? d.admins : PAV_ADM_DEF).map(normEmail).filter(Boolean); }
+async function isPavAdmin(env, u) { if (!u) return false; if (await isOwnerU(env, u)) return true; return (await pavAdmins(env)).includes(normEmail(u.email)); }
+// permessi per utente (config/perm): per ogni sito («hik» = hikpalermo.com, «pav» = proav.hikpalermo.com) le sezioni nascoste e quelle in sola lettura
+async function permOf(env, u, site) { if (!u || (await isOwnerU(env, u))) return { hide: [], ro: [] }; const d = (await getDoc(env, 'config', 'perm'))?.data || {}; const x = ((d.users || {})[u.id] || {})[site] || {}; return { hide: Array.isArray(x.hide) ? x.hide : [], ro: Array.isArray(x.ro) ? x.ro : [] }; }
+const SEC_OF = { commesse: 'commesse', proavCommesse: 'commesse', offerte: 'offerte', proavOfferte: 'offerte', offopt: 'offerte', clienti: 'clienti', eventi: 'cal', proavEventi: 'cal', magazzino: 'magazzino', proavMagazzino: 'magazzino', demo: 'magazzino', proavDemo: 'magazzino', proavListini: 'pav', artfoto: 'art', artdesc: 'art', dstrad: 'art', dsman: 'art', links: 'art', capitolati: 'cap', paternita: 'fatt', stockInfo: 'fatt', progettiSO: 'fatt' };
+const secOf = (col, id) => col === 'config' && (id === 'sales' || id === 'fatturato') ? 'fatt' : SEC_OF[String(col).split('/')[0]] || null;
 async function pavUids(env) {
   const em = [...new Set([...(await pavEmails(env)), normEmail(env.OWNER_EMAIL)])];
   const ids = (await env.DB.prepare(`SELECT id FROM users WHERE email IN (${em.map(() => '?').join(',')})`).bind(...em).all()).results.map(x => x.id);
@@ -355,8 +362,9 @@ function canRead(u, col) {
   if (col.startsWith('data/')) { const p = col.split('/'); return p[1] === 'users' && p[2] === u.id; }
   return true;
 }
-async function canWrite(env, u, col, id) {
+async function canWrite(env, u, col, id, site) {
   if (!canRead(u, col)) return false;
+  { const sec = secOf(col, id); if (sec) { const pm = await permOf(env, u, site || (isPavCol(col) ? 'pav' : 'hik')); if (pm.ro.includes(sec) || pm.hide.includes(sec)) return false; } }
   if (isPavCol(col)) return isPav(env, u);
   if (col === 'config' && id === 'proav') return isOwnerU(env, u); // chi entra nell'area ProAV lo decide solo il proprietario
   if (col === 'config') return id === 'sales' || id === 'fatturato' ? true : isAdmin(env, u); // fatturato: lo aggiorna chiunque nel gruppo
@@ -381,10 +389,10 @@ async function broadcast(env, msg, only) {
     await stub.fetch('https://room/broadcast' + (only ? '?only=' + encodeURIComponent(only) : ''), { method: 'POST', body: JSON.stringify(msg) });
   } catch { }
 }
-async function writeDoc(env, ctx, u, { op, col, id, data }) {
+async function writeDoc(env, ctx, u, { op, col, id, data }, site) {
   if (!validPath(col, id)) return err('invalid_argument', 'Percorso non valido');
   if (!['set', 'update', 'delete'].includes(op)) return err('invalid_argument', 'Operazione non valida');
-  if (!(await canWrite(env, u, col, id))) return err('permission_denied', 'Non hai i permessi per modificare questi dati.', 403);
+  if (!(await canWrite(env, u, col, id, site))) return err('permission_denied', 'Non hai i permessi per modificare questi dati (sezione in sola lettura).', 403);
   const prev = await getDoc(env, col, id);
   let next = null;
   if (op === 'set') next = data && typeof data === 'object' ? data : {};
@@ -863,7 +871,7 @@ async function api(req, env, ctx, url, u) {
     ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)));
     const r = await ruoli(env);
     const team = await getDoc(env, 'team', u.id);
-    return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd, proav: await isPav(env, u) });
+    return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd, proav: await isPav(env, u), pavAdmin: await isPavAdmin(env, u), perm: await permOf(env, u, isPavHost(url) ? 'pav' : 'hik') });
   }
   if (p === '/api/db' && m === 'GET') {
     const col = url.searchParams.get('col') || '';
@@ -875,7 +883,7 @@ async function api(req, env, ctx, url, u) {
   if (p === '/api/write' && m === 'POST') {
     const b = await req.json().catch(() => null);
     if (!b) return err('invalid_argument', 'Richiesta non valida');
-    return writeDoc(env, ctx, u, b);
+    return writeDoc(env, ctx, u, b, isPavHost(url) ? 'pav' : 'hik');
   }
   if (p === '/api/profiles' && m === 'POST') {
     const b = await req.json().catch(() => ({}));
@@ -896,17 +904,52 @@ async function api(req, env, ctx, url, u) {
     return json(results.map(x => ({ id: x.id, name: x.name, email: x.email, avatarUrl: null, guest: false })));
   }
   if (p === '/api/users') {
-    if (!(await isAdmin(env, u))) return err('permission_denied', 'Solo per amministratori', 403);
+    const adm = await isAdmin(env, u), padm = await isPavAdmin(env, u), own = await isOwnerU(env, u);
+    if (!adm && !padm) return err('permission_denied', 'Solo per amministratori', 403);
     if (m === 'GET') {
       const { results } = await env.DB.prepare('SELECT id,email,name,status,created,last_login,(pwd_hash IS NOT NULL) AS has_pwd FROM users ORDER BY created DESC').all();
-      const r0 = await ruoli(env); const oe = normEmail(env.OWNER_EMAIL);
-      return json(results.map(x => ({ ...x, owner: x.email === oe || x.id === r0.owner })));
+      const r0 = await ruoli(env); const oe = normEmail(env.OWNER_EMAIL); const pe = await pavEmails(env), pa = await pavAdmins(env); const pm = (await getDoc(env, 'config', 'perm'))?.data?.users || {};
+      return json(results.map(x => { const isO = x.email === oe || x.id === r0.owner; return { ...x, owner: isO, admin: isO || ['admin', 'owner'].includes((r0.ruoli || {})[x.id]), proav: isO || pe.includes(normEmail(x.email)), pavAdmin: isO || pa.includes(normEmail(x.email)), perm: pm[x.id] || {} }; }));
     }
     if (m === 'POST') {
       const b = await req.json().catch(() => ({}));
+      const base = (env.APP_URL || 'https://hikpalermo.com').replace(/\/$/, '');
+      const setPavList = async (key, email, on) => { const cur = (await getDoc(env, 'config', 'proav'))?.data || {}; const list = (key === 'admins' ? await pavAdmins(env) : await pavEmails(env)).filter(e => e !== email); if (on) list.push(email); const d = { ...cur, [key]: list }; if (key === 'admins' && on && !(cur.emails || PAV_DEF).map(normEmail).includes(email)) d.emails = [...new Set([...(cur.emails || PAV_DEF).map(normEmail), email])]; const v = now(); await env.DB.prepare('INSERT INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?) ON CONFLICT(col,id) DO UPDATE SET data=excluded.data, version=excluded.version, updated=excluded.updated').bind('config', 'proav', JSON.stringify(d), v, v).run(); await bcast(env, { col: 'config', id: 'proav', v, data: d, by: u.id }); };
+      // nuovo utente creato da un amministratore: attivo subito, riceve l'email per creare la password
+      if (b.action === 'create') {
+        const email = normEmail(b.email), name = String(b.name || '').trim().slice(0, 80) || email.split('@')[0];
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return err('invalid_argument', 'Email non valida');
+        const pavOnly = !adm; // l'amministratore ProAV crea utenti dell'area ProAV
+        if (await env.DB.prepare('SELECT 1 FROM users WHERE email=?').bind(email).first()) return err('already_exists', 'Esiste già un utente con questa email', 409);
+        const team = await teamByEmail(env, email); const id = team ? team.id : rndId();
+        await env.DB.prepare('INSERT INTO users(id,email,name,status,created) VALUES(?,?,?,?,?)').bind(id, email, name, 'active', now()).run();
+        if (!team) { const v = now(); const td = { nome: name, email, by: u.id, at: v }; await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('team', id, JSON.stringify(td), v, v).run(); await bcast(env, { col: 'team', id, v, data: td, by: u.id }); }
+        if (b.proav || pavOnly) await setPavList('emails', email, true);
+        const site = (b.proav || pavOnly) ? base.replace('://', '://proav.') : base;
+        await sendMail(env, { to: email, kind: 'invite', subject: 'Accesso al CRM HIK PALERMO', html: mailShell('Benvenuto in HIK PALERMO', `<p>Ciao ${esc(name)}, ${esc(u.name || 'un amministratore')} ti ha dato accesso al CRM HIK PALERMO${(b.proav || pavOnly) ? ' (area ProAV)' : ''}.</p><p>Apri il link, inserisci la tua email e ricevi un codice per creare la tua password.</p>`, ['Crea la password', site + '/login?reset=1']), text: 'Accesso al CRM HIK PALERMO: crea la password su ' + site + '/login?reset=1' });
+        return json({ ok: true, id });
+      }
       const t = await env.DB.prepare('SELECT * FROM users WHERE id=?').bind(String(b.id || '')).first();
       if (!t) return err('not_found', 'Utente non trovato', 404);
       if (t.email === normEmail(env.OWNER_EMAIL) || (await isOwnerU(env, t))) return err('permission_denied', 'Il proprietario non si può modificare', 403);
+      // accesso all'area ProAV e amministratori ProAV
+      if (b.action === 'setpav') { if (!padm) return err('permission_denied', 'Solo per gli amministratori ProAV', 403); await setPavList('emails', normEmail(t.email), !!b.on); if (!b.on) await setPavList('admins', normEmail(t.email), false); return json({ ok: true }); }
+      if (b.action === 'setpavadmin') { if (!own) return err('permission_denied', 'Solo il proprietario sceglie gli amministratori ProAV', 403); await setPavList('admins', normEmail(t.email), !!b.on); return json({ ok: true }); }
+      // cosa vede e cosa modifica, per sito
+      if (b.action === 'setperm') {
+        const site = b.site === 'pav' ? 'pav' : 'hik';
+        if (site === 'pav' ? !padm : !adm) return err('permission_denied', 'Non puoi modificare i permessi di questa area', 403);
+        const clean = a => [...new Set((Array.isArray(a) ? a : []).map(String).filter(x => /^[a-z]{2,12}$/.test(x) && x !== 'set' && x !== 'dash'))];
+        const cur = (await getDoc(env, 'config', 'perm'))?.data || {}; const us = { ...(cur.users || {}) }; us[t.id] = { ...(us[t.id] || {}), [site]: { hide: clean(b.hide), ro: clean(b.ro) } };
+        const d = { ...cur, users: us }; const v = now();
+        await env.DB.prepare('INSERT INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?) ON CONFLICT(col,id) DO UPDATE SET data=excluded.data, version=excluded.version, updated=excluded.updated').bind('config', 'perm', JSON.stringify(d), v, v).run();
+        await broadcast(env, { col: 'config', id: 'perm', v, data: d, by: u.id });
+        return json({ ok: true });
+      }
+      // le altre azioni: amministratori; l'amministratore ProAV può approvare o disattivare solo gli utenti dell'area ProAV
+      const tPav = (await pavEmails(env)).includes(normEmail(t.email));
+      if (!adm && !(padm && (tPav || b.action === 'approve') && ['approve', 'reject', 'disable', 'enable', 'resetpwd'].includes(b.action))) return err('permission_denied', 'Solo per amministratori', 403);
+      if (!adm && b.action === 'approve') await setPavList('emails', normEmail(t.email), true);
       if (t.id === u.id && b.action !== 'enable') return err('permission_denied', 'Per la tua password usa «Cambia password»', 403);
       if (b.action === 'approve' || b.action === 'enable') {
         await env.DB.prepare("UPDATE users SET status='active' WHERE id=?").bind(t.id).run();

@@ -45,16 +45,17 @@
   }
   function panel() {
     const fmt = t => t ? new Date(t).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
-    const head = el('div', { class: 'panel-h' }, el('h3', { text: 'Accessi al CRM' }), btn('Aggiorna', () => loadUsers(), 'sm'));
+    const head = el('div', { class: 'panel-h' }, el('h3', { text: 'Accessi al CRM' }), el('div', { class: 'row', style: 'gap:6px' }, window.hpUserNew ? btn('Aggiungi utente', () => hpUserNew(loadUsers), 'sm pri', 'plus') : null, btn('Aggiorna', () => loadUsers(), 'sm')));
     if (!users) { loadUsers(); return el('section', { class: 'panel stack', id: 'cfAccess' }, head, el('p', { class: 'hint' }, 'Caricamento…')); }
     if (users.err) return el('section', { class: 'panel stack', id: 'cfAccess' }, head, el('p', { class: 'hint' }, users.err));
     const pend = users.filter(u => u.status === 'pending');
     const rows = users.map(u => {
       const st = ST[u.status] || [u.status, ''];
       const acts = u.status === 'pending' ? [btn('Approva', () => act(u, 'approve'), 'sm pri'), btn('Rifiuta', () => act(u, 'reject'), 'sm ghost')]
-        : u.status === 'active' ? (u.id === S.me || u.owner ? (u.owner ? [el('span', { class: 'hint' }, 'Proprietario')] : []) : [btn('Reimposta password', () => act(u, 'resetpwd'), 'sm ghost', 'lock'), btn('Disattiva', () => act(u, 'disable'), 'sm ghost')])
-          : [btn('Riattiva', () => act(u, 'enable'), 'sm'), btn('Elimina', () => act(u, 'delete'), 'sm ghost')];
-      return el('tr', {}, el('td', {}, el('b', {}, u.name || '—'), el('div', { class: 'hint' }, u.email)), el('td', {}, el('span', { class: 'pill', style: '--c:var(--' + st[1] + ')' }, st[0]), u.status === 'active' && !u.has_pwd ? el('div', { class: 'hint' }, 'Password da creare') : null), el('td', { class: 'hint' }, fmt(u.last_login)), el('td', {}, el('div', { class: 'row', style: 'justify-content:flex-end;gap:6px' }, ...acts)));
+        : u.status === 'active' ? (u.id === S.me || u.owner ? (u.owner ? [el('span', { class: 'hint' }, 'Proprietario')] : []) : [window.hpUserPerm ? btn('Permessi', () => hpUserPerm(u, loadUsers), 'sm', 'gear') : null, btn('Reimposta password', () => act(u, 'resetpwd'), 'sm ghost', 'lock'), isAdmin() ? btn('Disattiva', () => act(u, 'disable'), 'sm ghost') : null].filter(Boolean))
+          : isAdmin() ? [btn('Riattiva', () => act(u, 'enable'), 'sm'), btn('Elimina', () => act(u, 'delete'), 'sm ghost')] : [];
+      const tag = u.proav ? el('span', { class: 'hp-utag pav', title: 'Può entrare in proav.hikpalermo.com' }, 'ProAV') : el('span', { class: 'hp-utag hik', title: 'Solo hikpalermo.com, nessun accesso all\'area ProAV' }, 'Hikvision');
+      return el('tr', {}, el('td', {}, el('div', { class: 'row', style: 'gap:6px' }, el('b', {}, u.name || '—'), tag, u.admin ? el('span', { class: 'hp-utag adm' }, 'Admin') : null, u.pavAdmin && !u.owner ? el('span', { class: 'hp-utag padm' }, 'Admin ProAV') : null, window.hpPermBadge ? hpPermBadge(u) : null), el('div', { class: 'hint' }, u.email)), el('td', {}, el('span', { class: 'pill', style: '--c:var(--' + st[1] + ')' }, st[0]), u.status === 'active' && !u.has_pwd ? el('div', { class: 'hint' }, 'Password da creare') : null), el('td', { class: 'hint' }, fmt(u.last_login)), el('td', {}, el('div', { class: 'row', style: 'justify-content:flex-end;gap:6px' }, ...acts)));
     });
     return el('section', { class: 'panel stack', id: 'cfAccess' }, head,
       pend.length ? el('div', { class: 'banner' }, pend.length === 1 ? '1 richiesta di accesso da approvare.' : pend.length + ' richieste di accesso da approvare.') : null,
@@ -65,7 +66,7 @@
   VIEWS.set.update = function () {
     const r = orig.apply(this, arguments);
     try {
-      if (!this.editing && isAdmin() && this.root) {
+      if (!this.editing && (isAdmin() || S.pavAdmin) && this.root) {
         this.root.querySelector('#cfAccess')?.remove();
         const p = panel();
         const first = this.root.querySelector('section.panel');
