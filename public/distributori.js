@@ -31,14 +31,25 @@
     return out;
   };
   // menu a tendina a scelta multipla delle categorie (stesso stile dei listini)
+  // menu a tendina a scelta multipla delle categorie: resta aperto mentre spunti, si applica e si chiude con OK (o cliccando fuori)
   function catMenu() {
     const all = dists(); const cnt = k => all.filter(c => catsOf(c).includes(k)).length;
-    const lab = () => sel.size === CATS.length ? 'Tutte le categorie' : sel.size === 1 ? [...sel][0] : sel.size + ' categorie';
-    const b = el('button', { type: 'button', class: 'btn hp-msbtn', 'aria-expanded': 'false' }, ic('list', 16), el('span', {}, lab()), el('span', { class: 'hp-caret', 'aria-hidden': 'true' }, '▾'));
+    let tmp = new Set(sel);
+    const lab = s => s.size === CATS.length ? 'Tutte le categorie' : s.size === 1 ? [...s][0] : s.size + ' categorie';
+    const b = el('button', { type: 'button', class: 'btn hp-msbtn', 'aria-expanded': 'false' }, ic('list', 16), el('span', {}, lab(sel)), el('span', { class: 'hp-caret', 'aria-hidden': 'true' }, '▾'));
+    const boxes = CATS.map(([k]) => el('input', { type: 'checkbox', checked: sel.has(k), onchange: e => { e.target.checked ? tmp.add(k) : tmp.delete(k); b.children[1].textContent = lab(tmp); } }));
+    const sync = () => boxes.forEach((x, i) => { x.checked = tmp.has(CATS[i][0]); });
+    let h = null;
+    const close = apply => { pop.hidden = true; b.setAttribute('aria-expanded', 'false'); if (h) { document.removeEventListener('click', h); h = null; }
+      if (apply) { if (!tmp.size) tmp = new Set(sel); const ch = [...tmp].sort().join('|') !== [...sel].sort().join('|'); sel = new Set(tmp); ls('hp_distCats3', [...sel]); b.children[1].textContent = lab(sel); if (ch) redraw(); } };
     const pop = el('div', { class: 'hp-mspop', hidden: true, onclick: e => e.stopPropagation() },
-      el('div', { class: 'row', style: 'gap:12px;padding:2px 4px 8px;border-bottom:1px solid var(--line)' }, el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); sel = new Set(CATS.map(c => c[0])); ls('hp_distCats3', [...sel]); redraw(); } }, 'Tutte')),
-      ...CATS.map(([k, col]) => el('label', { class: 'hp-msit' }, el('input', { type: 'checkbox', checked: sel.has(k), onchange: e => { e.target.checked ? sel.add(k) : sel.delete(k); if (!sel.size) sel.add(k); ls('hp_distCats3', [...sel]); b.children[1].textContent = lab(); redraw(); } }), el('i', { class: 'hp-mdot', style: { background: col } }), el('span', { class: 'grow' }, k), el('small', { class: 'hint' }, String(cnt(k))))));
-    b.addEventListener('click', e => { e.stopPropagation(); pop.hidden = !pop.hidden; b.setAttribute('aria-expanded', String(!pop.hidden)); if (!pop.hidden) { const h = ev => { if (!pop.contains(ev.target) && ev.target !== b) { pop.hidden = true; document.removeEventListener('click', h); } }; setTimeout(() => document.addEventListener('click', h), 0); } });
+      el('div', { class: 'row', style: 'gap:12px;padding:2px 4px 8px;border-bottom:1px solid var(--line)' },
+        el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); tmp = new Set(CATS.map(c => c[0])); sync(); b.children[1].textContent = lab(tmp); } }, 'Tutte'),
+        el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); tmp = new Set(DEF); sync(); b.children[1].textContent = lab(tmp); } }, 'Solo Distributore ProAV')),
+      ...CATS.map(([k, col], i) => el('label', { class: 'hp-msit' }, boxes[i], el('i', { class: 'hp-mdot', style: { background: col } }), el('span', { class: 'grow' }, k), el('small', { class: 'hint' }, String(cnt(k))))),
+      el('div', { class: 'row', style: 'justify-content:flex-end;padding:8px 4px 2px;border-top:1px solid var(--line);margin-top:4px' }, btn('OK', () => close(true), 'sm pri', 'check')));
+    b.addEventListener('click', e => { e.stopPropagation(); if (!pop.hidden) { close(true); return; } tmp = new Set(sel); sync(); pop.hidden = false; b.setAttribute('aria-expanded', 'true');
+      h = ev => { if (!pop.contains(ev.target) && ev.target !== b) close(true); }; setTimeout(() => document.addEventListener('click', h), 0); });
     return el('div', { class: 'hp-ms' }, b, pop);
   }
   window.hpDistPanel = function () {
