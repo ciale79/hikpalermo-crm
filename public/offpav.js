@@ -287,7 +287,11 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'middle' },
       headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 }, columnStyles: cs });
     roundTables();
-    y = doc.lastAutoTable.finalY + 6; // senza firme
+    y = doc.lastAutoTable.finalY + 20 * PT + 4 * PT; if (y > PH - 45) { doc.addPage(); y = MG; }
+    { const c1 = MG, w1 = 63.5, c2 = MG + 63.5, w2 = 45.9, c3 = MG + 63.5 + 45.9, w3 = CW - 63.5 - 45.9;
+      let ys = logoAt(c1 + (w1 - 32) / 2, y + 0.9, 32) + 2 * PT; PARA('HIKVISION ITALY SRL', ys, { s: 7, a: 'c', x: c1, w: w1, mult: 1.15 });
+      const yl = y + 0.9 + 30 * PT + 8 * PT * LH * 1.15 - 1.2; doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(c2 + 8, yl, c2 + w2 - 8, yl); doc.line(c3 + 9, yl, c3 + w3 - 9, yl);
+      PARA('Luogo e data', yl + 1, { s: 7, a: 'c', x: c2, w: w2, mult: 1.15 }); PARA('Il committente (timbro/firma)', yl + 1, { s: 7, a: 'c', x: c3, w: w3, mult: 1.15 }); }
     };
     orderForm(false); if (anyLed) orderForm(true);
 

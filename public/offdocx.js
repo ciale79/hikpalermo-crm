@@ -103,8 +103,8 @@
     const tot = (l, v, op = {}) => new TableRow({ children: [cell(l, { span: cols.length - 1, a: 'r', b: op.b, fill: op.fill, s: op.b ? 9 : 8 }), cell(v, { a: 'r', b: true, c: op.c, fill: op.fill, s: op.b ? 9 : 8 })] });
     rows.push(tot('Subtotale', eur(T.N), { c: RED }), tot('IVA (22%)', eur(iva)), tot('Totale offerta', eur(T.N + iva), { b: true, fill: pav ? 'F0F1F3' : 'E8E8E8' }));
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cols.map(c => c[1]), rows }));
-    // firme (non nell'offerta ProAV)
-    if (!pav) body.push(Pp(R(''), { before: 20 }), new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
+    // timbro e firme
+    body.push(Pp(R(''), { before: 20 }), new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
       cell([nl ? img(nl, 32) : img(hik, 36), Pp(R('HIKVISION ITALY SRL', { s: 7 }), { a: 'c', after: 0 })].filter(Boolean), { noB: true, w: 3600 }),
       cell([Pp(R('______________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Luogo e data', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 2600 }),
       cell([Pp(R('________________________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Il committente (timbro/firma)', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 3706 })] })] }));
