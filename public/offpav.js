@@ -200,6 +200,10 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const BLANK = (y0, s = 10, mult = 1, after = 0) => y0 + s * PT * LH * mult + after * PT;
     const logoAt = (x, y0, w) => { if (nlg) { doc.addImage(nlg.d, 'PNG', x, y0, w, w * nlg.r); return y0 + w * nlg.r; } return lockup(x, y0, w / 0.86); };
 
+    // allegati (immagini e PDF) nelle posizioni scelte: pagine a tutta pagina, senza piè di pagina dell'offerta
+    const AP = opt.attPages || {}; const attP = new Set(); const covers = new Set([1]);
+    const ins = pos => { for (const pg of AP[pos] || []) { const land = pg.w > pg.h; doc.addPage('a4', land ? 'l' : 'p'); attP.add(doc.internal.getNumberOfPages()); const PW = land ? 297 : 210, PHh = land ? 210 : 297, m = 6; const k = Math.min((PW - 2 * m) / pg.w, (PHh - 2 * m) / pg.h); const iw = pg.w * k, ih = pg.h * k; doc.addImage(pg.d, 'JPEG', (PW - iw) / 2, (PHh - ih) / 2, iw, ih, undefined, 'FAST'); } };
+
     /* 1 · copertina */
     let y = MG;
     y = logoAt((W - 69.6) / 2, y, 69.6) + 2 * PT;
@@ -222,8 +226,10 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       const yy = Math.min(PH - 22 - h, Math.max(y, PH - 30 - h - 10)); doc.addImage(im.d, 'JPEG', (W - w) / 2, yy, w, h);
     }
 
+    ins('cov');
+
     /* 2 · offerta con anteprime */
-    doc.addPage(); y = MG;
+    doc.addPage('a4', 'p'); y = MG;
     y = logoAt(MG, y, 52.5) + 2 * PT; y = BLANK(y, 10, 1.15, 6);
     y = PARA('Offerta', y, { s: 11, c: RED, mult: 1.15, after: 2 }); y = PARA(num + ' del ' + dt + (rif ? ' · ' + rif : ''), y, { s: 8, c: GREY, mult: 1.15, after: 6 });
     const y2 = y;
@@ -250,8 +256,10 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
         if (d.section === 'body' && d.column.index === 0 && imgAt.get(d.row.index)) { const s = Math.min(d.cell.width, d.cell.height) - 2; doc.addImage(imgAt.get(d.row.index), 'JPEG', d.cell.x + (d.cell.width - s) / 2, d.cell.y + (d.cell.height - s) / 2, s, s); } } });
     roundTables();
 
+    ins('img');
+
     /* 3 · copertina «Modulo Conferma d'ordine» */
-    doc.addPage(); y = MG;
+    doc.addPage('a4', 'p'); y = MG; covers.add(doc.internal.getNumberOfPages());
     logoAt((W - 69.6) / 2, y, 69.6);
     y = 105; y = PARA('Modulo Conferma d\'ordine', y, { s: 24, b: true, c: DARK, after: 6 });
     y = PARA(cliName.toUpperCase(), y, { s: 14, b: true, c: DARK }); y = PARA('Offerta ' + num + ' del ' + dt, y, { s: 8, c: GREY });
@@ -260,7 +268,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     // con un LED wall: due fogli di offerta commerciale, uno a pezzi e uno con il LED wall a m² (prezzo al m² calcolato dalla superficie del cabinet)
     const anyLed = !!window.hpLedInfo && lines.some(r => hpLedInfo(r)); let cl;
     const orderForm = mq => {
-    doc.addPage(); y = MG;
+    doc.addPage('a4', 'p'); y = MG;
     y = logoAt(MG, y, 52.5) + 2 * PT; y = BLANK(y, 10, 1.15, 6);
     cl = [cliName, [cli.indirizzo || C.indirizzo, [cli.cap || C.cap, cli.citta || C.citta].filter(Boolean).join(' '), cli.prov || C.prov].filter(Boolean).join(', '), (cli.piva || C.piva) ? 'P.IVA ' + (cli.piva || C.piva) : '', cli.referente ? 'Alla c.a. ' + cli.referente : ''].filter(Boolean);
     { const cx1 = MG + 1.4, cx2 = MG + 95.25 + 1.4, cw2 = CW - 95.25 - 2.8; let ya = y + 0.9, yb = y + 0.9; const o11 = { s: 10, mult: 1.15, after: 1 };
@@ -297,16 +305,18 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'middle' },
       headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 }, columnStyles: cs });
     roundTables();
+    if (mq) return; // il foglio a metro quadro non ha timbro e firma
     y = doc.lastAutoTable.finalY + 20 * PT + 4 * PT; if (y > PH - 45) { doc.addPage(); y = MG; }
     { const c1 = MG, w1 = 63.5, c2 = MG + 63.5, w2 = 45.9, c3 = MG + 63.5 + 45.9, w3 = CW - 63.5 - 45.9;
       let ys = logoAt(c1 + (w1 - 32) / 2, y + 0.9, 32) + 2 * PT; PARA('HIKVISION ITALY SRL', ys, { s: 7, a: 'c', x: c1, w: w1, mult: 1.15 });
       const yl = y + 0.9 + 30 * PT + 8 * PT * LH * 1.15 - 1.2; doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(c2 + 8, yl, c2 + w2 - 8, yl); doc.line(c3 + 9, yl, c3 + w3 - 9, yl);
       PARA('Luogo e data', yl + 1, { s: 7, a: 'c', x: c2, w: w2, mult: 1.15 }); PARA('Il committente (timbro/firma)', yl + 1, { s: 7, a: 'c', x: c3, w: w3, mult: 1.15 }); }
     };
-    orderForm(false); if (anyLed) orderForm(true);
+    if (anyLed) orderForm(true); orderForm(false); // con il LED wall: prima il foglio a m², poi quello a pezzi (con timbro e firma)
+    ins('ord');
 
     /* 5 · condizioni, con il riquadro delle note */
-    doc.addPage(); y = MG;
+    doc.addPage('a4', 'p'); y = MG;
     const cond = P0.cond || {}; const cf = (typeof cfg === 'function' ? cfg() : {}) || {};
     const pick = rx => { for (const [kk, v] of Object.entries(cond)) if (rx.test(kk)) return String(v).trim(); return ''; };
     const block = (title, ls) => { y = PARA(title, y, { s: 8, b: true, c: RED, mult: 1.15, before: 6, after: 4 }); ls.forEach(l => { y = PARA(l, y, { s: 8, mult: 1.15, after: 2 }); }); y = BLANK(y, 9, 1.15, 6); };
@@ -321,77 +331,68 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     ['Immagini e descrizioni dei prodotti presenti nell\'offerta sono indicativi e potrebbero contenere inesattezze.', 'Per maggiori dettagli, vi preghiamo di consultare le schede tecniche dei prodotti sui siti web ufficiali o di contattare il personale Hikvision e i partner di distribuzione autorizzati.'].forEach(l => { y = PARA(l, y, { s: 7.5, mult: 1.15, after: 2, c: GREY }); });
 
     // piè di pagina delle pagine dell'offerta (non sulle copertine)
-    const nOff = doc.internal.getNumberOfPages(); const covers = new Set([1, 3]);
-    for (let p = 1; p <= nOff; p++) {
-      if (covers.has(p)) continue; doc.setPage(p); const fy = PH - 10;
+    const nAll = doc.internal.getNumberOfPages(); const offP = []; for (let p = 1; p <= nAll; p++) if (!attP.has(p)) offP.push(p); const nOff = offP.length;
+    for (let n = 1; n <= nOff; n++) {
+      const pp = offP[n - 1]; if (covers.has(pp)) continue; doc.setPage(pp); const p = n; const fy = PH - 10;
       T('Prev. ', 4, fy, { s: 6.5 }); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(num, 4 + doc.getTextWidth('Prev. '), fy);
       T(HQ, W / 2, fy - 1.5, { a: 'center', s: 6 });
       const pg = p + '/' + nOff; doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); const wPg = doc.getTextWidth(pg); T('Pag. ', W - 4 - wPg, fy, { a: 'right', s: 6.5 }); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(String(p), W - 4 - wPg, fy); doc.setFont('helvetica', 'normal'); doc.setTextColor(...INK); doc.text('/' + nOff, W - 4 - wPg + doc.getTextWidth(String(p)), fy);
     }
 
-    /* 6 · schede tecniche e allegati (disegni, simulazioni, report HiTools Designer) */
-    const extra = [];
-    for (const a of opt.attach) {
-      try { say('Aggiungo ' + a.label + '…'); const buf = a.file ? await a.file.arrayBuffer() : await fetchBuf(a.url); const pages = await pdfPagesFrom(buf, say, a.label); extra.push(...pages); }
-      catch (e) { toast('Non ho potuto aggiungere «' + a.label + '»: ' + e.message, 'bad'); }
-    }
-    for (const pg of extra) { const land = pg.w > pg.h; doc.addPage('a4', land ? 'l' : 'p'); const PW = land ? 297 : 210, PHh = land ? 210 : 297, m = 6; const k = Math.min((PW - 2 * m) / pg.w, (PHh - 2 * m) / pg.h); const iw = pg.w * k, ih = pg.h * k; doc.addImage(pg.d, 'JPEG', (PW - iw) / 2, (PHh - ih) / 2, iw, ih, undefined, 'FAST'); }
+    /* 6 · allegati in coda (schede tecniche, disegni, simulazioni, report, immagini) */
+    ins('cond');
     say('Salvo il PDF…');
     window.hpDlReady(doc.output('blob'), ('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision_proav.pdf');
   }
 
   /* ---------- finestra di esportazione (ProAV) ---------- */
   window.exportOffer = function (o) {
-    const dsBox = el('div', { class: 'stack', style: 'gap:6px' }), atBox = el('div', { class: 'stack', style: 'gap:6px' });
-    const prog = el('div', { class: 'row', style: 'gap:8px', hidden: true }, el('span', { class: 'spin' }), el('span', {}));
+    const prog = el('div', { class: 'row hp-prog', style: 'gap:8px', hidden: true }, el('span', { class: 'spin' }), el('span', {}));
     const say = t => { prog.hidden = false; prog.lastChild.textContent = t; };
+    const SECT = [['cov', 'Copertina'], ['img', 'Offerta con le immagini'], ['ord', 'Offerta commerciale (modulo d\'ordine da firmare)'], ['cond', 'Condizioni e note']];
+    const U = hpAttUI(o, SECT, { empty: 'Nessun allegato: carica immagini o PDF nella scheda offerta, tra gli allegati della commessa o qui sotto.' });
     // schede tecniche: tradotta in italiano se c'è, altrimenti il PDF della scheda prodotto; se manca si può caricare
     const codes = [...new Map((o.righe || []).map(r => [mainC(r.c), r])).values()];
-    const ds = codes.map(r => ({ c: mainC(r.c), r, st: 'cerco', url: null, file: null, on: true }));
-    const drawDs = () => dsBox.replaceChildren(...(ds.length ? ds.map(x => {
-      const fIn = el('input', { type: 'file', accept: '.pdf', hidden: true, onchange: async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; x.file = f; x.st = 'caricato'; x.on = true; x.saving = true; drawDs();
+    const ds = codes.map(r => ({ c: mainC(r.c), r, st: 'cerco', url: null, file: null }));
+    const dsSet = x => {
+      const fIn = el('input', { type: 'file', accept: '.pdf', hidden: true, onchange: async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; x.file = f; x.st = 'caricato'; x.saving = true; x.forceOn = true; dsSet(x);
         try { if (typeof assets !== 'undefined' && assets) { const r = await assets.upload(f, { type: 'application/pdf' }); const D = { code: x.c, pdf: r.id, name: f.name, by: S.me, at: Date.now() }; await put('dsman', dsKey(x.c), D); DSMAN.set(dsKey(x.c), D); x.url = '/_blob/' + r.id; x.file = null; x.fname = f.name; } } catch (err) { console.warn(err); toast('Scheda di ' + x.c + ' usata per questa offerta, ma non salvata: ' + (err.message || err), 'bad'); }
-        x.saving = false; drawDs(); } });
-      const stTxt = { cerco: 'cerco la scheda…', it: '🇮🇹 scheda tradotta in italiano', orig: '🇬🇧 scheda originale (dal sito Hikvision)', caricato: '📎 ' + (x.file ? x.file.name : x.fname || '') + (x.saving ? ' · salvo…' : ''), man: '📎 ' + (x.fname || 'scheda caricata') + ' · salvata', no: 'non trovata' }[x.st];
-      return el('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap' }, el('label', { class: 'row', style: 'gap:6px' }, el('input', { type: 'checkbox', checked: x.on && x.st !== 'no' && x.st !== 'cerco', disabled: x.st === 'no' || x.st === 'cerco', onchange: e => { x.on = e.target.checked; } }), el('b', { class: 'mono' }, x.c)),
-        el('span', { class: 'hint', style: x.st === 'no' ? 'color:var(--accent)' : '' }, stTxt), x.st === 'no' || x.st === 'orig' || x.st === 'man' || x.st === 'caricato' ? btn(x.st === 'no' ? 'Carica PDF' : 'Usa un altro PDF', () => fIn.click(), 'sm ghost', 'up') : null,
-        x.st === 'no' ? el('a', { class: 'hint', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + x.c + ' datasheet filetype:pdf'), target: '_blank', rel: 'noopener' }, 'cercala su Google ↗') : null, fIn);
-    }) : [el('p', { class: 'hint', style: 'margin:0' }, 'Nessun articolo nell\'offerta.')]));
-    drawDs();
+        x.saving = false; dsSet(x); } });
+      const stTxt = { cerco: 'cerco la scheda…', it: '🇮🇹 tradotta in italiano', orig: '🇬🇧 originale (sito Hikvision)', caricato: '📎 ' + (x.file ? x.file.name : x.fname || '') + (x.saving ? ' · salvo…' : ''), man: '📎 ' + (x.fname || 'scheda caricata') + ' · salvata', no: 'non trovata' }[x.st];
+      const was = U.get('ds:' + x.c);
+      U.set('ds:' + x.c, { label: 'Scheda tecnica ' + x.c, icon: '📘', on: x.st === 'no' || x.st === 'cerco' ? false : x.forceOn ? true : was && !was.dis ? was.on : !(o.attOff || {})['ds:' + x.c], dis: x.st === 'no' || x.st === 'cerco', src: () => ({ url: x.url, file: x.file, type: 'application/pdf', name: x.c + '.pdf' }),
+        sub: () => el('span', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, el('span', { class: 'hint', style: x.st === 'no' ? 'color:var(--accent)' : '' }, stTxt),
+          x.st === 'no' || x.st === 'orig' || x.st === 'man' || x.st === 'caricato' ? btn(x.st === 'no' ? 'Carica PDF' : 'Usa un altro PDF', () => fIn.click(), 'sm ghost', 'up') : null,
+          x.st === 'no' ? el('a', { class: 'hint', href: 'https://www.google.com/search?q=' + encodeURIComponent('site:hikvision.com ' + x.c + ' datasheet filetype:pdf'), target: '_blank', rel: 'noopener' }, 'cercala su Google ↗') : null, fIn) });
+    };
+    ds.forEach(x => dsSet(x));
     ds.forEach(async x => {
       try {
         const D = S.dsTrad && window.hpDsKey ? S.dsTrad.get(hpDsKey(x.c)) : null;
         const Mn = DSMAN.get(dsKey(x.c));
         if (D && D.pdf) { x.st = 'it'; x.url = '/_blob/' + D.pdf; }
         else if (Mn && Mn.pdf) { x.st = 'man'; x.url = '/_blob/' + Mn.pdf; x.fname = Mn.name; }
-        else { const it = fc(x.c, x.r.L) || {}; const u = it.url ? await withTimeout(window.hpFindDsPdf ? hpFindDsPdf(x.c, it.url, () => { }) : Promise.resolve([]), 15000) : null; if (u && u.length) { x.st = 'orig'; x.url = u[0]; } else { x.st = 'no'; x.on = false; } }
-      } catch (e) { x.st = 'no'; x.on = false; }
-      drawDs();
+        else { const it = fc(x.c, x.r.L) || {}; const u = it.url ? await withTimeout(window.hpFindDsPdf ? hpFindDsPdf(x.c, it.url, () => { }) : Promise.resolve([]), 15000) : null; if (u && u.length) { x.st = 'orig'; x.url = u[0]; } else { x.st = 'no'; } }
+      } catch (e) { x.st = 'no'; }
+      dsSet(x);
     });
-    // allegati PDF della commessa (disegni, simulazioni, report HiTools Designer) + PDF caricati al momento
-    const extra = [];
-    const drawAt = files => {
-      const pdfs = (files || []).filter(f => /pdf/i.test(f.type || '') || /\.pdf$/i.test(f.name || ''));
-      const add = el('input', { type: 'file', accept: '.pdf', multiple: true, hidden: true, onchange: e => { for (const f of e.target.files) extra.push({ label: f.name, file: f, on: true }); e.target.value = ''; drawAt(files); } });
-      atBox.replaceChildren(...pdfs.map(f => { f.on = f.on ?? !/offert|prev/i.test((f.cat || '') + ' ' + f.name); return el('label', { class: 'row', style: 'gap:6px' }, el('input', { type: 'checkbox', checked: f.on, onchange: e => { f.on = e.target.checked; } }), el('span', {}, f.name), f.cat ? el('span', { class: 'hint' }, '· ' + f.cat) : null); }),
-        ...extra.map(x => el('label', { class: 'row', style: 'gap:6px' }, el('input', { type: 'checkbox', checked: x.on, onchange: e => { x.on = e.target.checked; } }), el('span', {}, '📎 ' + x.label))),
-        el('div', { class: 'row', style: 'gap:8px' }, btn('Aggiungi PDF (disegno, simulazione, report HiTools Designer)', () => add.click(), 'sm ghost', 'up'), add),
-        !pdfs.length && !extra.length ? el('p', { class: 'hint', style: 'margin:0' }, o.commessaId ? 'Nessun PDF tra gli allegati della commessa.' : 'L\'offerta non è collegata a una commessa: puoi aggiungere i PDF qui.') : null);
-      atBox._files = pdfs;
-    };
-    drawAt([]);
-    if (o.commessaId && typeof db !== 'undefined' && db) { try { const un = db.collection('commesse/' + o.commessaId + '/allegati').onSnapshot(s => { drawAt(s.docs.map(d => ({ id: d.id, ...d.data() }))); }, () => { }); setTimeout(() => { try { un && un(); } catch (e) { } }, 4000); } catch (e) { } }
+    // allegati dell'offerta (immagini e PDF), PDF della commessa (disegni, simulazioni, report HiTools Designer) e PDF caricati al momento
+    const unO = hpOffAtts(o, fs => { for (const f of fs) if (!U.has('of:' + f.id)) U.set('of:' + f.id, { label: f.name, icon: hpAttIsImg(f.type, f.name) ? '🖼️' : '📄', on: true, src: () => ({ url: '/_blob/' + f.id, type: f.type, name: f.name }) }); });
+    let unC = null;
+    if (o.commessaId && typeof db !== 'undefined' && db) { try { unC = db.collection('commesse/' + o.commessaId + '/allegati').onSnapshot(sn => { for (const d of sn.docs) { const f = { id: d.id, ...d.data() }; if (!(/pdf/i.test(f.type || '') || /\.pdf$/i.test(f.name || '')) || U.has('cm:' + f.id)) continue; U.set('cm:' + f.id, { label: f.name + (f.cat ? ' · ' + f.cat : ''), icon: '📐', on: !/offert|prev/i.test((f.cat || '') + ' ' + f.name), src: () => ({ url: '/_blob/' + f.id, type: 'application/pdf', name: f.name }) }); } }, () => { }); } catch (e) { } }
+    let nx = 0; const add = el('input', { type: 'file', accept: '.pdf,image/*', multiple: true, hidden: true, onchange: e => { for (const f of e.target.files) { const k = 'tmp:' + (++nx); U.set(k, { label: f.name, icon: hpAttIsImg(f.type, f.name) ? '🖼️' : '📄', on: true, src: () => ({ file: f, type: f.type, name: f.name }) }); } e.target.value = ''; } });
+    const stop = () => { try { unO && unO(); } catch (e) { } try { unC && unC(); } catch (e) { } };
     const X = window.hpExportOpts(o);
     const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node,
-      el('h4', { style: 'margin:6px 0 0' }, 'Schede tecniche in coda'), dsBox,
-      el('h4', { style: 'margin:6px 0 0' }, 'Disegni, simulazioni e report HiTools Designer'), atBox, prog),
-      [el('span', { class: 'grow' }), btn('Annulla', () => m.close()),
-        btn('Excel', () => { const R = X.read(); m.close(); window.hpOffXlsx && hpOffXlsx(R.o, R.sc, R.lst); }, '', 'dl'),
-        btn('Word', async () => { const R = X.read(); m.close(); if (window.hpOffDocx) await hpOffDocx(R.o, R.sc, R.lst, true); }, '', 'doc'),
+      el('h4', { style: 'margin:6px 0 0' }, 'Allegati e ordine dell\'offerta'),
+      el('p', { class: 'hint', style: 'margin:0' }, 'Spunta gli allegati da includere e spostali con ↑ ↓ prima o dopo le parti dell\'offerta: ogni allegato va dopo la parte che lo precede nell\'elenco.'),
+      U.node, el('div', { class: 'row', style: 'gap:8px' }, btn('Aggiungi PDF o immagine', () => add.click(), 'sm ghost', 'up'), add), prog),
+      [el('span', { class: 'grow' }), btn('Annulla', () => { stop(); m.close(); }),
+        btn('Excel', () => { const R = X.read(); stop(); m.close(); window.hpOffXlsx && hpOffXlsx(R.o, R.sc, R.lst); }, '', 'dl'),
+        btn('Word', async () => { const R = X.read(); const list = U.read(); U.save(); try { const attPages = list.length ? await hpAttRender(list, say) : {}; stop(); m.close(); if (window.hpOffDocx) await hpOffDocx(R.o, R.sc, R.lst, true, attPages); } catch (e) { console.error(e); toast('Word non creato: ' + (e.message || e), 'bad'); prog.hidden = true; } }, '', 'doc'),
         btn('PDF', async () => {
-          const R = X.read();
-          const attach = [...ds.filter(x => x.on && (x.url || x.file)).map(x => ({ label: 'scheda ' + x.c, url: x.url, file: x.file })), ...(atBox._files || []).filter(f => f.on).map(f => ({ label: f.name, url: '/_blob/' + f.id })), ...extra.filter(x => x.on)];
-          try { await build(R.o, { sc: R.sc, lst: R.lst, attach }, say); m.close(); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; }
+          const R = X.read(); const list = U.read(); U.save();
+          try { const attPages = list.length ? await hpAttRender(list, say) : {}; await build(R.o, { sc: R.sc, lst: R.lst, attPages }, say); stop(); m.close(); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; }
         }, 'pri', 'doc')], { wide: true });
   };
   window.hpPavOfferBuild = build; window.hpPavProdImg = productImage;

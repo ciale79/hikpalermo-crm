@@ -340,11 +340,20 @@
   const origExport = window.exportOffer;
   window.exportOffer = function (o) {
     const X = window.hpExportOpts(o);
-    const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node, el('p', { class: 'hint', style: 'margin:0' }, 'Le voci scelte e i testi modificati valgono per questo documento; le ultime scelte si ripropongono alla prossima esportazione. «Gestisci voci» crea, modifica e cancella le voci dei menu per tutto il gruppo.')),
-      [el('span', { class: 'grow' }), btn('Annulla', () => m.close()),
-        btn('Excel', () => { const R = X.read(); m.close(); xlsxOut(R.o, R.sc, R.lst); }, '', 'dl'),
-        btn('Word', async () => { const R = X.read(); m.close(); if (window.hpOffDocx) { await hpOffDocx(R.o, R.sc, R.lst, false); } }, '', 'doc'),
-        btn('PDF', () => { const R = X.read(); m.close(); pdfOut(R.o, R.sc, R.lst); }, 'pri', 'doc')], { wide: true });
+    // allegati dell'offerta (immagini e PDF) con la loro posizione nel documento
+    const U = window.hpAttUI ? hpAttUI(o, [['cov', 'Copertina'], ['ord', 'Offerta commerciale e dettaglio'], ['cond', 'Condizioni e note']], { empty: 'Nessun allegato: carica immagini o PDF nella scheda offerta o qui sotto.' }) : null;
+    let nx = 0; const unO = U ? hpOffAtts(o, fs => { for (const f of fs) if (!U.has('of:' + f.id)) U.set('of:' + f.id, { label: f.name, icon: hpAttIsImg(f.type, f.name) ? '🖼️' : '📄', on: true, src: () => ({ url: '/_blob/' + f.id, type: f.type, name: f.name }) }); }) : null;
+    const add = el('input', { type: 'file', accept: '.pdf,image/*', multiple: true, hidden: true, onchange: e => { for (const f of e.target.files) U.set('tmp:' + (++nx), { label: f.name, icon: hpAttIsImg(f.type, f.name) ? '🖼️' : '📄', on: true, src: () => ({ file: f, type: f.type, name: f.name }) }); e.target.value = ''; } });
+    const prog = el('div', { class: 'row hp-prog', style: 'gap:8px', hidden: true }, el('span', { class: 'spin' }), el('span', {})); const say = t => { prog.hidden = false; prog.lastChild.textContent = t; };
+    const stop = () => { try { unO && unO(); } catch (e) { } };
+    const pages = async () => { if (!U) return {}; const list = U.read(); U.save(); return list.length ? await hpAttRender(list, say) : {}; };
+    const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node, el('p', { class: 'hint', style: 'margin:0' }, 'Le voci scelte e i testi modificati valgono per questo documento; le ultime scelte si ripropongono alla prossima esportazione. «Gestisci voci» crea, modifica e cancella le voci dei menu per tutto il gruppo.'),
+      U ? el('h4', { style: 'margin:6px 0 0' }, 'Allegati e ordine dell\'offerta') : null, U ? el('p', { class: 'hint', style: 'margin:0' }, 'Spunta gli allegati da includere e spostali con ↑ ↓ prima o dopo le parti dell\'offerta: ogni allegato va dopo la parte che lo precede nell\'elenco.') : null,
+      U ? U.node : null, U ? el('div', { class: 'row', style: 'gap:8px' }, btn('Aggiungi PDF o immagine', () => add.click(), 'sm ghost', 'up'), add) : null, prog),
+      [el('span', { class: 'grow' }), btn('Annulla', () => { stop(); m.close(); }),
+        btn('Excel', () => { const R = X.read(); stop(); m.close(); xlsxOut(R.o, R.sc, R.lst); }, '', 'dl'),
+        btn('Word', async () => { const R = X.read(); try { const ap = await pages(); stop(); m.close(); if (window.hpOffDocx) await hpOffDocx(R.o, R.sc, R.lst, false, ap); } catch (e) { console.error(e); toast('Word non creato: ' + (e.message || e), 'bad'); prog.hidden = true; } }, '', 'doc'),
+        btn('PDF', async () => { const R = X.read(); try { const ap = await pages(); stop(); m.close(); await pdfOut(R.o, R.sc, R.lst, ap); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; } }, 'pri', 'doc')], { wide: true });
   };
   async function xlsxOut(o, sc, lst) {
     if (sc && lst && !(o.righe || []).some(r => r.noList || r.sez)) return origExport(o);
@@ -370,7 +379,7 @@
   /* ---------- PDF dell'offerta: modello standard Hikvision (copertina, offerta commerciale, dettaglio SAP, condizioni) ---------- */
   const HQ = 'HIKVISION ITALY Srl - Viale Fulvio Testi, 113 - 20092 Cinisello Balsamo (MI) - P.IVA 07757250969';
   const imgData = (src, w) => new Promise(res => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * i.naturalHeight / i.naturalWidth); c.getContext('2d').drawImage(i, 0, 0, c.width, c.height); res({ d: c.toDataURL('image/png'), r: i.naturalHeight / i.naturalWidth }); }; i.onerror = () => res(null); i.src = src; });
-  async function pdfOut(o, sc, lst) {
+  async function pdfOut(o, sc, lst, attPages) {
     const eur = v => '€ ' + (window.hpGrpX ? hpGrpX(v) : window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); // come nel modello: «€ 1.200,00»
     try {
       if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -392,8 +401,12 @@
     T(cliName.toUpperCase(), W / 2, 86, { a: 'center', s: 19, b: true, c: [85, 85, 85] });
     if (rif) { T('Riferimento', W / 2, 101, { a: 'center', s: 8 }); doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(85, 85, 85); doc.text(doc.splitTextToSize(rif, W - 50), W / 2, 109, { align: 'center' }); }
     T(num + ' del ' + dt, W / 2, rif ? 124 : 104, { a: 'center', s: 8 });
+    // allegati (immagini e PDF) nelle posizioni scelte: pagine intere, senza piè di pagina dell'offerta
+    const AP = attPages || {}; const attP = new Set();
+    const ins = pos => { for (const pg of AP[pos] || []) { const land = pg.w > pg.h; doc.addPage('a4', land ? 'l' : 'p'); attP.add(doc.internal.getNumberOfPages()); const PW = land ? 297 : 210, PHh = land ? 210 : 297, m = 6; const k = Math.min((PW - 2 * m) / pg.w, (PHh - 2 * m) / pg.h); const iw = pg.w * k, ih = pg.h * k; doc.addImage(pg.d, 'JPEG', (PW - iw) / 2, (PHh - ih) / 2, iw, ih, undefined, 'FAST'); } };
+    ins('cov');
     // 2 · offerta commerciale
-    doc.addPage();
+    doc.addPage('a4', 'p');
     if (logo) doc.addImage(logo.d, 'PNG', 14, 12, 80, 80 * logo.r);
     let y = 38;
     T('Partner contrattuale:', 16, y, { i: true, s: 8 }); T('HIKVISION ITALY Srl', 16, y + 5.5, { s: 8.5 }); T('Sede legale:', 16, y + 11, { s: 8 }); T('Viale Fulvio Testi, 113', 16, y + 16, { s: 8 }); T('20092 Cinisello Balsamo (MI)', 16, y + 21, { s: 8 });
@@ -430,14 +443,15 @@
     doc.setLineDashPattern([0.6, 0.8], 0); doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(85, y - 4, 128, y - 4); doc.line(130, y - 4, 196, y - 4); doc.setLineDashPattern([], 0);
     T('Luogo e data', 106, y, { a: 'center', s: 7 }); T('Il committente (timbro/firma)', 163, y, { a: 'center', s: 7 });
     // 3 · dettaglio con i codici SAP
-    doc.addPage(); T('Dettaglio', 14, 22, { s: 11, c: RED });
+    doc.addPage('a4', 'p'); T('Dettaglio', 14, 22, { s: 11, c: RED });
     const dBody = []; for (const r of o.righe || []) { const it = typeof findCode === 'function' ? findCode(r.c, r.L) : null; const t = lineTot(r); dBody.push([(it && it.sap) || r.sap || '', r.c, String(r.q), eur(t.unit), eur(t.netto)]); }
     doc.autoTable({ startY: 27, head: [['SAP', 'Codice / Descrizione', 'Q.tà', 'Prezzo Cad.', 'Totale']], body: dBody, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid',
       styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 1.8, textColor: [60, 60, 60], lineColor: [90, 90, 90], lineWidth: .15 },
       headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 },
       columnStyles: { 0: { cellWidth: 26 }, 2: { cellWidth: 10, halign: 'center' }, 3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 24, halign: 'right', textColor: RED } } });
+    ins('ord');
     // 4 · condizioni
-    doc.addPage(); y = 22;
+    doc.addPage('a4', 'p'); y = 22;
     const cond = P.cond || {}; const cf = (typeof cfg === 'function' ? cfg() : {}) || {};
     const pick = rx => { for (const [kk, v] of Object.entries(cond)) if (rx.test(kk)) return String(v).trim(); return ''; };
     const block = (title, lines) => { T(title, 14, y, { s: 7.5, b: true, c: RED }); y += 8; lines.forEach(l => { const ls = doc.splitTextToSize(String(l), W - 28); ls.forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; }); }); y += 9; };
@@ -452,13 +466,14 @@
     else { doc.setDrawColor(60, 60, 60); doc.setLineDashPattern([1.2, 0.6], 0); for (let q = 0; q < 5; q++) { doc.line(14, y, W - 14, y); y += 3.4; } doc.setLineDashPattern([], 0); y += 3; }
     ['Immagini e descrizioni dei prodotti presenti nell\'offerta sono indicativi e potrebbero contenere inesattezze.', 'Per maggiori dettagli, vi preghiamo di consultare le schede tecniche dei prodotti sui siti web ufficiali o di contattare il personale Hikvision e i partner di distribuzione autorizzati.'].forEach(l => doc.splitTextToSize(l, W - 28).forEach(z => { T(z, 14, y, { s: 7.5 }); y += 4.8; }));
     // piè di pagina (tranne la copertina)
-    const n = doc.internal.getNumberOfPages();
+    const nAll = doc.internal.getNumberOfPages(); const offP = []; for (let q = 1; q <= nAll; q++) if (!attP.has(q)) offP.push(q); const n = offP.length;
     for (let p = 2; p <= n; p++) {
-      doc.setPage(p); const fy = PH - 10;
+      doc.setPage(offP[p - 1]); const fy = PH - 10;
       T('Prev. ', 4, fy, { s: 6.5 }); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(num, 4 + doc.getTextWidth('Prev. '), fy);
       T(HQ, W / 2, fy - 1.5, { a: 'center', s: 6 });
       const pg = p + '/' + n; doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); const wPg = doc.getTextWidth(pg); T('Pag. ', W - 4 - wPg, fy, { a: 'right', s: 6.5 }); doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(String(p), W - 4 - wPg, fy); doc.setFont('helvetica', 'normal'); doc.setTextColor(...INK); doc.text('/' + n, W - 4 - wPg + doc.getTextWidth(String(p)), fy);
     }
+    ins('cond');
     window.hpDlReady(doc.output('blob'), ('Prev_' + num + '_' + cliName).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '-').toLowerCase() + '_hikvision.pdf');
   }
   window.hpOffXlsx = xlsxOut; window.hpOffPdfStd = pdfOut;

@@ -15,7 +15,7 @@
   }
 
   const u8url = async d => new Uint8Array(await (await fetch(d)).arrayBuffer());
-  window.hpOffDocx = async function (o, sc, lst, pav) {
+  window.hpOffDocx = async function (o, sc, lst, pav, attPages) {
     try { if (!window.docx) await loadScript(DOCX); } catch (e) { toast('Non riesco a caricare il generatore Word.', 'bad'); return; }
     const X = window.docx; const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType, PageBreak, TableLayoutType } = X;
     const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P = o.pdf || {}; const M = P.meta || {}; const C = P.cliente || {};
@@ -27,6 +27,9 @@
     const FONT = 'Open Sans';
     const R = (t, op = {}) => new TextRun({ text: String(t ?? ''), font: FONT, size: Math.round((op.s || 9) * 2), bold: !!op.b, italics: !!op.i, color: op.c || INK, allCaps: !!op.caps });
     const Pp = (runs, op = {}) => new Paragraph({ keepNext: !!op.keep, children: Array.isArray(runs) ? runs : [runs], alignment: op.a === 'c' ? AlignmentType.CENTER : op.a === 'r' ? AlignmentType.RIGHT : AlignmentType.LEFT, spacing: { before: Math.round((op.before || 0) * 20), after: Math.round((op.after ?? 4) * 20), ...(op.img ? {} : { line: op.line || 276 }) } });
+    // allegati (immagini e PDF già trasformati in pagine) nelle posizioni scelte, una pagina ciascuno
+    const AP = attPages || {};
+    const ins = async pos => { for (const pg of AP[pos] || []) { const k = Math.min(174 / pg.w, 248 / pg.h); body.push(new Paragraph({ children: [new PageBreak()] }), new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new ImageRun({ type: 'jpg', data: await u8url(pg.d), transformation: { width: Math.round(pg.w * k * 3.78), height: Math.round(pg.h * k * 3.78) } })] })); } };
     const img = (im, wMm, a) => im ? Pp(new ImageRun({ type: 'png', data: im.data, transformation: { width: Math.round(wMm * 3.78), height: Math.round(wMm * im.r * 3.78) } }), { a: a || 'c', after: 2, img: true }) : null;
     const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, thin = { style: BorderStyle.SINGLE, size: 4, color: LINE };
     const cell = (content, op = {}) => new TableCell({ children: (Array.isArray(content) ? content : [content]).map(c => c instanceof Paragraph ? c : Pp(R(c, { s: op.s || 7.5, b: op.b, c: op.c || (op.head ? 'FFFFFF' : INK) }), { a: op.a, after: 0, line: 240, keep: op.keep })), columnSpan: op.span, width: op.w ? { size: op.w, type: WidthType.DXA } : undefined,
@@ -44,6 +47,7 @@
       const cov = window.hpPavCovData ? await hpPavCovData(o) : [];
       if (cov.length) { const im = cov[0]; let h = 70, w = h / (im.r || 1); if (w > 174) { w = 174; h = w * (im.r || 1); }
         body.push(Pp(R('', { s: 10 }), { after: 30 }), new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(im.d), transformation: { width: Math.round(w * 3.78), height: Math.round(h * 3.78) } })] })); }
+      await ins('cov');
       /* pagina «Offerta» con le anteprime dei prodotti */
       body.push(new Paragraph({ children: [new PageBreak()] }), nl ? img(nl, 52.5, 'l') : null, Pp(R('', { s: 10 }), { after: 6 }), Pp(R('Offerta', { s: 11, c: RED }), { after: 2 }), Pp(R(num + ' del ' + dt + (rif ? ' · ' + rif : ''), { s: 8, c: GREY }), { after: 6 }));
       { const L0 = o.righe || []; const cellB = (c, op = {}) => cell(c, { ...op, bord: op.head ? { top: none, left: none, right: none, bottom: thin } : { top: none, bottom: none, left: none, right: none } }); const thumbs = await Promise.all(L0.map(r => window.hpPavProdImg ? hpPavProdImg({ ...r, c: hpPavMainC(r.c) }, false).catch(() => null) : null));
@@ -58,6 +62,7 @@
         body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: [9906], rows: [new TableRow({ children: [new TableCell({ children: [inner, new Paragraph({ children: [], spacing: { after: 0, line: 20, lineRule: 'exact' } })], width: { size: 9906, type: WidthType.DXA }, margins: { top: 0, bottom: 0, left: 0, right: 0 }, borders: { top: thin, bottom: thin, left: thin, right: thin } })] })] }));
         const T0 = offTot(L0), iva0 = hpExact(T0.N * 0.22); const tl = (l, v, b, c) => Pp([R(l + '   ', { s: b ? 10 : 8, b, c: b ? DARK : INK }), R(v, { s: b ? 10 : 8, b: true, c: c || DARK })], { a: 'r', after: 2 });
         body.push(Pp(R(''), { after: 4 }), tl('Subtotale', eur(T0.N), false, RED), tl('IVA (22%)', eur(iva0)), tl('Totale offerta', eur(T0.N + iva0), true)); }
+      await ins('img');
       /* copertina «Modulo Conferma d'ordine» */
       body.push(new Paragraph({ children: [new PageBreak()] }), nl ? img(nl, 69.6, 'c') : null, Pp(R(''), { after: 0, before: 160 }),
         Pp(R('Modulo Conferma d\'ordine', { s: 24, b: true, c: DARK }), { after: 6, img: true }), Pp(R(cliName.toUpperCase(), { s: 14, b: true, c: DARK }), { after: 0, img: true }), Pp(R('Offerta ' + num + ' del ' + dt, { s: 8, c: GREY }), { after: 0, img: true }));
@@ -67,6 +72,7 @@
       Pp(R(cliName.toUpperCase(), { s: 17, b: true, c: DARK }), { a: 'c', after: 22 }),
       rif ? Pp(R('Riferimento', { s: 8, c: GREY }), { a: 'c', after: 4 }) : null, rif ? Pp(R(rif, { s: 13, c: DARK, b: true }), { a: 'c', after: 14 }) : null,
       Pp(R(num + ' del ' + dt, { s: 8, c: GREY }), { a: 'c', after: 26 }));
+    if (!pav) await ins('cov');
     body.push(new Paragraph({ children: [new PageBreak()] }));
 
     /* 2 · offerta commerciale */
@@ -103,13 +109,14 @@
     const tot = (l, v, op = {}) => new TableRow({ children: [cell(l, { span: cols.length - 1, a: 'r', b: op.b, fill: op.fill, s: op.b ? 9 : 8 }), cell(v, { a: 'r', b: true, c: op.c, fill: op.fill, s: op.b ? 9 : 8 })] });
     rows.push(tot('Subtotale', eur(T.N), { c: RED }), tot('IVA (22%)', eur(iva)), tot('Totale offerta', eur(T.N + iva), { b: true, fill: pav ? 'F0F1F3' : 'E8E8E8' }));
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cols.map(c => c[1]), rows }));
-    // timbro e firme
-    body.push(Pp(R(''), { before: 20 }), new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
+    // timbro e firme (non sul foglio a metro quadro)
+    if (!mq) body.push(Pp(R(''), { before: 20 }), new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, rows: [new TableRow({ children: [
       cell([nl ? img(nl, 32) : img(hik, 36), Pp(R('HIKVISION ITALY SRL', { s: 7 }), { a: 'c', after: 0 })].filter(Boolean), { noB: true, w: 3600 }),
       cell([Pp(R('______________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Luogo e data', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 2600 }),
       cell([Pp(R('________________________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Il committente (timbro/firma)', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 3706 })] })] }));
     };
-    orderW(false); if (anyLed) { body.push(new Paragraph({ children: [new PageBreak()] })); orderW(true); }
+    if (anyLed) { orderW(true); body.push(new Paragraph({ children: [new PageBreak()] })); } orderW(false); // prima il foglio a m², poi quello a pezzi
+    await ins('ord');
 
     /* 3 · condizioni */
     body.push(new Paragraph({ children: [new PageBreak()] }));
@@ -124,6 +131,8 @@
     const note = String(o.note || '').replace(/^(tempi di consegna|validit[aà][^:]*|condizioni di pagamento|banca|iban|beneficiario)\s*:.*$/gim, '').trim();
     body.push(Pp(R('NOTE AGGIUNTIVE', { s: 8, b: true, c: RED }), { before: 6, after: 4 }));
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, rows: [new TableRow({ children: [cell((note ? note.split('\n') : ['', '', '']).map(l => Pp(R(l, { s: 8 }), { after: 2 })), { w: 9906 })] })] }));
+
+    await ins('cond');
 
     // Open Sans incorporato nel file: il documento si vede uguale anche dove il font non è installato
     const FD = window.hpPdfFontData ? await hpPdfFontData() : {}; const fonts = [];
