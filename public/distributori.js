@@ -6,6 +6,7 @@
   const PAVK = 'Distributore ProAV';
   const CATS = [[PAVK, '#C8102E'], ['Sicurezza', '#D9480F'], ['Materiale elettrico', '#2F9E44'], ['IT', '#1971C2'], ['Commercial Display & EDU', '#AE3EC9'], ['Solution', '#E8A100']];
   const COL = Object.fromEntries(CATS);
+  const PAVIMG = '/proav-touch.png'; window.hpDistImg = { [PAVK]: PAVIMG }; // segnalino dei distributori ProAV con il logo ProAV
   window.hpDistCats = CATS; window.hpComColor = '#343A40';
   const ls = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || 'null'); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } };
   const DEF = [PAVK]; // di base: solo i clienti della categoria «Distributore Pro AV»
@@ -26,7 +27,8 @@
     for (const c of visible()) for (const s of (c.sedi && c.sedi.length ? c.sedi : [{ lat: c.lat, lng: c.lng, citta: c.citta }])) {
       if (s.lat == null || s.lng == null) continue;
       const k = s.lat.toFixed(3) + ',' + s.lng.toFixed(3); const n = seen.get(k) || 0; seen.set(k, n + 1); const ang = n * 2.4, rad = n ? 0.03 * Math.sqrt(n) : 0;
-      out.push({ lat: s.lat + rad * Math.sin(ang), lng: s.lng + rad * Math.cos(ang), r: 5, color: colorOf(c), title: c.nome + (s.label ? ' · ' + s.label : '') + ' · ' + [s.citta, s.prov].filter(Boolean).join(' ') + '\n' + catsOf(c).join(', '), on: () => go('clienti', c.id) });
+      const pv = sel.has(PAVK) && catsOf(c).includes(PAVK);
+      out.push({ lat: s.lat + rad * Math.sin(ang), lng: s.lng + rad * Math.cos(ang), r: 5, color: colorOf(c), ...(pv ? { img: PAVIMG, imgR: 13 } : {}), title: c.nome + (s.label ? ' · ' + s.label : '') + ' · ' + [s.citta, s.prov].filter(Boolean).join(' ') + '\n' + catsOf(c).join(', '), on: () => go('clienti', c.id) });
     }
     return out;
   };
