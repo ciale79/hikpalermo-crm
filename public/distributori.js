@@ -7,7 +7,8 @@
   const COL = Object.fromEntries(CATS);
   window.hpDistCats = CATS; window.hpComColor = '#343A40';
   const ls = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || 'null'); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } };
-  let sel = new Set(ls('hp_distCats') || CATS.map(c => c[0])); let q = '';
+  const DEF = ['IT', 'Commercial Display & EDU']; // di base: i canali ProAV
+  let sel = new Set(ls('hp_distCats2') || DEF); let q = '';
   const dists = () => [...S.clienti.values()].filter(c => Array.isArray(c.distCat) && c.distCat.length);
   const visible = () => dists().filter(c => c.distCat.some(x => sel.has(x)));
   const colorOf = c => COL[CATS.map(x => x[0]).find(k => sel.has(k) && c.distCat.includes(k)) || c.distCat[0]] || '#868E96';
@@ -31,8 +32,8 @@
     const lab = () => sel.size === CATS.length ? 'Tutte le categorie' : sel.size === 1 ? [...sel][0] : sel.size + ' categorie';
     const b = el('button', { type: 'button', class: 'btn hp-msbtn', 'aria-expanded': 'false' }, ic('list', 16), el('span', {}, lab()), el('span', { class: 'hp-caret', 'aria-hidden': 'true' }, '▾'));
     const pop = el('div', { class: 'hp-mspop', hidden: true, onclick: e => e.stopPropagation() },
-      el('div', { class: 'row', style: 'gap:12px;padding:2px 4px 8px;border-bottom:1px solid var(--line)' }, el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); sel = new Set(CATS.map(c => c[0])); ls('hp_distCats', [...sel]); redraw(); } }, 'Tutte')),
-      ...CATS.map(([k, col]) => el('label', { class: 'hp-msit' }, el('input', { type: 'checkbox', checked: sel.has(k), onchange: e => { e.target.checked ? sel.add(k) : sel.delete(k); if (!sel.size) sel.add(k); ls('hp_distCats', [...sel]); b.children[1].textContent = lab(); redraw(); } }), el('i', { class: 'hp-mdot', style: { background: col } }), el('span', { class: 'grow' }, k), el('small', { class: 'hint' }, String(cnt(k))))));
+      el('div', { class: 'row', style: 'gap:12px;padding:2px 4px 8px;border-bottom:1px solid var(--line)' }, el('a', { href: '#', class: 'hint', onclick: e => { e.preventDefault(); sel = new Set(CATS.map(c => c[0])); ls('hp_distCats2', [...sel]); redraw(); } }, 'Tutte')),
+      ...CATS.map(([k, col]) => el('label', { class: 'hp-msit' }, el('input', { type: 'checkbox', checked: sel.has(k), onchange: e => { e.target.checked ? sel.add(k) : sel.delete(k); if (!sel.size) sel.add(k); ls('hp_distCats2', [...sel]); b.children[1].textContent = lab(); redraw(); } }), el('i', { class: 'hp-mdot', style: { background: col } }), el('span', { class: 'grow' }, k), el('small', { class: 'hint' }, String(cnt(k))))));
     b.addEventListener('click', e => { e.stopPropagation(); pop.hidden = !pop.hidden; b.setAttribute('aria-expanded', String(!pop.hidden)); if (!pop.hidden) { const h = ev => { if (!pop.contains(ev.target) && ev.target !== b) { pop.hidden = true; document.removeEventListener('click', h); } }; setTimeout(() => document.addEventListener('click', h), 0); } });
     return el('div', { class: 'hp-ms' }, b, pop);
   }
