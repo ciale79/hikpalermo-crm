@@ -371,7 +371,7 @@
   const HQ = 'HIKVISION ITALY Srl - Viale Fulvio Testi, 113 - 20092 Cinisello Balsamo (MI) - P.IVA 07757250969';
   const imgData = (src, w) => new Promise(res => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = Math.round(w * i.naturalHeight / i.naturalWidth); c.getContext('2d').drawImage(i, 0, 0, c.width, c.height); res({ d: c.toDataURL('image/png'), r: i.naturalHeight / i.naturalWidth }); }; i.onerror = () => res(null); i.src = src; });
   async function pdfOut(o, sc, lst) {
-    const eur = v => '€ ' + (window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); // come nel modello: «€ 1.200,00»
+    const eur = v => '€ ' + (window.hpGrpX ? hpGrpX(v) : window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })); // come nel modello: «€ 1.200,00»
     try {
       if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
       if (!window.jspdf.jsPDF.API.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
@@ -420,10 +420,10 @@
     doc.autoTable({ startY: y + 8, head: [head], body, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid',
       styles: { font: 'helvetica', fontSize: 7, cellPadding: 1.6, textColor: [60, 60, 60], lineColor: [90, 90, 90], lineWidth: .15, valign: 'top' },
       headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 }, columnStyles: cs, didDrawPage: foot });
-    const Tt = offTot(o.righe); const iva = round2(Tt.N * 0.22);
+    const Tt = offTot(o.righe); const iva = exact(Tt.N * 0.22);
     y = doc.lastAutoTable.finalY + 9; if (y > PH - 75) { doc.addPage(); y = 25; }
     const tot = (l, v, b, vr) => { T(l, W - 48, y, { a: 'right', s: b ? 10.5 : 9.5, c: [80, 80, 80] }); T(v, W - 16, y, { a: 'right', s: b ? 10.5 : 9.5, b: true, c: vr ? RED : [64, 64, 64] }); y += 8; };
-    tot('Subtotale', eur(Tt.N), false, true); tot('IVA (22%)', eur(iva)); tot('Totale offerta', eur(round2(Tt.N + iva)), true);
+    tot('Subtotale', eur(Tt.N), false, true); tot('IVA (22%)', eur(iva)); tot('Totale offerta', eur(exact(Tt.N + iva)), true);
     y += 8; if (y > PH - 40) { doc.addPage(); y = 30; }
     if (logo) doc.addImage(logo.d, 'PNG', 32, y, 40, 40 * logo.r); y += 40 * (logo ? logo.r : .14) + 6;
     T('HIKVISION ITALY SRL', 52, y, { a: 'center', s: 7 });

@@ -3,7 +3,7 @@
 (function () {
   const DOCX = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js';
   const RED = 'C8102E', INK = '404040', GREY = '808080', DARK = '333333', LINE = 'AAAEB6';
-  const eur = v => '€ ' + (window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const eur = v => '€ ' + (window.hpGrpX ? hpGrpX(v) : window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const r2 = v => Math.round((+v || 0) * 100) / 100;
   const fc = (c, L) => { try { return typeof findCode === 'function' ? findCode(c, L) : null; } catch (e) { return null; } };
   const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
@@ -56,7 +56,7 @@
         // solo la cornice esterna (tabella contenitore) e la riga sotto l'intestazione
         const inner = new Table({ width: { size: 9906 - 40, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cw.map((w, k) => k === 2 ? w - 40 : w), rows, borders: { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none } });
         body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: [9906], rows: [new TableRow({ children: [new TableCell({ children: [inner, new Paragraph({ children: [], spacing: { after: 0, line: 20, lineRule: 'exact' } })], width: { size: 9906, type: WidthType.DXA }, margins: { top: 0, bottom: 0, left: 0, right: 0 }, borders: { top: thin, bottom: thin, left: thin, right: thin } })] })] }));
-        const T0 = offTot(L0), iva0 = r2(T0.N * 0.22); const tl = (l, v, b, c) => Pp([R(l + '   ', { s: b ? 10 : 8, b, c: b ? DARK : INK }), R(v, { s: b ? 10 : 8, b: true, c: c || DARK })], { a: 'r', after: 2 });
+        const T0 = offTot(L0), iva0 = hpExact(T0.N * 0.22); const tl = (l, v, b, c) => Pp([R(l + '   ', { s: b ? 10 : 8, b, c: b ? DARK : INK }), R(v, { s: b ? 10 : 8, b: true, c: c || DARK })], { a: 'r', after: 2 });
         body.push(Pp(R(''), { after: 4 }), tl('Subtotale', eur(T0.N), false, RED), tl('IVA (22%)', eur(iva0)), tl('Totale offerta', eur(T0.N + iva0), true)); }
       /* copertina «Modulo Conferma d'ordine» */
       body.push(new Paragraph({ children: [new PageBreak()] }), nl ? img(nl, 69.6, 'c') : null, Pp(R(''), { after: 0, before: 160 }),
@@ -99,7 +99,7 @@
       const v = [r.c, longD(r) + (LC ? ' — ' + LC.d : ''), LC ? LC.q : String(r.q), ...(sL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)];
       rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(k === 0 && pav && window.hpCodeLines ? hpCodeLines(x) : typeof x === 'string' && x.includes('\n') ? x.split('\n') : x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
     }
-    const T = offTot(lines), iva = r2(T.N * 0.22);
+    const T = offTot(lines), iva = hpExact(T.N * 0.22);
     const tot = (l, v, op = {}) => new TableRow({ children: [cell(l, { span: cols.length - 1, a: 'r', b: op.b, fill: op.fill, s: op.b ? 9 : 8 }), cell(v, { a: 'r', b: true, c: op.c, fill: op.fill, s: op.b ? 9 : 8 })] });
     rows.push(tot('Subtotale', eur(T.N), { c: RED }), tot('IVA (22%)', eur(iva)), tot('Totale offerta', eur(T.N + iva), { b: true, fill: pav ? 'F0F1F3' : 'E8E8E8' }));
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cols.map(c => c[1]), rows }));

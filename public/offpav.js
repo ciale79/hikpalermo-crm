@@ -12,7 +12,7 @@
   const RED = [200, 16, 46], INK = [64, 64, 64], GREY = [128, 128, 128], DARK = [51, 51, 51];
   // celle colorate in grigio chiaro: intestazioni, sezioni, totale
   const HEADF = [222, 224, 228], SECF = [246, 247, 248], TOTF = [240, 241, 243], LINEC = [170, 174, 182];
-  const eur = v => '€ ' + (window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const eur = v => '€ ' + (window.hpGrpX ? hpGrpX(v) : window.hpGrp ? hpGrp(v, 2) : (+v || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
   const fc = (c, L) => { try { return typeof findCode === 'function' ? findCode(c, L) : null; } catch (e) { return null; } };
   const mainC = c => String(c || '').split(' + ')[0];
 
@@ -236,7 +236,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       body.push([{ content: longD(r), colSpan: 6, styles: { fontSize: 7.5, textColor: INK, cellPadding: { top: 0.9, bottom: 2.2, left: 1.4, right: 1.4 } } }]);
     });
     // totali dentro il riquadro arrotondato, a tutta larghezza, sulla stessa pagina dell'ultimo articolo
-    const Tt = offTot(lines); const iva = Math.round(Tt.N * 22) / 100;
+    const Tt = offTot(lines); const iva = hpExact(Tt.N * 0.22);
     const totIdx = body.length; body.push([{ content: '', colSpan: 5, styles: { minCellHeight: 21 } }, { content: '' }].concat(lines.length ? [] : [{ content: '' }]));
     tb = {}; doc.autoTable({ startY: y2, head: [['', 'SAP', 'Codice', 'Q.tà', 'Prezzo Cad.', 'Totale', { content: '', styles: { cellPadding: 0 } }]], body, margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
       styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: 0, valign: 'middle' },
