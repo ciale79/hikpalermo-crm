@@ -96,7 +96,7 @@
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) rows.push(new TableRow({ children: [cell(sez, { b: true, fill: pav ? 'F6F7F8' : 'F0F0F0', span: cols.length })] })); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
       const LC = pav && window.hpLedCells ? hpLedCells(r, t.unit, mq, eur) : null;
-      const v = [r.c, LC ? [longD(r), Pp(R(LC.d, { s: 7.5, c: GREY }), { after: 0, line: 240 })] : longD(r), LC && LC.q.includes('\n') ? LC.q.split('\n').map((t, i) => Pp(R(t, { s: 7.5, b: !i, c: i ? 'AFAFAF' : DARK }), { a: 'c', after: 0, line: 240 })) : LC ? LC.q : String(r.q), ...(sL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)];
+      const v = [r.c, longD(r), LC && LC.q.includes('\n') ? LC.q.split('\n').map((t, i) => Pp(R(t, { s: 7.5, b: !i, c: i ? 'AFAFAF' : DARK }), { a: 'c', after: 0, line: 240 })) : LC ? LC.q : String(r.q), ...(sL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)];
       rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(k === 0 && pav && window.hpCodeLines ? hpCodeLines(x) : typeof x === 'string' && x.includes('\n') ? x.split('\n') : x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
     }
     const T = offTot(lines), iva = hpExact(T.N * 0.22);
