@@ -352,7 +352,7 @@
     const head = [['Offerta', o.numero || ''], ['Titolo', o.titolo || ''], ['Data', o.data || ''], ['Cliente', cli?.nome || ''], ['Commessa', com?.nome || ''], []];
     const H = ['Sezione', 'Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Prezzo listino'] : []), ...(sc ? ['Sconto %'] : []), 'Prezzo netto', 'Totale netto'];
     const aoa = [...head, H];
-    for (const r of o.righe || []) { const t = lineTot(r); aoa.push([r.sez || '', r.c, (r.b || '') + (r.net ? ' (prezzo netto)' : ''), +r.q || 0, ...(lst ? [r.noList ? '' : +r.p || 0] : []), ...(sc ? [r.noList ? '' : (+r.sc2 ? (typeof scTxt === 'function' ? scTxt(r) : r2(+r.sc || 0)) : r2(+r.sc || 0))] : []), t.unit, t.netto]); }
+    for (const r of o.righe || []) { const t = lineTot(r); aoa.push([r.sez || '', r.c, (r.b || ''), +r.q || 0, ...(lst ? [r.noList ? '' : +r.p || 0] : []), ...(sc ? [r.noList ? '' : (+r.sc2 ? (typeof scTxt === 'function' ? scTxt(r) : r2(+r.sc || 0)) : r2(+r.sc || 0))] : []), t.unit, t.netto]); }
     const T = offTot(o.righe), TL = offTot((o.righe || []).filter(r => !r.noList)); aoa.push([]); aoa.push(['', '', 'TOTALE', '', ...(lst ? [TL.L] : []), ...(sc ? [TL.sc] : []), '', T.N]);
     if (o.note) aoa.push([], ['Note', o.note]);
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = H.map((h, i) => ({ wch: i === 2 ? 60 : i === 1 ? 24 : 14 }));
@@ -412,7 +412,7 @@
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: head.length, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]); }
       const t = lineTot(r); const net = r.net || r.noList || r.noSc && !(+r.sc);
       const s1 = r.sc1 ?? r.sc, s2 = +r.sc2 || 0;
-      body.push([r.c, longD(r) + (r.net ? ' (prezzo netto)' : ''), String(r.q), ...(lst ? [r.noList || net ? '' : eur(r.p)] : []), ...(sc ? [r.ncHide ? '' : net ? 'NETTO' : fN.format(round2(+(s2 ? s1 : r.sc) || 0)), r.ncHide ? '' : net ? '-' : s2 ? fN.format(round2(s2)) : '-'] : []), eur(t.unit), eur(t.netto)]);
+      body.push([r.c, longD(r), String(r.q), ...(lst ? [r.noList || net ? '' : eur(r.p)] : []), ...(sc ? [r.ncHide ? '' : net ? 'NETTO' : fN.format(round2(+(s2 ? s1 : r.sc) || 0)), r.ncHide ? '' : net ? '-' : s2 ? fN.format(round2(s2)) : '-'] : []), eur(t.unit), eur(t.netto)]);
     }
     const nC = head.length; const cs = { 0: { cellWidth: 22 }, 2: { cellWidth: 9, halign: 'center' } };
     let k = 3; if (lst) cs[k++] = { cellWidth: 18, halign: 'right' }; if (sc) { cs[k++] = { cellWidth: 13, halign: 'center' }; cs[k++] = { cellWidth: 11, halign: 'center' }; } cs[k++] = { cellWidth: 19, halign: 'right' }; cs[k] = { cellWidth: 21, halign: 'right', textColor: RED };
