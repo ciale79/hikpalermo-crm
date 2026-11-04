@@ -131,9 +131,13 @@
     const cat = String(r.cat || '').toUpperCase();
     const head = (/LED/.test(cat) ? 'Display LED' : /VIDEOWALL|LCD/.test(cat) ? 'Videowall' : r.cat ? capF(r.cat) : 'Kit') + [ser, spec].filter(Boolean).map(x => ' ' + x).join('');
     const nameOf = k => { const f = String(k.d || '').split(/[.,;]/)[0].trim(); const n = f.split(/\s+(?:per|da|con|in)\s+/i)[0].trim(); return (n || k.d2 || 'componente').replace(/^./, ch => ch.toLowerCase()); };
-    const parts = r.kit.map(k => k.q + '× ' + nameOf(k) + ' ' + k.c);
-    const list = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' e ' + parts[parts.length - 1] : parts[0] || '';
-    return { b: head + ', composto da: ' + list, d: head + ', composto da:\n' + r.kit.map(k => '• ' + k.q + '× ' + k.c + ' — ' + (k.d || k.d2 || '')).join('\n') };
+    // prima i cabinet (la struttura), poi i moduli
+    const isCab = k => /cabinet|struttura/i.test(k.d2 || '') || /^\s*(struttura|cabinet)/i.test(k.d || '');
+    const mk = kit => { const parts = kit.map(k => k.q + '× ' + nameOf(k) + ' ' + k.c);
+      const list = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' e ' + parts[parts.length - 1] : parts[0] || '';
+      return { b: head + ', composto da: ' + list, d: head + ', composto da:\n' + kit.map(k => '• ' + k.q + '× ' + k.c + ' — ' + (k.d || k.d2 || '')).join('\n') }; };
+    const old = mk(r.kit), nw = mk([...r.kit.filter(isCab), ...r.kit.filter(k => !isCab(k))]);
+    return { ...nw, bOld: old.b, dOld: old.d };
   }
   function injectPav() {
     if (!S.cat || !S.cat.length || !S.pavList) return;
@@ -148,13 +152,16 @@
         const nets = {}; for (const [h, v] of r.n || []) { if (/1 ?pz/i.test(h)) continue; if (/distribut/i.test(h) && nets.dist == null) nets.dist = v; else if (/dealer/i.test(h) && nets.dealer == null) nets.dealer = v; else if (/install|\bsi\b|system/i.test(h) && nets.si == null) nets.si = v; }
         const c = r.c, kd = r.kit ? kitDesc(r) : null, b = kd ? kd.b : (r.d2 || r.tip || String(r.d || '').slice(0, 110));
         const d = kd ? kd.d : (r.d || r.d2 || '');
-        S.cat.push({ i: i0++, s, sap: r.kit ? (r.kit[0].sap || '') : (r.sap || ''), c, sz: r.cat || 'PROAV', fm: r.tip || '', b, d, p: r.p != null ? r.p : 0, noPrice: r.p == null, inf: /new/i.test(r.var || '') ? 'NEW' : '', st: '', m: r.moq || '', n: r.note || '', im: (im => im ? (String(im).startsWith('/') ? im : '/_blob/' + im) : -1)(r.img || (r.kit && (r.kit.find(k => k.img) || {}).img)),
+        S.cat.push({ ...(kd && kd.bOld !== kd.b ? { bOld: kd.bOld, dOld: kd.dOld } : {}), i: i0++, s, sap: r.kit ? (r.kit[0].sap || '') : (r.sap || ''), c, sz: r.cat || 'PROAV', fm: r.tip || '', b, d, p: r.p != null ? r.p : 0, noPrice: r.p == null, inf: /new/i.test(r.var || '') ? 'NEW' : '', st: '', m: r.moq || '', n: r.note || '', im: (im => im ? (String(im).startsWith('/') ? im : '/_blob/' + im) : -1)(r.img || (r.kit && (r.kit.find(k => k.img) || {}).img)),
           nets: Object.keys(nets).length ? nets : null, url: r.url || (r.kit && r.kit[0].url) || '', isNet: false, L: 'pav', kitN: r.kit ? r.kit.length : 0, cn: norm(c), hay: [c, r._h].join(' | ').toLowerCase(), pavRef: { m, r } });
       }
     }
     S.byCode = new Map(); for (const it of S.cat) { if (!S.byCode.has(it.cn)) S.byCode.set(it.cn, []); S.byCode.get(it.cn).push(it); }
-    S.catSap = null; injKey = key; changed();
+    S.catSap = null; injKey = key; fixKitB(); changed();
   }
+  // offerte già salvate con la vecchia descrizione dei kit (moduli prima dei cabinet): si mostra quella nuova
+  function fixKitB() { if (!S.offerte || !S.byCode) return; for (const o of S.offerte.values()) for (const r of o.righe || []) { if (r.L !== 'pav' || !r.b) continue; const it = (S.byCode.get(norm(r.c)) || []).find(x => x.L === 'pav'); if (!it || !it.bOld) continue; if (r.b === it.bOld) r.b = it.b; if (r.dx === it.dOld) r.dx = it.d; } }
+  setInterval(() => { try { fixKitB(); } catch (e) { } }, 3000);
   const ad0 = window.artDetail || artDetail;
   window.artDetail = function (it) { if (it && it.pavRef) return rowDetail(it.pavRef.m, it.pavRef.r); return ad0.apply(this, arguments); };
   const tInj = setInterval(() => { if (S.cat && S.cat.length && S.pavList) { if (S.pavList.every(m => S.pavRows.has(m.id))) { injectPav(); } else loadAll().then(injectPav); } }, 1500);

@@ -352,7 +352,7 @@
     const head = [['Offerta', o.numero || ''], ['Titolo', o.titolo || ''], ['Data', o.data || ''], ['Cliente', cli?.nome || ''], ['Commessa', com?.nome || ''], []];
     const H = ['Sezione', 'Codice', 'Descrizione', 'Q.tà', ...(lst ? ['Prezzo listino'] : []), ...(sc ? ['Sconto %'] : []), 'Prezzo netto', 'Totale netto'];
     const aoa = [...head, H];
-    for (const r of o.righe || []) { const t = lineTot(r); aoa.push([r.sez || '', r.c, (r.b || ''), +r.q || 0, ...(lst ? [r.noList ? '' : +r.p || 0] : []), ...(sc ? [r.noList ? '' : (+r.sc2 ? (typeof scTxt === 'function' ? scTxt(r) : r2(+r.sc || 0)) : r2(+r.sc || 0))] : []), t.unit, t.netto]); }
+    for (const r of o.righe || []) { const t = lineTot(r); aoa.push([r.sez || '', window.hpKitCode ? hpKitCode(r.c) : r.c, (r.b || ''), +r.q || 0, ...(lst ? [r.noList ? '' : +r.p || 0] : []), ...(sc ? [r.noList ? '' : (+r.sc2 ? (typeof scTxt === 'function' ? scTxt(r) : r2(+r.sc || 0)) : r2(+r.sc || 0))] : []), t.unit, t.netto]); }
     const T = offTot(o.righe), TL = offTot((o.righe || []).filter(r => !r.noList)); aoa.push([]); aoa.push(['', '', 'TOTALE', '', ...(lst ? [TL.L] : []), ...(sc ? [TL.sc] : []), '', T.N]);
     if (o.note) aoa.push([], ['Note', o.note]);
     const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = H.map((h, i) => ({ wch: i === 2 ? 60 : i === 1 ? 24 : 14 }));

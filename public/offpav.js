@@ -45,9 +45,12 @@
   let DSMAN = new Map();
   try { claude.use('db').then(db => { if (db) db.collection('dsman').onSnapshot(sn => { const m = new Map(); sn.docs.forEach(d => m.set(d.id, { id: d.id, ...d.data() })); DSMAN = m; }, () => { }); }); } catch (e) { }
   // codice nel modulo d'ordine: a capo dopo il «+» dei kit e comunque ogni 22 caratteri
-  window.hpCodeLines = c => String(c || '').split(/\s*\+\s*/).flatMap((p, i, a) => { const t = p + (i < a.length - 1 ? ' +' : ''); const out = []; for (let k = 0; k < t.length; k += 22) out.push(t.slice(k, k + 22)); return out.length ? out : ['']; });
+  // codice del kit come si mostra: prima il cabinet, poi i moduli (il codice salvato resta quello del listino)
+  window.hpKitCode = c => { c = String(c || ''); if (!c.includes('+')) return c; const it = fc(c, 'pav'); const kit = it && it.pavRef && it.pavRef.r && it.pavRef.r.kit; if (!kit || kit.length < 2) return c;
+    const isCab = k => /cabinet|struttura/i.test(k.d2 || '') || /^\s*(struttura|cabinet)/i.test(k.d || ''); const o = [...kit.filter(isCab), ...kit.filter(k => !isCab(k))]; return o.map(k => k.c).join(' + '); };
+  window.hpCodeLines = c => String(hpKitCode(c) || '').split(/\s*\+\s*/).flatMap((p, i, a) => { const t = p + (i < a.length - 1 ? ' +' : ''); const out = []; for (let k = 0; k < t.length; k += 22) out.push(t.slice(k, k + 22)); return out.length ? out : ['']; });
   // SAP della riga: per i kit quelli di tutti gli articoli che lo compongono (moduli e cabinet)
-  window.hpSapList = r => { const it = fc(r.c, r.L) || {}; const kit = it.pavRef && it.pavRef.r && it.pavRef.r.kit; const l = kit && kit.length ? kit.map(k => k.sap).filter(Boolean) : [it.sap || r.sap].filter(Boolean); return [...new Set(l)]; };
+  window.hpSapList = r => { const it = fc(r.c, r.L) || {}; const kit = it.pavRef && it.pavRef.r && it.pavRef.r.kit; const l = kit && kit.length ? [...kit].sort((a, b) => (/cabinet|struttura/i.test(b.d2 || b.d || '') ? 1 : 0) - (/cabinet|struttura/i.test(a.d2 || a.d || '') ? 1 : 0)).map(k => k.sap).filter(Boolean) : [it.sap || r.sap].filter(Boolean); return [...new Set(l)]; };
   const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
   // immagine del prodotto: prima quella della pagina ufficiale ProAV (og:image della scheda prodotto), altrimenti quella del listino
   async function productImage(r, big, nat) {
@@ -232,7 +235,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) body.push([{ content: sez, colSpan: 7, styles: { fontStyle: 'bold', fillColor: SECF, textColor: DARK } }]); }
       const it = fc(r.c, r.L) || {}; const t = lineTot(r);
       imgAt.set(body.length, thumbs[i]);
-      body.push(['', { content: hpSapList(r).join('\n'), styles: { fontStyle: 'normal' } }, { content: r.c, styles: { fontStyle: 'bold', textColor: DARK } }, ...(() => { const x = window.hpLedQ ? hpLedQ(r) : null; const lp = x && hpLedPrice(r, t.unit); return [{ content: x ? (x.kit ? hpMq(x.mq) + ' m²' : String(r.q) + '\n' + hpMq(x.mq) + ' m²') : String(r.q), styles: { halign: 'center' } }, { content: eur(t.unit), styles: { halign: 'right' } }]; })(), { content: eur(t.netto), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }, { content: '', rowSpan: i === lines.length - 1 ? 3 : 2, styles: { cellPadding: 0 } }]);
+      body.push(['', { content: hpSapList(r).join('\n'), styles: { fontStyle: 'normal' } }, { content: hpKitCode(r.c), styles: { fontStyle: 'bold', textColor: DARK } }, ...(() => { const x = window.hpLedQ ? hpLedQ(r) : null; const lp = x && hpLedPrice(r, t.unit); return [{ content: x ? hpMq(x.mq) + ' m²' : String(r.q), styles: { halign: 'center' } }, { content: eur(x ? (x.kit ? t.unit : t.unit / x.A) : t.unit), styles: { halign: 'right' } }]; })(), { content: eur(t.netto), styles: { halign: 'right', textColor: RED, fontStyle: 'bold' } }, { content: '', rowSpan: i === lines.length - 1 ? 3 : 2, styles: { cellPadding: 0 } }]);
       body.push([{ content: longD(r), colSpan: 6, styles: { fontSize: 7.5, textColor: INK, cellPadding: { top: 0.9, bottom: 2.2, left: 1.4, right: 1.4 } } }]);
     });
     // totali dentro il riquadro arrotondato, a tutta larghezza, sulla stessa pagina dell'ultimo articolo
@@ -278,17 +281,18 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
       const LC = window.hpLedCells ? hpLedCells(r, t.unit, mq, eur) : null;
       const dMain = String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160);
-      sb.push([hpCodeLines(r.c).join('\n'), LC ? { content: dMain + '\n' + LC.d, _main: dMain, _grey: LC.d } : dMain, LC ? LC.q : String(r.q), ...(showL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)]);
+      sb.push([hpCodeLines(r.c).join('\n'), LC ? { content: dMain + '\n' + LC.d, _parts: [[dMain, INK], [LC.d, GREY]] } : dMain, LC && LC.q.includes('\n') ? { content: LC.q, _parts: LC.q.split('\n').map((t, i) => [t, i ? [175, 175, 175] : DARK, !i]) } : LC ? LC.q : String(r.q), ...(showL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)]);
     }
     const lab = (t, extra) => ({ content: t, colSpan: nC - 1, styles: { halign: 'right', fontStyle: 'normal', fontSize: 8, textColor: INK, ...(extra || {}) } });
     const foot = [[lab('Subtotale'), { content: eur(Tt.N), styles: { halign: 'right', textColor: RED, fontStyle: 'bold', fontSize: 8 } }], [lab('IVA (22%)'), { content: eur(iva), styles: { halign: 'right', fontStyle: 'bold', fontSize: 8 } }],
       [lab('Totale offerta', { fillColor: TOTF, fontStyle: 'bold', textColor: DARK, fontSize: 9 }), { content: eur(Tt.N + iva), styles: { halign: 'right', fontStyle: 'bold', fillColor: TOTF, textColor: DARK, fontSize: 9 } }]];
-    const cs = { 0: { cellWidth: 37, fontStyle: 'bold', overflow: 'visible' }, 2: { cellWidth: anyLed ? 15 : 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
-    // riga dei pezzi del LED wall in grigio sotto la descrizione
-    const greyW = d => { if (d.section === 'body' && d.column.index === 1 && d.cell.raw && d.cell.raw._grey != null) { d.cell._lines = d.cell.text; d.cell.text = []; } };
-    const greyD = d => { tHooks.didDrawCell(d); const c = d.cell; if (!c._lines || d.section !== 'body') return; const fs = c.styles.fontSize, k = doc.internal.scaleFactor, lh = fs / k * 1.15, pl = c.padding('left'), w = c.width - c.padding('horizontal');
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(fs); const m = doc.splitTextToSize(c.raw._main, w), g = doc.splitTextToSize(c.raw._grey, w); const all = [...m.map(t => [t, INK]), ...g.map(t => [t, GREY])];
-      let yy = c.y + (c.height - all.length * lh) / 2; for (const [t, col] of all) { doc.setTextColor(...col); doc.text(t, c.x + pl, yy + lh / 2, { baseline: 'middle' }); yy += lh; } doc.setTextColor(...INK); };
+    const cs = { 0: { cellWidth: 37, fontStyle: 'bold', overflow: 'visible' }, 2: { cellWidth: anyLed ? 17 : 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
+    // celle a più colori: pezzi del LED wall in grigio sotto la descrizione; cabinet in grassetto e moduli in grigio chiaro nella quantità
+    const greyW = d => { if (d.section === 'body' && d.cell.raw && d.cell.raw._parts) { d.cell._lines = 1; d.cell.text = []; } };
+    const greyD = d => { tHooks.didDrawCell(d); const c = d.cell; if (!c._lines || d.section !== 'body') return; const fs = c.styles.fontSize, k = doc.internal.scaleFactor, lh = fs / k * 1.15, w = c.width - c.padding('horizontal'), ha = c.styles.halign;
+      doc.setFontSize(fs); const all = []; for (const [t, col, b] of c.raw._parts) { doc.setFont('helvetica', b ? 'bold' : 'normal'); for (const l of doc.splitTextToSize(t, w)) all.push([l, col, b]); }
+      let yy = c.y + (c.height - all.length * lh) / 2; for (const [t, col, b] of all) { doc.setFont('helvetica', b ? 'bold' : 'normal'); doc.setTextColor(...col); const x = ha === 'center' ? c.x + c.width / 2 : ha === 'right' ? c.x + c.width - c.padding('right') : c.x + c.padding('left'); doc.text(t, x, yy + lh / 2, { baseline: 'middle', align: ha === 'center' ? 'center' : ha === 'right' ? 'right' : 'left' }); yy += lh; }
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(...INK); };
     tb = {}; doc.autoTable({ willDrawCell: greyW, didDrawCell: greyD, startY: y, head: [head], body: [...sb, ...foot], margin: { left: MG, right: MG, bottom: 22, top: MG }, theme: 'grid', rowPageBreak: 'avoid',
       styles: { font: 'helvetica', fontSize: 7.5, cellPadding: { top: 0.9, bottom: 0.9, left: 1.4, right: 1.4 }, textColor: INK, lineColor: LINEC, lineWidth: .15, valign: 'middle' },
       headStyles: { fillColor: HEADF, textColor: DARK, fontStyle: 'bold', halign: 'center', lineColor: LINEC, lineWidth: .2 }, columnStyles: cs });
