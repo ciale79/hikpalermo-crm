@@ -116,6 +116,19 @@
       cell([Pp(R('________________________________', { s: 8, c: GREY }), { a: 'c', before: 30, after: 0 }), Pp(R('Il committente (timbro/firma)', { s: 7 }), { a: 'c', after: 0 })], { noB: true, w: 3706 })] })] }));
     };
     if (anyLed) { orderW(true); body.push(new Paragraph({ children: [new PageBreak()] })); } orderW(false); // prima il foglio a m², poi quello a pezzi
+    if (!pav) { // dettaglio con l'immagine del prodotto, SAP, codice e descrizione
+      body.push(new Paragraph({ children: [new PageBreak()] }), Pp(R('Dettaglio', { s: 11, c: RED }), { after: 6 }));
+      const L1 = o.righe || []; const ths = await Promise.all(L1.map(r => window.hpProdThumb ? hpProdThumb(r).catch(() => null) : null));
+      const cw = [1150, 1250, 0, 650, 1350, 1450]; cw[2] = 9906 - cw.reduce((x, y) => x + y, 0);
+      const rows = [new TableRow({ tableHeader: true, children: ['', 'SAP', 'Codice / Descrizione', 'Q.tà', 'Prezzo Cad.', 'Totale'].map((h, k) => cell(h, { head: true, fill: '808080', w: cw[k], a: 'c' })) })];
+      for (let i = 0; i < L1.length; i++) { const r = L1[i]; const it = fc(r.c, r.L) || {}; const t = lineTot(r); const th = ths[i];
+        rows.push(new TableRow({ cantSplit: true, children: [
+          cell(th ? new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(th), transformation: { width: 56, height: 56 } })] }) : '', { w: cw[0] }),
+          cell(it.sap || r.sap || '', { w: cw[1] }),
+          cell([Pp(R(r.c, { s: 7.5, b: true, c: DARK }), { after: 0, line: 240 }), Pp(R(String(r.b || it.b || '').slice(0, 220), { s: 7.5 }), { after: 0, line: 240 })], { w: cw[2] }),
+          cell(String(r.q), { w: cw[3], a: 'c' }), cell(eur(t.unit), { w: cw[4], a: 'r' }), cell(eur(t.netto), { w: cw[5], a: 'r', c: RED })] })); }
+      body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, layout: TableLayoutType.FIXED, columnWidths: cw, rows }));
+    }
     await ins('ord');
 
     /* 3 · condizioni */

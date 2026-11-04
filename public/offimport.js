@@ -356,6 +356,8 @@
         btn('PDF', async () => { const R = X.read(); try { const ap = await pages(); stop(); m.close(); await pdfOut(R.o, R.sc, R.lst, ap); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; } }, 'pri', 'doc')], { wide: true });
   };
   async function xlsxOut(o, sc, lst) {
+    // Excel con le immagini dei prodotti, nel formato dei listini Pro e Solution
+    if (window.hpOffXlsxImg) { try { return await hpOffXlsxImg(o, sc, lst, typeof HP_PAV !== 'undefined' && !!HP_PAV); } catch (e) { console.warn(e); toast('Excel con immagini non riuscito, esporto senza immagini', 'bad'); } }
     if (sc && lst && !(o.righe || []).some(r => r.noList || r.sez)) return origExport(o);
     const X = await xlsxLib(); const com = S.commesse.get(o.commessaId); const cli = S.clienti.get(o.clienteId);
     const head = [['Offerta', o.numero || ''], ['Titolo', o.titolo || ''], ['Data', o.data || ''], ['Cliente', cli?.nome || ''], ['Commessa', com?.nome || ''], []];
@@ -375,6 +377,15 @@
   const pdfSafe = t => typeof t === 'string' ? [...t].map(safeCh).join('') : Array.isArray(t) ? t.map(pdfSafe) : t;
   window.hpPdfSafe = pdfSafe;
   window.hpPdfSafeDoc = doc => { const t0 = doc.text.bind(doc), s0 = doc.splitTextToSize.bind(doc), w0 = doc.getTextWidth.bind(doc); doc.text = (t, ...a) => t0(pdfSafe(t), ...a); doc.splitTextToSize = (t, ...a) => s0(pdfSafe(t), ...a); doc.getTextWidth = t => w0(pdfSafe(t)); return doc; };
+
+  /* immagine del prodotto per i documenti: quella dell'articolo nel listino (o della riga), quadrata su fondo bianco */
+  window.hpProdThumb = async function (r, px = 240) {
+    const it = (typeof findCode === 'function' ? findCode(r.c, r.L) : null) || {}; const im = r.im != null ? r.im : it.im;
+    const sq = src => new Promise(res => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => { try { const c = document.createElement('canvas'); c.width = c.height = px; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, px, px); const k = Math.min(px / i.naturalWidth, px / i.naturalHeight) * 0.92; const w = i.naturalWidth * k, h = i.naturalHeight * k; g.drawImage(i, (px - w) / 2, (px - h) / 2, w, h); res(c.toDataURL('image/jpeg', 0.88)); } catch (e) { res(null); } }; i.onerror = () => res(null); i.src = src; });
+    if (typeof im === 'string' && im[0] === '/') return sq(im);
+    try { const n = window.artThumbC ? artThumbC(r.c, im, 96) : thumb(im, 96); if (n && !n.classList.contains('none') && window.hpImgData) { let tmp = false; if (!n.isConnected && !(n.tagName === 'IMG') && !n.style.backgroundImage) { tmp = true; n.style.cssText += ';position:fixed;left:-9999px;top:0'; document.body.append(n); await new Promise(z => setTimeout(z, 300)); } const d = await window.hpImgData(n, px); if (tmp) n.remove(); return d; } } catch (e) { }
+    return null;
+  };
 
   /* ---------- PDF dell'offerta: modello standard Hikvision (copertina, offerta commerciale, dettaglio SAP, condizioni) ---------- */
   const HQ = 'HIKVISION ITALY Srl - Viale Fulvio Testi, 113 - 20092 Cinisello Balsamo (MI) - P.IVA 07757250969';
@@ -444,11 +455,23 @@
     T('Luogo e data', 106, y, { a: 'center', s: 7 }); T('Il committente (timbro/firma)', 163, y, { a: 'center', s: 7 });
     // 3 · dettaglio con i codici SAP
     doc.addPage('a4', 'p'); T('Dettaglio', 14, 22, { s: 11, c: RED });
-    const dBody = []; for (const r of o.righe || []) { const it = typeof findCode === 'function' ? findCode(r.c, r.L) : null; const t = lineTot(r); dBody.push([(it && it.sap) || r.sap || '', r.c, String(r.q), eur(t.unit), eur(t.netto)]); }
-    doc.autoTable({ startY: 27, head: [['SAP', 'Codice / Descrizione', 'Q.tà', 'Prezzo Cad.', 'Totale']], body: dBody, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid',
-      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 1.8, textColor: [60, 60, 60], lineColor: [90, 90, 90], lineWidth: .15 },
+    // dettaglio con l'immagine del prodotto, il codice SAP, il codice e la descrizione
+    const LL = o.righe || []; const ths = await Promise.all(LL.map(r => window.hpProdThumb ? hpProdThumb(r).catch(() => null) : null));
+    const dBody = []; LL.forEach((r, i) => { const it = typeof findCode === 'function' ? findCode(r.c, r.L) : null; const t = lineTot(r); dBody.push(['', (it && it.sap) || r.sap || '', { content: r.c + '\n' + String(r.b || (it && it.b) || '').slice(0, 220), _c: r.c }, String(r.q), eur(t.unit), eur(t.netto)]); });
+    doc.autoTable({ startY: 27, head: [['', 'SAP', 'Codice / Descrizione', 'Q.tà', 'Prezzo Cad.', 'Totale']], body: dBody, margin: { left: 14, right: 14, bottom: 22, top: 18 }, theme: 'grid', rowPageBreak: 'avoid',
+      styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 1.8, textColor: [60, 60, 60], lineColor: [90, 90, 90], lineWidth: .15, valign: 'middle' },
       headStyles: { fillColor: GREY, textColor: 255, fontStyle: 'normal', halign: 'center', lineColor: [255, 255, 255], lineWidth: .4 },
-      columnStyles: { 0: { cellWidth: 26 }, 2: { cellWidth: 10, halign: 'center' }, 3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 24, halign: 'right', textColor: RED } } });
+      columnStyles: { 0: { cellWidth: 20, minCellHeight: 20 }, 1: { cellWidth: 22 }, 3: { cellWidth: 10, halign: 'center' }, 4: { cellWidth: 22, halign: 'right' }, 5: { cellWidth: 24, halign: 'right', textColor: RED } },
+      didParseCell: d => { if (d.section === 'body' && d.column.index === 2 && d.cell.raw && d.cell.raw._c) d.cell._c = d.cell.raw._c; },
+      willDrawCell: d => { if (d.section === 'body' && d.column.index === 2 && d.cell._c) { d.cell._t = d.cell.text; d.cell.text = []; } },
+      didDrawCell: d => {
+        if (d.section !== 'body') return; const c = d.cell;
+        if (d.column.index === 0 && ths[d.row.index]) { const sz = Math.min(c.width, c.height) - 2; doc.addImage(ths[d.row.index], 'JPEG', c.x + (c.width - sz) / 2, c.y + (c.height - sz) / 2, sz, sz); }
+        if (d.column.index === 2 && c._t) { // codice in grassetto, descrizione sotto
+          const fs = c.styles.fontSize, lh = fs / doc.internal.scaleFactor * 1.15; const n = c._t.length; let yy = c.y + (c.height - n * lh) / 2 + lh / 2; const codeN = doc.splitTextToSize(c._c, c.width - c.padding('horizontal')).length;
+          c._t.forEach((l, k) => { doc.setFont('helvetica', k < codeN ? 'bold' : 'normal'); doc.setFontSize(fs); doc.setTextColor(...(k < codeN ? [40, 40, 40] : [90, 90, 90])); doc.text(l, c.x + c.padding('left'), yy, { baseline: 'middle' }); yy += lh; });
+          doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60); }
+      } });
     ins('ord');
     // 4 · condizioni
     doc.addPage('a4', 'p'); y = 22;
