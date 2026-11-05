@@ -767,6 +767,14 @@ async function migratePavAudioTag(env) {
   for (const r of results || []) { const d = JSON.parse(r.data); if (d.tag === TAG) continue; d.tag = TAG; await env.DB.prepare('UPDATE docs SET data=?, version=?, updated=? WHERE col=? AND id=?').bind(JSON.stringify(d), t, t, 'proavListini', r.id).run(); const ids = await pavUids(env); await Promise.all(ids.map(uid => broadcast(env, { col: 'proavListini', id: r.id, v: t, data: d, by: 'server' }, uid))); }
   if ((results || []).length) await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', 'mig_pav_audio_tag', JSON.stringify({ at: t, n: results.length }), t, t).run();
 }
+// correzione una tantum: negli articoli caricati con la foto dell'etichetta (5/11/2026 dalle 12:28) la foto dell'etichetta era finita al primo posto tra le foto del prodotto
+async function migrateMagLbl(env) {
+  if (await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id='mig_mag_lbl'").first()) return;
+  const t = now(); let n = 0;
+  const { results } = await env.DB.prepare("SELECT col, id, data FROM docs WHERE col IN ('magazzino','proavMagazzino') AND json_extract(data,'$.at') >= 1793878080000 AND json_extract(data,'$.descEt') IS NOT NULL AND json_extract(data,'$.fotoEt') IS NULL AND json_array_length(json_extract(data,'$.foto')) > 0").all();
+  for (const r of results || []) { const d = JSON.parse(r.data); if (!d.descEt && !d.lotto) continue; d.fotoEt = d.foto[0]; d.foto = d.foto.slice(1); await env.DB.prepare('UPDATE docs SET data=?, version=?, updated=? WHERE col=? AND id=?').bind(JSON.stringify(d), t, t, r.col, r.id).run(); n++; }
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', 'mig_mag_lbl', JSON.stringify({ at: t, n }), t, t).run();
+}
 // Import una tantum dei distributori autorizzati Hikvision Italia (hikvision.com/it/Partners/distributori-autorizzati):
 // un cliente «Distributore» per azienda, con le categorie di canale, l'area e tutte le sedi; i clienti già presenti si completano senza sovrascrivere
 const distKey = n => String(n || '').toUpperCase().replace(/\b(S\.?R\.?L\.?|S\.?P\.?A\.?|SAS|SNC|S\.?C\.?A\.?R\.?L|SCARL|UNIPERSONALE|A SOCIO UNICO|SOC\.? ?COOP\.?)\b/g, '').replace(/\./g, '').replace(/ /g, '').replace(/&/g, 'E').replace(/[^A-Z0-9]/g, '');
@@ -901,7 +909,7 @@ async function api(req, env, ctx, url, u) {
   if (m !== 'GET' && req.headers.get('x-hp') !== '1') return err('csrf', 'Richiesta non valida', 403);
 
   if (p === '/api/me') {
-    ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migratePavAudio(env)).then(() => migratePavAudioTag(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)));
+    ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migratePavAudio(env)).then(() => migratePavAudioTag(env)).then(() => migrateMagLbl(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)));
     const r = await ruoli(env);
     const team = await getDoc(env, 'team', u.id);
     return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd, proav: await isPav(env, u), pavAdmin: await isPavAdmin(env, u), perm: await permOf(env, u, isPavHost(url) ? 'pav' : 'hik') });
@@ -1144,7 +1152,7 @@ export default {
     // (promemoria di domani e pulizia) girano nel primo passaggio delle 06:00 UTC; i promemoria non si duplicano (tabella reminders)
     const st = new Date((ev && ev.scheduledTime) || Date.now());
     const daily = !ev || !ev.cron || ev.cron === '0 6 * * *' || (st.getUTCHours() === 6 && st.getUTCMinutes() < 10);
-    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migratePavAudio(env)).then(() => migratePavAudioTag(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)); try { await geoDist(env, 40); } catch (e) { console.log('geoDist', e); } await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); if (!daily) return; }
+    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migratePavAudio(env)).then(() => migratePavAudioTag(env)).then(() => migrateMagLbl(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)); try { await geoDist(env, 40); } catch (e) { console.log('geoDist', e); } await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); if (!daily) return; }
     const t = now();
     await env.DB.batch([env.DB.prepare('DELETE FROM otp WHERE expires<?').bind(t - 864e5), env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(t)]);
     const tomorrow = romeDay(t + 864e5);
