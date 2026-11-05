@@ -449,6 +449,9 @@
         el('button', { type: 'button', class: 'mg-add', onclick: () => pick.click() }, ic('cam', 22), 'Scatta foto'), el('button', { type: 'button', class: 'mg-add', onclick: () => pickG.click() }, ic('up', 22), 'Dalla galleria'), pick, pickG);
     };
     code.addEventListener('change', drawGal); drawGal();
+    // nessuna foto (né dal listino né caricata né dal web): la si cerca da sola sui siti Hikvision / ProAV
+    { const c0 = findCode(d.code) || null; const im0 = c0 ? c0.im : (d.im ?? -1); const has0 = typeof im0 === 'string' ? !!im0 : im0 >= 0;
+      if (!has0 && !d.imgWeb && !(d.foto || []).length && !d.noWebImg && d.code) (async () => { const b = await webImg(/^SAP /.test(d.code) ? (d.descSap || d.desc) : d.code, d.descEt || d.descSap || d.desc); if (b) { d.imgWeb = b; drawGal(); patch('magazzino', it.id, { imgWeb: b }).catch(() => { }); } })(); }
     const dm = demoOf(it);
     const hist = [...S.demo.values()].filter(x => (x.items || []).some(y => y.id === it.id || y.parentId === it.id)).sort((a, b) => (b.consegna || '').localeCompare(a.consegna || ''));
     const body = el('div', { class: 'stack' },
