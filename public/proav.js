@@ -19,7 +19,7 @@
   { const i = NAV.findIndex(n => n[0] === 'partner'); if (i >= 0) NAV.splice(i, 1); } // i partner sono solo di HIK PALERMO
   if (S.view === 'naming' || S.view === 'partner') S.view = 'dash';
   document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach(l => l.remove());
-  document.head.append(el('link', { rel: 'icon', type: 'image/png', href: '/proav-favicon.png' }), el('link', { rel: 'apple-touch-icon', href: '/proav-touch.png' }));
+  document.head.append(el('link', { rel: 'icon', type: 'image/png', href: '/proav-favicon.png?v=2' }), el('link', { rel: 'apple-touch-icon', href: '/proav-touch.png?v=2' }));
 
   /* ---------- archivio: privato ProAV o del gruppo (commesse, offerte, calendario, magazzino, attività) ---------- */
   const space = (() => { try { return localStorage.getItem('hp_pavSpace') === 'grp' ? 'grp' : 'pav'; } catch (e) { return 'pav'; } })();

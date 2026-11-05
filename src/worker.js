@@ -310,6 +310,13 @@ ${ev.note ? `<tr><td style="color:#768797;padding:2px 12px 2px 0;vertical-align:
 const PAV_DEF = ['antonino.pumilia@hikvision.com'];
 const isPavCol = col => /^proav/i.test(String(col || ''));
 const isPavHost = url => /^proav\./i.test(url.hostname);
+// pagine HTML su ProAV: le icone (favicon e web app) puntano già nell'HTML a quelle ProAV
+const pavIcons = (url, res) => {
+  if (!isPavHost(url) || !/text\/html/i.test(res.headers.get('content-type') || '') || typeof HTMLRewriter === 'undefined') return res;
+  return new HTMLRewriter().on('link[rel~="icon"]', { element: e => { e.setAttribute('href', '/proav-favicon.png?v=2'); e.setAttribute('type', 'image/png'); } })
+    .on('link[rel="apple-touch-icon"]', { element: e => e.setAttribute('href', '/proav-touch.png?v=2') })
+    .on('head', { element: e => e.append('<meta name="apple-mobile-web-app-title" content="ProAV"><meta name="application-name" content="ProAV">', { html: true }) }).transform(res);
+};
 async function pavEmails(env) { const d = (await getDoc(env, 'config', 'proav'))?.data; return (d && Array.isArray(d.emails) ? d.emails : PAV_DEF).map(normEmail).filter(Boolean); }
 async function isOwnerU(env, u) { if (!u) return false; if (u.email === normEmail(env.OWNER_EMAIL)) return true; return (await ruoli(env)).owner === u.id; }
 async function isPav(env, u) { if (!u) return false; if (await isOwnerU(env, u)) return true; return (await pavEmails(env)).includes(normEmail(u.email)); }
@@ -1070,7 +1077,12 @@ export default {
       const u = await currentUser(req, env);
       if (u && (p === '/login' || p === '/login.html') && u.has_pwd && !url.searchParams.has('step')) return Response.redirect(url.origin + '/', 302);
       if (u && !u.has_pwd && (p === '/' || p === '/index.html')) return Response.redirect(url.origin + '/login?step=pwd', 302);
-      if (PUBLIC_PATHS.has(p)) return env.ASSETS.fetch(p === '/login.html' ? new Request(url.origin + '/login', req) : req);
+      // ProAV: favicon e icona della web app sempre quelle ProAV (anche quando il browser o iOS le chiedono direttamente)
+      if (isPavHost(url) && req.method === 'GET') {
+        const ic = { '/favicon.png': '/proav-favicon.png', '/favicon.ico': '/proav-favicon.png', '/favicon.svg': '/proav-favicon.png', '/apple-touch-icon.png': '/proav-touch.png', '/apple-touch-icon-precomposed.png': '/proav-touch.png' }[p];
+        if (ic) { const r0 = await env.ASSETS.fetch(new Request(url.origin + ic, req)); const r1 = new Response(r0.body, r0); r1.headers.set('cache-control', 'public, max-age=3600'); return r1; }
+      }
+      if (PUBLIC_PATHS.has(p)) return pavIcons(url, await env.ASSETS.fetch(p === '/login.html' ? new Request(url.origin + '/login', req) : req));
       if (p.startsWith('/api/')) {
         if (!u) return err('unauthenticated', 'Sessione scaduta: accedi di nuovo.', 401);
         return await api(req, env, ctx, url, u);
@@ -1092,7 +1104,7 @@ export default {
         return new Response(o.body, { headers: h });
       }
       const res = await env.ASSETS.fetch(req);
-      if (p === '/' || p.endsWith('.html')) { const r2 = new Response(res.body, res); r2.headers.set('cache-control', 'no-store'); return r2; }
+      if (p === '/' || p.endsWith('.html')) { const r2 = new Response(res.body, res); r2.headers.set('cache-control', 'no-store'); return pavIcons(url, r2); }
       return res;
     } catch (e) {
       console.log('errore', e && e.stack || e);
