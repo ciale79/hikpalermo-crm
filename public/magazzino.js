@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   ICONS.whs = 'M3 9l9-5 9 5v11H3zM7 20v-7h10v7M7 16h10';
-  if (!document.getElementById('hpMagWho')) document.head.append(el('style', { id: 'hpMagWho' }, '.hp-magwho{padding:8px 12px;border-radius:10px;font-size:.84rem;border:1px solid;display:flex;gap:6px;align-items:center}.hp-magwho.pav{background:#EEE9FC;border-color:#B39DFF;color:#3B2A8F}.hp-magwho.hik{background:#FDECEE;border-color:#E9A3AE;color:#8A1024}'));
+  if (!document.getElementById('hpMagWho')) document.head.append(el('style', { id: 'hpMagWho' }, '.mg-ways{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}.mg-way{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}.mg-wayh{display:flex;gap:10px;align-items:flex-start}.mg-wayi{width:40px;height:40px;flex:none;border-radius:10px;display:grid;place-items:center;background:var(--surface-2,#f1f3f5);color:var(--accent)}.mg-way .mg-scan{width:100%}.hp-magwho{padding:8px 12px;border-radius:10px;font-size:.84rem;border:1px solid;display:flex;gap:6px;align-items:center}.hp-magwho.pav{background:#EEE9FC;border-color:#B39DFF;color:#3B2A8F}.hp-magwho.hik{background:#FDECEE;border-color:#E9A3AE;color:#8A1024}'));
   ICONS.scan = 'M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 9v6M10 9v6M13 9v6M17 9v6';
   ICONS.cam = 'M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7';
   ICONS.ret = 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3';
@@ -262,8 +262,8 @@
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
     return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('conversione non riuscita')), 'image/jpeg', .85));
   }
-  function photoPicker(onBlobId) {
-    const inp = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, multiple: true });
+  function photoPicker(onBlobId, gallery) {
+    const inp = el('input', { type: 'file', accept: 'image/*', ...(gallery ? {} : { capture: 'environment' }), hidden: true, multiple: true });
     inp.addEventListener('change', async () => {
       const fs = [...inp.files]; inp.value = ''; if (!fs.length) return;
       if (!assets) { toast('Caricamento foto non disponibile.', 'bad'); return; }
@@ -299,13 +299,13 @@
   const MAGL = (typeof HP_PAV !== 'undefined' && HP_PAV) ? 'Magazzino ProAV' : 'Magazzino HIK PALERMO';
   window.hpMagLabel = MAGL;
   const LBLF = [['sap', 'Codice SAP (material code)'], ['descEt', 'Descrizione in etichetta'], ['lotto', 'Lotto'], ['dataProd', 'Data di produzione'], ['ordine', 'N. ordine']];
-  async function shrink(file, px = 1600) {
+  async function shrinkB64(file, px = 1600) {
     const url = URL.createObjectURL(file);
     try { const im = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = url; }); const k = Math.min(1, px / Math.max(im.naturalWidth, im.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.88).split(',')[1]; }
     finally { URL.revokeObjectURL(url); }
   }
   async function readLabel(file) {
-    const b64 = await shrink(file);
+    const b64 = await shrinkB64(file);
     const prompt = 'Questa è la foto di un\'etichetta di imballo di un prodotto Hikvision (possono esserci più etichette). Leggi TUTTI i campi stampati e rispondi SOLO con un JSON, senza testo prima o dopo, così: {"modello":"","descrizione":"","sap":"","ean":"","seriale":"","lotto":"","data":"","quantita":null,"ordine":"","altri":[{"nome":"","valore":""}]}. ' +
       'modello = Model; descrizione = la riga descrittiva sotto il marchio (es. «Professional Amplifier 500W 4-Zone»); sap = Material code (9 cifre); ean = il numero sotto il codice a barre (13 cifre, senza spazi); seriale = SN; lotto = Lot No. / Lot Number; data = Date (come scritto, es. 01/2026); quantita = Quantity (numero); ordine = Order No. (vuoto se manca). ' +
       'In «altri» metti ogni altro campo con un valore (es. codici di certificazione, importatore, codici numerici non etichettati), NON il testo legale generico, l\'indirizzo del produttore o «Made in China». Se un campo non c\'è lascialo vuoto.';
@@ -333,11 +333,12 @@
     const setModel = (it, ean) => {
       ean = ean || pendingEan; pendingEan = null;
       const keep = cur && cur.code === it.c ? cur : {};
-      cur = { code: it.c, desc: it.d || '', im: it.im, L: it.L, ean: ean || keep.ean || '', sap: keep.sap || it.sap || '', descEt: keep.descEt || '', lotto: keep.lotto || '', dataProd: keep.dataProd || '', ordine: keep.ordine || '', campi: keep.campi || [] };
+      cur = { code: it.c, desc: it.d || '', im: it.im, L: it.L, ean: ean || keep.ean || '', sap: keep.sap || it.sap || '', descEt: keep.descEt || '', lotto: keep.lotto || '', dataProd: keep.dataProd || '', ordine: keep.ordine || '', campi: keep.campi || [], foto: keep.foto || [], lblFoto: keep.lblFoto || null };
       if (ean) em.set(ean, { code: it.c, L: it.L });
       drawCur();
     };
     const drawCur = () => {
+      try { drawFoto(); } catch (e) { }
       curBox.replaceChildren(cur ? el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:12px' }, thumb(cur.im, 56), el('div', { class: 'grow', style: 'min-width:0' }, el('span', { class: 'eyebrow' }, 'Modello in carico'), el('div', {}, el('b', { class: 'mono' }, cur.code)), el('div', { class: 'hint mg-clamp' }, cur.desc), cur.ean ? el('small', { class: 'mono muted' }, 'EAN ' + cur.ean) : null, extraTxt(cur) ? el('div', { class: 'hint', style: 'font-size:.72rem' }, extraTxt(cur)) : null), btn('Cambia', () => { cur = null; drawCur(); }, 'sm ghost'))
         : el('div', { class: 'stack', style: 'gap:6px' }, el('span', { class: 'eyebrow' }, 'Modello'), el('p', { class: 'hint', style: 'margin:0' }, 'Scansiona il codice modello o l\'EAN della scatola, oppure cercalo a listino. Poi scansiona i seriali uno dopo l\'altro.'), catPicker(it => { setModel(it); scan.focus(); })));
     };
@@ -347,7 +348,7 @@
         const ex = findBySn(sn); if (ex) { toast('Seriale ' + sn + ' già in magazzino (' + ex.code + ').', 'bad'); return 'già presente'; }
         if (pend.some(p => p.seriale && snNorm(p.seriale) === snNorm(sn))) return 'già in lista';
       }
-      pend.unshift({ code: cur.code, desc: cur.desc, im: cur.im, L: cur.L, ean: cur.ean || '', sap: cur.sap || '', descEt: cur.descEt || '', lotto: cur.lotto || '', dataProd: cur.dataProd || '', ordine: cur.ordine || '', campi: (cur.campi || []).slice(), seriale: sn || '', snFull: full || '', qty: sn ? 1 : Math.max(1, +q || 1) });
+      pend.unshift({ code: cur.code, desc: cur.desc, im: cur.im, L: cur.L, ean: cur.ean || '', sap: cur.sap || '', descEt: cur.descEt || '', lotto: cur.lotto || '', dataProd: cur.dataProd || '', ordine: cur.ordine || '', campi: (cur.campi || []).slice(), foto: [...(cur.lblFoto ? [cur.lblFoto] : []), ...(cur.foto || [])], seriale: sn || '', snFull: full || '', qty: sn ? 1 : Math.max(1, +q || 1) });
       drawList(); return sn ? 'aggiunto' : 'aggiunto ×' + (+q || 1);
     };
     const handle = raw => {
@@ -367,35 +368,50 @@
     scan.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); const v = scan.value; scan.value = ''; handle(v); } });
     const drawList = () => {
       listBox.replaceChildren(...(pend.length ? [el('div', { class: 'row between' }, el('b', {}, pend.reduce((a, p) => a + p.qty, 0) + ' articoli da caricare'), btn('Svuota', () => { pend = []; drawList(); }, 'sm ghost'))] : []),
-        ...pend.map((p, k) => el('div', { class: 'mg-pr' }, thumb(p.im, 32), el('div', { class: 'grow', style: 'min-width:0' }, el('b', { class: 'mono' }, p.code), el('div', { class: 'hint' }, (p.seriale ? 'S/N ' + p.seriale : 'Senza seriale · quantità ' + p.qty) + (extraTxt(p) ? ' · ' + extraTxt(p) : ''))),
+        ...pend.map((p, k) => el('div', { class: 'mg-pr' }, thumb(p.im, 32), el('div', { class: 'grow', style: 'min-width:0' }, el('b', { class: 'mono' }, p.code), el('div', { class: 'hint' }, (p.seriale ? 'S/N ' + p.seriale : 'Senza seriale · quantità ' + p.qty) + (extraTxt(p) ? ' · ' + extraTxt(p) : '') + ((p.foto || []).length ? ' · ' + p.foto.length + ' foto' : ''))),
           el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Togli', onclick: () => { pend.splice(k, 1); drawList(); } }, ic('x', 16)))));
     };
     drawCur(); drawList();
-    // foto dell'etichetta → tutti i campi; il seriale (se c'è) va subito in lista
-    const lblIn = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => {
-      const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Leggo l\'etichetta…');
+    // foto dell'etichetta → tutti i campi; il seriale (se c'è) va subito in lista; la foto resta tra le foto dell'articolo
+    async function doLabel(f) {
+      toast('Leggo l\'etichetta…');
       try {
         const L = await readLabel(f);
         const it = (L.modello && findCode(L.modello)) || (L.sap && S.cat && S.cat.find(x => x.sap === L.sap)) || (L.ean && (() => { const k = em.get(L.ean); return k && findCode(k.code, k.L); })()) || null;
         if (it) setModel(it, L.ean || null); else if (L.modello) { cur = { code: L.modello, desc: L.descrizione || '', im: -1, L: null, ean: L.ean || '' }; toast('Modello ' + L.modello + ' non presente a listino: lo carico comunque.'); } else { toast('Non trovo il modello nell\'etichetta.', 'bad'); return; }
         Object.assign(cur, { ean: L.ean || cur.ean || '', sap: L.sap || cur.sap || '', descEt: L.descrizione || '', lotto: L.lotto || '', dataProd: L.data || '', ordine: L.ordine || '', campi: L.altri || [] });
         if (L.ean) em.set(L.ean, { code: cur.code, L: cur.L });
+        if (keepLbl.checked && assets) { try { const b = await shrink(f); const r = await assets.upload(b, { type: 'image/jpeg' }); cur.lblFoto = r.id; } catch (e) { } } else cur.lblFoto = null;
         drawCur();
         if (L.seriale) toast(addPend(L.seriale, '') + ' · S/N ' + L.seriale); else if (L.quantita) qty.value = L.quantita;
       } catch (err) { console.warn(err); toast('Etichetta non letta: ' + (err.message || err), 'bad'); }
-    } });
+    }
+    const lblCam = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await doLabel(f); } });
+    const lblGal = el('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: async e => { const fs = [...e.target.files]; e.target.value = ''; for (const f of fs) await doLabel(f); } });
+    const keepLbl = el('input', { type: 'checkbox', checked: true });
+    // foto dell'articolo (prodotto, scatola…): valgono per gli articoli del modello in carico aggiunti da qui in poi
+    const fotoBox = el('div', { class: 'mg-gal', style: 'gap:6px' });
+    const drawFoto = () => fotoBox.replaceChildren(...(cur && cur.foto || []).map((id, k) => el('figure', { style: 'width:64px' }, el('img', { src: '/_blob/' + id, alt: '', style: 'width:64px;height:64px;object-fit:cover;border-radius:6px' }), el('figcaption', {}, el('button', { type: 'button', class: 'linkish', onclick: () => { cur.foto.splice(k, 1); drawFoto(); } }, 'Togli')))));
+    const addFoto = id => { if (!cur) { toast('Prima indica il modello.', 'bad'); return; } cur.foto = [...(cur.foto || []), id]; for (const p of pend) if (p.code === cur.code && !(p.foto || []).includes(id)) p.foto = [...(p.foto || []), id]; drawFoto(); drawList(); };
+    const fCam = photoPicker(addFoto), fGal = photoPicker(addFoto, true);
+    const card = (icon, title, sub, ...kids) => el('div', { class: 'mg-way' }, el('div', { class: 'mg-wayh' }, el('span', { class: 'mg-wayi', 'aria-hidden': 'true' }, icon), el('div', {}, el('b', {}, title), el('div', { class: 'hint' }, sub))), ...kids);
     const body = el('div', { class: 'stack' },
       el('div', { class: 'hp-magwho ' + ((typeof HP_PAV !== 'undefined' && HP_PAV) ? 'pav' : 'hik') }, 'Stai caricando nel ', el('b', {}, MAGL)),
       curBox,
-      el('div', { class: 'fld' }, el('span', {}, 'Scansione (lettore USB / Bluetooth o tastiera)'), el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:8px' }, scan, btn('Fotocamera', () => openCam(v => { const r = handle(v); return r; }, 'Carico articoli'), 'pri', 'cam'), btn('Leggi etichetta (foto)', () => lblIn.click(), '', 'spark'), lblIn)),
-      el('p', { class: 'hint', style: 'margin:-4px 0 0' }, 'Con «Leggi etichetta» fotografi l\'etichetta della scatola: modello, descrizione, SAP, EAN, seriale, lotto, data, quantità, n. ordine e gli altri campi si compilano da soli.'),
+      el('div', { class: 'mg-ways' },
+        card(ic('scan', 26), 'Pistola codici a barre', 'Lettore USB / Bluetooth o tastiera: scansiona modello, SAP, EAN e seriali',
+          el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:8px' }, scan)),
+        card(el('span', { style: 'font-size:22px' }, '📱'), 'Telefono', 'Foto dell\'etichetta: modello, descrizione, SAP, EAN, seriale, lotto, data, quantità, n. ordine e altri campi si compilano da soli',
+          el('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, btn('Scatta foto etichetta', () => lblCam.click(), 'pri sm', 'cam'), btn('Etichette dalla galleria', () => lblGal.click(), 'sm', 'up'), btn('Codici a barre con la fotocamera', () => openCam(v => { const r = handle(v); return r; }, 'Carico articoli'), 'sm ghost', 'scan'), lblCam, lblGal),
+          el('label', { class: 'row hint', style: 'gap:6px;font-size:.75rem' }, keepLbl, 'Salva la foto dell\'etichetta tra le foto dell\'articolo'))),
+      el('div', { class: 'stack', style: 'gap:6px' }, el('div', { class: 'row between', style: 'gap:8px;flex-wrap:wrap' }, el('span', { class: 'eyebrow' }, 'Foto dell\'articolo in carico'), el('span', { class: 'row', style: 'gap:6px' }, btn('Scatta foto', () => fCam.click(), 'sm ghost', 'cam'), btn('Dalla galleria', () => fGal.click(), 'sm ghost', 'up'), fCam, fGal)), fotoBox),
       el('div', { class: 'row', style: 'gap:8px;align-items:flex-end' }, el('label', { class: 'fld' }, el('span', {}, 'Quantità senza seriale'), qty), btn('Aggiungi senza seriale', () => { const r = addPend('', '', qty.value); if (r) toast(r); }, 'sm', 'plus'), el('label', { class: 'fld grow' }, el('span', {}, 'Ubicazione in filiale'), ub)),
       listBox);
     const m = modal('Carica articoli · ' + MAGL, body, [el('span', { class: 'grow' }), btn('Chiudi', () => m.close()), btn('Salva in magazzino', async () => {
       if (!pend.length) { toast('Nessun articolo da salvare.', 'bad'); return; }
       const now = Date.now(); let ok = 0; S.state.mgUb = ub.value.trim();
       for (const p of pend.slice().reverse()) {
-        const d = { code: p.code, desc: p.desc, im: p.im, L: p.L, ean: p.ean, sap: p.sap || '', descEt: p.descEt || '', lotto: p.lotto || '', dataProd: p.dataProd || '', ordine: p.ordine || '', campi: p.campi || [], seriale: p.seriale, snFull: p.snFull, qty: p.qty, foto: [], stato: 'sede', ubicazione: ub.value.trim(), note: '', demoId: null, at: now, by: S.me, upd: now };
+        const d = { code: p.code, desc: p.desc, im: p.im, L: p.L, ean: p.ean, sap: p.sap || '', descEt: p.descEt || '', lotto: p.lotto || '', dataProd: p.dataProd || '', ordine: p.ordine || '', campi: p.campi || [], seriale: p.seriale, snFull: p.snFull, qty: p.qty, foto: p.foto || [], stato: 'sede', ubicazione: ub.value.trim(), note: '', demoId: null, at: now, by: S.me, upd: now };
         if (await put('magazzino', newId('magazzino'), d)) ok++;
       }
       toast(ok === 1 ? '1 articolo caricato' : ok + ' articoli caricati'); feed('magazzino', 'ha caricato ' + ok + (ok === 1 ? ' articolo' : ' articoli') + ' in magazzino', { k: 'magazzino' }, []);
@@ -415,10 +431,10 @@
     let campi = (d.campi || []).map(a => ({ ...a })); const cBox = el('div', { class: 'stack', style: 'gap:6px' });
     const drawC = () => cBox.replaceChildren(...campi.map((a, k) => el('div', { class: 'row', style: 'gap:6px;flex-wrap:nowrap' }, el('input', { type: 'text', value: a.nome, placeholder: 'Campo', style: 'max-width:200px', oninput: e => { a.nome = e.target.value; } }), el('input', { type: 'text', value: a.valore, placeholder: 'Valore', oninput: e => { a.valore = e.target.value; } }), el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Togli il campo', onclick: () => { campi.splice(k, 1); drawC(); } }, ic('x', 16)))), el('div', {}, btn('Aggiungi campo', () => { campi.push({ nome: '', valore: '' }); drawC(); }, 'sm ghost', 'plus')));
     drawC();
-    const lblIn2 = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Leggo l\'etichetta…'); try { const L = await readLabel(f); if (L.modello && !code.value) code.value = L.modello; if (L.seriale && !sn.value) sn.value = L.seriale; if (L.ean && !ean.value) ean.value = L.ean; const set = (k, v) => { if (v && !lf[k].value) lf[k].value = v; }; set('sap', L.sap); set('descEt', L.descrizione); set('lotto', L.lotto); set('dataProd', L.data); set('ordine', L.ordine); for (const a of L.altri || []) if (!campi.some(x => x.nome.toLowerCase() === a.nome.toLowerCase())) campi.push(a); drawC(); toast('Campi dell\'etichetta compilati'); } catch (err) { toast('Etichetta non letta: ' + (err.message || err), 'bad'); } } });
+    const lblIn2 = el('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Leggo l\'etichetta…'); try { const L = await readLabel(f); if (L.modello && !code.value) code.value = L.modello; if (L.seriale && !sn.value) sn.value = L.seriale; if (L.ean && !ean.value) ean.value = L.ean; const set = (k, v) => { if (v && !lf[k].value) lf[k].value = v; }; set('sap', L.sap); set('descEt', L.descrizione); set('lotto', L.lotto); set('dataProd', L.data); set('ordine', L.ordine); for (const a of L.altri || []) if (!campi.some(x => x.nome.toLowerCase() === a.nome.toLowerCase())) campi.push(a); drawC(); toast('Campi dell\'etichetta compilati'); } catch (err) { toast('Etichetta non letta: ' + (err.message || err), 'bad'); } } });
     const inv = d.pz != null || d.qRil != null || /^inv_/.test(d.id || '') ? Object.fromEntries(INVF.map(([k]) => [k, inp('mi_' + k, d[k] ?? '', { type: 'number', min: 0, step: 1 })])) : null;
     const gal = el('div', { class: 'mg-gal' });
-    const pick = photoPicker(id => { d.foto = [...(d.foto || []), id]; drawGal(); });
+    const pick = photoPicker(id => { d.foto = [...(d.foto || []), id]; drawGal(); }), pickG = photoPicker(id => { d.foto = [...(d.foto || []), id]; drawGal(); }, true);
     const drawGal = () => {
       const c = findCode(code.value.trim()) || null; const im = c ? c.im : -1;
       gal.replaceChildren(
@@ -426,7 +442,7 @@
         im < 0 && d.imgWeb ? el('figure', {}, el('a', { href: '/_blob/' + d.imgWeb, target: '_blank', rel: 'noopener' }, el('img', { src: '/_blob/' + d.imgWeb, alt: 'Immagine dal web', style: 'object-fit:contain;background:#fff' })), el('figcaption', {}, 'Dal web · ', el('button', { type: 'button', class: 'linkish', onclick: () => { d.imgWeb = null; drawGal(); } }, 'Rimuovi'))) : null,
         im < 0 && !d.imgWeb ? el('button', { type: 'button', class: 'mg-add', onclick: async e => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Cerco sul web…'; const r = await webImg(/^SAP /.test(code.value) ? (d.descSap || d.desc) : code.value, d.descSap || d.desc, true); if (r) { d.imgWeb = r; } else toast('Nessuna immagine trovata per ' + (code.value || d.code) + '.', 'bad'); drawGal(); } }, ic('search', 22), 'Cerca immagine sul web') : null,
         ...(d.foto || []).map((f, k) => el('figure', {}, el('a', { href: '/_blob/' + f, target: '_blank', rel: 'noopener' }, el('img', { src: '/_blob/' + f, alt: 'Foto ' + (k + 1), loading: 'lazy' })), el('figcaption', {}, el('button', { type: 'button', class: 'linkish', onclick: () => { d.foto.splice(k, 1); drawGal(); } }, 'Rimuovi')))),
-        el('button', { type: 'button', class: 'mg-add', onclick: () => pick.click() }, ic('cam', 22), 'Aggiungi foto'), pick);
+        el('button', { type: 'button', class: 'mg-add', onclick: () => pick.click() }, ic('cam', 22), 'Scatta foto'), el('button', { type: 'button', class: 'mg-add', onclick: () => pickG.click() }, ic('up', 22), 'Dalla galleria'), pick, pickG);
     };
     code.addEventListener('change', drawGal); drawGal();
     const dm = demoOf(it);
@@ -435,7 +451,7 @@
       gal,
       el('div', { class: 'hp-magwho ' + ((typeof HP_PAV !== 'undefined' && HP_PAV) ? 'pav' : 'hik') }, el('b', {}, MAGL)),
       el('div', { class: 'fgrid' }, fld('Codice modello', code), fld('Seriale', sn), fld('EAN', ean), inv ? null : fld('Quantità', q), fld('Stato', st), fld('Ubicazione', ub), ...LBLF.filter(([k]) => !(inv && k === 'sap')).map(([k, l]) => fld(l, lf[k])), fld('Note', note, 'full')),
-      el('div', { class: 'stack', style: 'gap:6px' }, el('div', { class: 'row between' }, el('span', { class: 'eyebrow' }, 'Altri campi dell\'etichetta'), el('span', {}, btn('Leggi etichetta (foto)', () => lblIn2.click(), 'sm ghost', 'spark'), lblIn2)), cBox),
+      el('div', { class: 'stack', style: 'gap:6px' }, el('div', { class: 'row between' }, el('span', { class: 'eyebrow' }, 'Altri campi dell\'etichetta'), el('span', {}, btn('📱 Leggi etichetta (foto o galleria)', () => lblIn2.click(), 'sm ghost'), lblIn2)), cBox),
       inv ? el('div', { class: 'stack', style: 'gap:6px' }, el('span', { class: 'eyebrow' }, 'Inventario' + (d.magSap ? ' · magazzino ' + d.magSap : '') + (d.divisione ? ' · divisione ' + d.divisione : '')), el('dl', { class: 'dl' }, el('dt', {}, 'Codice SAP'), el('dd', { class: 'mono' }, d.sap || '—'), el('dt', {}, 'Descrizione SAP'), el('dd', {}, d.descSap || '—')), el('div', { class: 'mg-inv' }, ...INVF.map(([k, l]) => el('label', { class: 'fld' }, el('span', {}, l), inv[k])))) : null,
       window.hpDlBox ? hpDlBox(it.code) : null,
       dm ? el('div', { class: 'banner' }, 'In ' + (TIPL[dm.tipo] || 'demo').toLowerCase() + ' presso ', el('b', {}, cliName(dm.clienteId) || '—'), ' dal ' + fK(dm.consegna) + (dm.rientro ? ', rientro previsto ' + fK(dm.rientro) : '') + '. ', el('a', { href: '#', onclick: e => { e.preventDefault(); m.close(); demoDetail(dm); } }, 'Apri la consegna')) : null,
