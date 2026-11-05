@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   ICONS.whs = 'M3 9l9-5 9 5v11H3zM7 20v-7h10v7M7 16h10';
+  if (!document.getElementById('hpMagWho')) document.head.append(el('style', { id: 'hpMagWho' }, '.hp-magwho{padding:8px 12px;border-radius:10px;font-size:.84rem;border:1px solid;display:flex;gap:6px;align-items:center}.hp-magwho.pav{background:#EEE9FC;border-color:#B39DFF;color:#3B2A8F}.hp-magwho.hik{background:#FDECEE;border-color:#E9A3AE;color:#8A1024}'));
   ICONS.scan = 'M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 9v6M10 9v6M13 9v6M17 9v6';
   ICONS.cam = 'M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7';
   ICONS.ret = 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3';
@@ -140,6 +141,7 @@
     for (const t0 of toks) {
       const t = t0.toUpperCase().replace(/\s+/g, '');
       if (!t) continue;
+      if (/^\d{9}$/.test(t)) { out.sap = out.sap || t; continue; } // codice materiale (SAP) Hikvision
       if (/^\d{8}$|^\d{12,14}$/.test(t)) { out.ean = out.ean || t; continue; }
       const it = findCode(t); if (it) { out.item = out.item || it; continue; }
       const p = prefixCode(t);
@@ -293,6 +295,30 @@
     return el('div', { class: 'picker' }, q, drop);
   }
 
+  /* ---------------- lettura dell'etichetta da foto: tutti i campi (modello, descrizione, SAP, EAN, seriale, lotto, data, quantità, ordine, altri) ---------------- */
+  const MAGL = (typeof HP_PAV !== 'undefined' && HP_PAV) ? 'Magazzino ProAV' : 'Magazzino HIK PALERMO';
+  window.hpMagLabel = MAGL;
+  const LBLF = [['sap', 'Codice SAP (material code)'], ['descEt', 'Descrizione in etichetta'], ['lotto', 'Lotto'], ['dataProd', 'Data di produzione'], ['ordine', 'N. ordine']];
+  async function shrink(file, px = 1600) {
+    const url = URL.createObjectURL(file);
+    try { const im = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = url; }); const k = Math.min(1, px / Math.max(im.naturalWidth, im.naturalHeight)); const c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.88).split(',')[1]; }
+    finally { URL.revokeObjectURL(url); }
+  }
+  async function readLabel(file) {
+    const b64 = await shrink(file);
+    const prompt = 'Questa è la foto di un\'etichetta di imballo di un prodotto Hikvision (possono esserci più etichette). Leggi TUTTI i campi stampati e rispondi SOLO con un JSON, senza testo prima o dopo, così: {"modello":"","descrizione":"","sap":"","ean":"","seriale":"","lotto":"","data":"","quantita":null,"ordine":"","altri":[{"nome":"","valore":""}]}. ' +
+      'modello = Model; descrizione = la riga descrittiva sotto il marchio (es. «Professional Amplifier 500W 4-Zone»); sap = Material code (9 cifre); ean = il numero sotto il codice a barre (13 cifre, senza spazi); seriale = SN; lotto = Lot No. / Lot Number; data = Date (come scritto, es. 01/2026); quantita = Quantity (numero); ordine = Order No. (vuoto se manca). ' +
+      'In «altri» metti ogni altro campo con un valore (es. codici di certificazione, importatore, codici numerici non etichettati), NON il testo legale generico, l\'indirizzo del produttore o «Made in China». Se un campo non c\'è lascialo vuoto.';
+    const r = await fetch('/api/claude', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-hp': '1' }, body: JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 1200, feat: 'Etichetta magazzino', messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }, { type: 'text', text: prompt }] }] }) });
+    if (!r.ok) throw new Error('lettura non riuscita (' + r.status + ')');
+    const j = await r.json(); const t = (j.content || []).map(c => c.text || '').join('');
+    const m = /\{[\s\S]*\}/.exec(t); if (!m) throw new Error('etichetta non leggibile');
+    const x = JSON.parse(m[0]); const cl = v => String(v == null ? '' : v).trim();
+    return { modello: cl(x.modello).toUpperCase(), descrizione: cl(x.descrizione), sap: cl(x.sap).replace(/\D/g, ''), ean: cl(x.ean).replace(/\D/g, ''), seriale: cl(x.seriale).toUpperCase().replace(/\s+/g, ''), lotto: cl(x.lotto), data: cl(x.data), quantita: +x.quantita || null, ordine: cl(x.ordine),
+      altri: (Array.isArray(x.altri) ? x.altri : []).map(a => ({ nome: cl(a && a.nome), valore: cl(a && a.valore) })).filter(a => a.nome && a.valore).slice(0, 20) };
+  }
+  const extraTxt = d => [...LBLF.filter(([k]) => d[k]).map(([k, l]) => l.replace(/ \(.*\)/, '') + ' ' + d[k]), ...(d.campi || []).map(a => a.nome + ' ' + a.valore)].join(' · ');
+
   /* ---------------- carico articoli con scansione ---------------- */
   function loadForm() {
     let cur = null;        // modello corrente {code, desc, im, L, ean}
@@ -306,12 +332,13 @@
     let pendingEan = null;
     const setModel = (it, ean) => {
       ean = ean || pendingEan; pendingEan = null;
-      cur = { code: it.c, desc: it.d || '', im: it.im, L: it.L, ean: ean || (cur && cur.code === it.c ? cur.ean : '') || '' };
+      const keep = cur && cur.code === it.c ? cur : {};
+      cur = { code: it.c, desc: it.d || '', im: it.im, L: it.L, ean: ean || keep.ean || '', sap: keep.sap || it.sap || '', descEt: keep.descEt || '', lotto: keep.lotto || '', dataProd: keep.dataProd || '', ordine: keep.ordine || '', campi: keep.campi || [] };
       if (ean) em.set(ean, { code: it.c, L: it.L });
       drawCur();
     };
     const drawCur = () => {
-      curBox.replaceChildren(cur ? el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:12px' }, thumb(cur.im, 56), el('div', { class: 'grow', style: 'min-width:0' }, el('span', { class: 'eyebrow' }, 'Modello in carico'), el('div', {}, el('b', { class: 'mono' }, cur.code)), el('div', { class: 'hint mg-clamp' }, cur.desc), cur.ean ? el('small', { class: 'mono muted' }, 'EAN ' + cur.ean) : null), btn('Cambia', () => { cur = null; drawCur(); }, 'sm ghost'))
+      curBox.replaceChildren(cur ? el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:12px' }, thumb(cur.im, 56), el('div', { class: 'grow', style: 'min-width:0' }, el('span', { class: 'eyebrow' }, 'Modello in carico'), el('div', {}, el('b', { class: 'mono' }, cur.code)), el('div', { class: 'hint mg-clamp' }, cur.desc), cur.ean ? el('small', { class: 'mono muted' }, 'EAN ' + cur.ean) : null, extraTxt(cur) ? el('div', { class: 'hint', style: 'font-size:.72rem' }, extraTxt(cur)) : null), btn('Cambia', () => { cur = null; drawCur(); }, 'sm ghost'))
         : el('div', { class: 'stack', style: 'gap:6px' }, el('span', { class: 'eyebrow' }, 'Modello'), el('p', { class: 'hint', style: 'margin:0' }, 'Scansiona il codice modello o l\'EAN della scatola, oppure cercalo a listino. Poi scansiona i seriali uno dopo l\'altro.'), catPicker(it => { setModel(it); scan.focus(); })));
     };
     const addPend = (sn, full, q) => {
@@ -320,11 +347,12 @@
         const ex = findBySn(sn); if (ex) { toast('Seriale ' + sn + ' già in magazzino (' + ex.code + ').', 'bad'); return 'già presente'; }
         if (pend.some(p => p.seriale && snNorm(p.seriale) === snNorm(sn))) return 'già in lista';
       }
-      pend.unshift({ code: cur.code, desc: cur.desc, im: cur.im, L: cur.L, ean: cur.ean || '', seriale: sn || '', snFull: full || '', qty: sn ? 1 : Math.max(1, +q || 1) });
+      pend.unshift({ code: cur.code, desc: cur.desc, im: cur.im, L: cur.L, ean: cur.ean || '', sap: cur.sap || '', descEt: cur.descEt || '', lotto: cur.lotto || '', dataProd: cur.dataProd || '', ordine: cur.ordine || '', campi: (cur.campi || []).slice(), seriale: sn || '', snFull: full || '', qty: sn ? 1 : Math.max(1, +q || 1) });
       drawList(); return sn ? 'aggiunto' : 'aggiunto ×' + (+q || 1);
     };
     const handle = raw => {
       const p = parseScan(raw); if (!p.raw) return '';
+      if (p.sap && !p.item && !p.serial && !p.ean) { const bySap = S.cat && S.cat.find(x => x.sap === p.sap); if (bySap) { setModel(bySap); cur.sap = p.sap; drawCur(); return 'modello ' + bySap.c + ' (SAP)'; } if (cur) { cur.sap = p.sap; drawCur(); return 'SAP ' + p.sap; } toast('Codice SAP ' + p.sap + ' non trovato nei listini: scansiona il modello.', 'bad'); return 'SAP sconosciuto'; }
       if (p.item) { setModel(p.item, p.ean); if (p.serial) return addPend(p.serial, p.full); return 'modello ' + p.item.c; }
       if (p.ean && !p.serial) {
         const k = em.get(p.ean); const it = k && findCode(k.code, k.L);
@@ -339,20 +367,35 @@
     scan.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); const v = scan.value; scan.value = ''; handle(v); } });
     const drawList = () => {
       listBox.replaceChildren(...(pend.length ? [el('div', { class: 'row between' }, el('b', {}, pend.reduce((a, p) => a + p.qty, 0) + ' articoli da caricare'), btn('Svuota', () => { pend = []; drawList(); }, 'sm ghost'))] : []),
-        ...pend.map((p, k) => el('div', { class: 'mg-pr' }, thumb(p.im, 32), el('div', { class: 'grow', style: 'min-width:0' }, el('b', { class: 'mono' }, p.code), el('div', { class: 'hint' }, p.seriale ? 'S/N ' + p.seriale : 'Senza seriale · quantità ' + p.qty)),
+        ...pend.map((p, k) => el('div', { class: 'mg-pr' }, thumb(p.im, 32), el('div', { class: 'grow', style: 'min-width:0' }, el('b', { class: 'mono' }, p.code), el('div', { class: 'hint' }, (p.seriale ? 'S/N ' + p.seriale : 'Senza seriale · quantità ' + p.qty) + (extraTxt(p) ? ' · ' + extraTxt(p) : ''))),
           el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Togli', onclick: () => { pend.splice(k, 1); drawList(); } }, ic('x', 16)))));
     };
     drawCur(); drawList();
+    // foto dell'etichetta → tutti i campi; il seriale (se c'è) va subito in lista
+    const lblIn = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => {
+      const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Leggo l\'etichetta…');
+      try {
+        const L = await readLabel(f);
+        const it = (L.modello && findCode(L.modello)) || (L.sap && S.cat && S.cat.find(x => x.sap === L.sap)) || (L.ean && (() => { const k = em.get(L.ean); return k && findCode(k.code, k.L); })()) || null;
+        if (it) setModel(it, L.ean || null); else if (L.modello) { cur = { code: L.modello, desc: L.descrizione || '', im: -1, L: null, ean: L.ean || '' }; toast('Modello ' + L.modello + ' non presente a listino: lo carico comunque.'); } else { toast('Non trovo il modello nell\'etichetta.', 'bad'); return; }
+        Object.assign(cur, { ean: L.ean || cur.ean || '', sap: L.sap || cur.sap || '', descEt: L.descrizione || '', lotto: L.lotto || '', dataProd: L.data || '', ordine: L.ordine || '', campi: L.altri || [] });
+        if (L.ean) em.set(L.ean, { code: cur.code, L: cur.L });
+        drawCur();
+        if (L.seriale) toast(addPend(L.seriale, '') + ' · S/N ' + L.seriale); else if (L.quantita) qty.value = L.quantita;
+      } catch (err) { console.warn(err); toast('Etichetta non letta: ' + (err.message || err), 'bad'); }
+    } });
     const body = el('div', { class: 'stack' },
+      el('div', { class: 'hp-magwho ' + ((typeof HP_PAV !== 'undefined' && HP_PAV) ? 'pav' : 'hik') }, 'Stai caricando nel ', el('b', {}, MAGL)),
       curBox,
-      el('div', { class: 'fld' }, el('span', {}, 'Scansione (lettore USB / Bluetooth o tastiera)'), el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:8px' }, scan, btn('Fotocamera', () => openCam(v => { const r = handle(v); return r; }, 'Carico articoli'), 'pri', 'cam'))),
+      el('div', { class: 'fld' }, el('span', {}, 'Scansione (lettore USB / Bluetooth o tastiera)'), el('div', { class: 'row', style: 'flex-wrap:nowrap;gap:8px' }, scan, btn('Fotocamera', () => openCam(v => { const r = handle(v); return r; }, 'Carico articoli'), 'pri', 'cam'), btn('Leggi etichetta (foto)', () => lblIn.click(), '', 'spark'), lblIn)),
+      el('p', { class: 'hint', style: 'margin:-4px 0 0' }, 'Con «Leggi etichetta» fotografi l\'etichetta della scatola: modello, descrizione, SAP, EAN, seriale, lotto, data, quantità, n. ordine e gli altri campi si compilano da soli.'),
       el('div', { class: 'row', style: 'gap:8px;align-items:flex-end' }, el('label', { class: 'fld' }, el('span', {}, 'Quantità senza seriale'), qty), btn('Aggiungi senza seriale', () => { const r = addPend('', '', qty.value); if (r) toast(r); }, 'sm', 'plus'), el('label', { class: 'fld grow' }, el('span', {}, 'Ubicazione in filiale'), ub)),
       listBox);
-    const m = modal('Carica articoli in magazzino', body, [el('span', { class: 'grow' }), btn('Chiudi', () => m.close()), btn('Salva in magazzino', async () => {
+    const m = modal('Carica articoli · ' + MAGL, body, [el('span', { class: 'grow' }), btn('Chiudi', () => m.close()), btn('Salva in magazzino', async () => {
       if (!pend.length) { toast('Nessun articolo da salvare.', 'bad'); return; }
       const now = Date.now(); let ok = 0; S.state.mgUb = ub.value.trim();
       for (const p of pend.slice().reverse()) {
-        const d = { code: p.code, desc: p.desc, im: p.im, L: p.L, ean: p.ean, seriale: p.seriale, snFull: p.snFull, qty: p.qty, foto: [], stato: 'sede', ubicazione: ub.value.trim(), note: '', demoId: null, at: now, by: S.me, upd: now };
+        const d = { code: p.code, desc: p.desc, im: p.im, L: p.L, ean: p.ean, sap: p.sap || '', descEt: p.descEt || '', lotto: p.lotto || '', dataProd: p.dataProd || '', ordine: p.ordine || '', campi: p.campi || [], seriale: p.seriale, snFull: p.snFull, qty: p.qty, foto: [], stato: 'sede', ubicazione: ub.value.trim(), note: '', demoId: null, at: now, by: S.me, upd: now };
         if (await put('magazzino', newId('magazzino'), d)) ok++;
       }
       toast(ok === 1 ? '1 articolo caricato' : ok + ' articoli caricati'); feed('magazzino', 'ha caricato ' + ok + (ok === 1 ? ' articolo' : ' articoli') + ' in magazzino', { k: 'magazzino' }, []);
@@ -367,7 +410,13 @@
     const code = inp('miCode', d.code || ''), sn = inp('miSn', d.seriale || '', { class: 'mono' }), ean = inp('miEan', d.ean || ''), q = inp('miQty', d.qty ?? 1, { type: 'number', min: 1 });
     const st = selectEl('miSt', Object.entries(ST).map(([k, v]) => [k, v[0]]), d.stato || 'sede', { disabled: d.stato === 'demo' });
     const ub = inp('miUb', d.ubicazione || ''), note = el('textarea', { id: 'miNote', value: d.note || '', style: 'min-height:60px' });
-    const inv = d.sap || d.pz != null ? Object.fromEntries(INVF.map(([k]) => [k, inp('mi_' + k, d[k] ?? '', { type: 'number', min: 0, step: 1 })])) : null;
+    // campi dell'etichetta (SAP, descrizione, lotto, data, ordine) e campi aggiuntivi letti o aggiunti a mano
+    const lf = Object.fromEntries(LBLF.map(([k]) => [k, inp('mi_l_' + k, d[k] || '', k === 'sap' || k === 'lotto' ? { class: 'mono' } : {})]));
+    let campi = (d.campi || []).map(a => ({ ...a })); const cBox = el('div', { class: 'stack', style: 'gap:6px' });
+    const drawC = () => cBox.replaceChildren(...campi.map((a, k) => el('div', { class: 'row', style: 'gap:6px;flex-wrap:nowrap' }, el('input', { type: 'text', value: a.nome, placeholder: 'Campo', style: 'max-width:200px', oninput: e => { a.nome = e.target.value; } }), el('input', { type: 'text', value: a.valore, placeholder: 'Valore', oninput: e => { a.valore = e.target.value; } }), el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Togli il campo', onclick: () => { campi.splice(k, 1); drawC(); } }, ic('x', 16)))), el('div', {}, btn('Aggiungi campo', () => { campi.push({ nome: '', valore: '' }); drawC(); }, 'sm ghost', 'plus')));
+    drawC();
+    const lblIn2 = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, onchange: async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Leggo l\'etichetta…'); try { const L = await readLabel(f); if (L.modello && !code.value) code.value = L.modello; if (L.seriale && !sn.value) sn.value = L.seriale; if (L.ean && !ean.value) ean.value = L.ean; const set = (k, v) => { if (v && !lf[k].value) lf[k].value = v; }; set('sap', L.sap); set('descEt', L.descrizione); set('lotto', L.lotto); set('dataProd', L.data); set('ordine', L.ordine); for (const a of L.altri || []) if (!campi.some(x => x.nome.toLowerCase() === a.nome.toLowerCase())) campi.push(a); drawC(); toast('Campi dell\'etichetta compilati'); } catch (err) { toast('Etichetta non letta: ' + (err.message || err), 'bad'); } } });
+    const inv = d.pz != null || d.qRil != null || /^inv_/.test(d.id || '') ? Object.fromEntries(INVF.map(([k]) => [k, inp('mi_' + k, d[k] ?? '', { type: 'number', min: 0, step: 1 })])) : null;
     const gal = el('div', { class: 'mg-gal' });
     const pick = photoPicker(id => { d.foto = [...(d.foto || []), id]; drawGal(); });
     const drawGal = () => {
@@ -384,7 +433,9 @@
     const hist = [...S.demo.values()].filter(x => (x.items || []).some(y => y.id === it.id || y.parentId === it.id)).sort((a, b) => (b.consegna || '').localeCompare(a.consegna || ''));
     const body = el('div', { class: 'stack' },
       gal,
-      el('div', { class: 'fgrid' }, fld('Codice modello', code), fld('Seriale', sn), fld('EAN', ean), inv ? null : fld('Quantità', q), fld('Stato', st), fld('Ubicazione', ub), fld('Note', note, 'full')),
+      el('div', { class: 'hp-magwho ' + ((typeof HP_PAV !== 'undefined' && HP_PAV) ? 'pav' : 'hik') }, el('b', {}, MAGL)),
+      el('div', { class: 'fgrid' }, fld('Codice modello', code), fld('Seriale', sn), fld('EAN', ean), inv ? null : fld('Quantità', q), fld('Stato', st), fld('Ubicazione', ub), ...LBLF.filter(([k]) => !(inv && k === 'sap')).map(([k, l]) => fld(l, lf[k])), fld('Note', note, 'full')),
+      el('div', { class: 'stack', style: 'gap:6px' }, el('div', { class: 'row between' }, el('span', { class: 'eyebrow' }, 'Altri campi dell\'etichetta'), el('span', {}, btn('Leggi etichetta (foto)', () => lblIn2.click(), 'sm ghost', 'spark'), lblIn2)), cBox),
       inv ? el('div', { class: 'stack', style: 'gap:6px' }, el('span', { class: 'eyebrow' }, 'Inventario' + (d.magSap ? ' · magazzino ' + d.magSap : '') + (d.divisione ? ' · divisione ' + d.divisione : '')), el('dl', { class: 'dl' }, el('dt', {}, 'Codice SAP'), el('dd', { class: 'mono' }, d.sap || '—'), el('dt', {}, 'Descrizione SAP'), el('dd', {}, d.descSap || '—')), el('div', { class: 'mg-inv' }, ...INVF.map(([k, l]) => el('label', { class: 'fld' }, el('span', {}, l), inv[k])))) : null,
       window.hpDlBox ? hpDlBox(it.code) : null,
       dm ? el('div', { class: 'banner' }, 'In ' + (TIPL[dm.tipo] || 'demo').toLowerCase() + ' presso ', el('b', {}, cliName(dm.clienteId) || '—'), ' dal ' + fK(dm.consegna) + (dm.rientro ? ', rientro previsto ' + fK(dm.rientro) : '') + '. ', el('a', { href: '#', onclick: e => { e.preventDefault(); m.close(); demoDetail(dm); } }, 'Apri la consegna')) : null,
@@ -397,7 +448,7 @@
       btn('Salva', async () => {
         const c = findCode(code.value.trim());
         if (sn.value.trim()) { const ex = findBySn(sn.value.trim()); if (ex && ex.id !== it.id) { toast('Seriale già presente su un altro articolo (' + ex.code + ').', 'bad'); return; } }
-        const up = { code: c ? c.c : code.value.trim().toUpperCase(), desc: c ? (c.d || '') : d.desc || '', im: c ? c.im : -1, L: c ? c.L : null, seriale: sn.value.trim().toUpperCase(), ean: ean.value.trim(), qty: Math.max(1, +q.value || 1), ubicazione: ub.value.trim(), note: note.value.trim(), foto: d.foto || [], imgWeb: d.imgWeb || null, upd: Date.now() };
+        const up = { code: c ? c.c : code.value.trim().toUpperCase(), desc: c ? (c.d || '') : d.desc || '', im: c ? c.im : -1, L: c ? c.L : null, seriale: sn.value.trim().toUpperCase(), ean: ean.value.trim(), qty: Math.max(1, +q.value || 1), ubicazione: ub.value.trim(), note: note.value.trim(), ...Object.fromEntries(LBLF.filter(([k]) => !(inv && k === 'sap')).map(([k]) => [k, lf[k].value.trim()])), campi: campi.map(a => ({ nome: String(a.nome || '').trim(), valore: String(a.valore || '').trim() })).filter(a => a.nome && a.valore), foto: d.foto || [], imgWeb: d.imgWeb || null, upd: Date.now() };
         if (inv) {
           Object.assign(up, Object.fromEntries(INVF.map(([k]) => [k, inv[k].value === '' ? null : +inv[k].value])));
           up.qty = up.qRil ?? up.pz ?? 0;
@@ -704,7 +755,7 @@
   /* ---------------- vista Magazzino ---------------- */
   S.mgSel = S.mgSel || new Set();
   VIEWS.magazzino = {
-    title: () => 'Magazzino', mount() { this.root = $('#view'); this.update(); },
+    title: () => MAGL, mount() { this.root = $('#view'); this.update(); },
     update() {
       const r = this.root; if (!r) return; const f = S.fMag;
       const items = [...S.mag.values()];
@@ -723,7 +774,7 @@
       let filters, body;
       if (f.tab === 'art') {
         const ql = f.q.trim().toLowerCase(); const qn = norm(f.q);
-        const rows = items.filter(x => passSt(x, f.st) && (!ql || (x.code + ' ' + (x.seriale || '') + ' ' + (x.ean || '') + ' ' + (x.sap || '') + ' ' + (x.descSap || '') + ' ' + (x.note || '') + ' ' + descOf(x) + ' ' + (x.ubicazione || '') + ' ' + (demoOf(x) ? cliName(demoOf(x).clienteId) : '')).toLowerCase().includes(ql) || (qn.length >= 4 && snNorm(x.seriale || '').includes(qn))))
+        const rows = items.filter(x => passSt(x, f.st) && (!ql || (x.code + ' ' + (x.seriale || '') + ' ' + (x.ean || '') + ' ' + (x.sap || '') + ' ' + (x.lotto || '') + ' ' + (x.ordine || '') + ' ' + (x.descEt || '') + ' ' + (x.campi || []).map(c => c.valore).join(' ') + ' ' + (x.descSap || '') + ' ' + (x.note || '') + ' ' + descOf(x) + ' ' + (x.ubicazione || '') + ' ' + (demoOf(x) ? cliName(demoOf(x).clienteId) : '')).toLowerCase().includes(ql) || (qn.length >= 4 && snNorm(x.seriale || '').includes(qn))))
           .sort((a, b) => a.code.localeCompare(b.code) || String(a.seriale || '').localeCompare(String(b.seriale || '')));
         const vis = new Set(rows.map(x => x.id)); [...S.mgSel].forEach(id => { if (!vis.has(id) || (S.mag.get(id) || {}).stato !== 'sede') S.mgSel.delete(id); });
         const scanQ = el('input', { type: 'search', placeholder: 'Cerca o scansiona codice, seriale, cliente…', value: f.q, oninput: e => { f.q = e.target.value; this.update(); } });
@@ -798,7 +849,8 @@
               el('td', { onclick: e => e.stopPropagation() }, el('button', { type: 'button', class: 'icon-btn', title: 'Documento PDF', 'aria-label': 'Documento PDF', onclick: () => demoPdf(d) }, ic('pdf', 16))));
           }))))) : emptyBox('Nessuna consegna', f.dst === 'aperte' ? 'Non ci sono prodotti fuori in demo o POC.' : 'Nessuna consegna con questo filtro.', btn('Nuova demo / POC', () => demoForm(null), 'pri', 'ext'));
       }
-      r.replaceChildren(...[dbGate(), el('div', { class: 'row between' }, seg, acts), kpis, filters, body].filter(Boolean));
+      const who = el('div', { class: 'hp-magwho ' + ((typeof HP_PAV !== 'undefined' && HP_PAV) ? 'pav' : 'hik') }, (typeof HP_PAV !== 'undefined' && HP_PAV) ? 'Magazzino ProAV: articoli separati da quelli di HIK PALERMO (sicurezza).' : 'Magazzino HIK PALERMO (sicurezza): gli articoli ProAV stanno nel magazzino ProAV.');
+      r.replaceChildren(...[dbGate(), who, el('div', { class: 'row between' }, seg, acts), kpis, filters, body].filter(Boolean));
     }
   };
 
@@ -850,7 +902,7 @@
     const out = rn0.apply(this, arguments);
     try {
       const n = openDemos().filter(dueNow).length;
-      const b = [...document.querySelectorAll('#nav button')].find(x => x.title === 'Magazzino');
+      const b = [...document.querySelectorAll('#nav button')].find(x => /^Magazzino/.test(x.title || ''));
       if (b && n && !b.querySelector('.cnt')) b.appendChild(el('span', { class: 'cnt', title: 'Demo con promemoria oggi o rientro scaduto' }, String(n)));
     } catch (e) { }
     return out;
