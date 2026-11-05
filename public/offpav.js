@@ -214,12 +214,13 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     if (rif) { y = PARA('Riferimento', y, { s: 10, c: GREY }); y = PARA(rif, y, { s: 12, c: DARK }); }
     y = PARA(num + ' del ' + dt, y, { s: 8, c: GREY });
     y = BLANK(y, 10); y = BLANK(y, 10);
-    const intro = String(o.intro || '').trim();
+    const SI = o.tipo === 'sellin'; // ordine Sell In: copertina senza testo introduttivo e senza immagini
+    const intro = SI ? '' : String(o.intro || '').trim();
     if (intro) for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) y = PARA(par, y, { s: 10, mult: 1.375, a: 'j', after: 8 });
     y += 4;
     // immagini dei prodotti (fino a 4, i prodotti principali per valore)
     say('Cerco le immagini dei prodotti…');
-    const covList = Array.isArray(o.cov) ? o.cov : autoCov(o);
+    const covList = SI ? [] : Array.isArray(o.cov) ? o.cov : autoCov(o);
     const covImgs = (await Promise.all(covList.slice(0, COVMAX).map(x => covImage(x, o).catch(() => null)))).filter(Boolean);
     if (covImgs.length) { // una sola immagine, alta 7 cm con le sue proporzioni, centrata (se è molto larga si stringe alla larghezza utile)
       const im = covImgs[0]; let h = 70, w = h / (im.r || 1); if (w > CW) { w = CW; h = w * (im.r || 1); }

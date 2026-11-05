@@ -42,9 +42,9 @@
       body.push(nl ? img(nl, 69.6, 'c') : img(hik, 100), Pp(R('', { s: 10 }), { after: 10 }), Pp(R('', { s: 10 }), { after: 10 }),
         P1('Offerta riservata per', { s: 10, c: GREY }), P1(cliName.toUpperCase(), { s: 14, b: true, c: DARK }), E(),
         rif ? P1('Riferimento', { s: 10, c: GREY }) : null, rif ? P1(rif, { s: 12, c: DARK }) : null, P1(num + ' del ' + dt, { s: 8, c: GREY }), E(), E());
-      String(o.intro || '').trim().split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(new Paragraph({ children: [R(par, { s: 10 })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 330 } })));
+      String(o.tipo === 'sellin' ? '' : o.intro || '').trim().split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean).forEach(par => body.push(new Paragraph({ children: [R(par, { s: 10 })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 160, line: 330 } })));
       // immagini dei prodotti in copertina, come nel PDF
-      const cov = window.hpPavCovData ? await hpPavCovData(o) : [];
+      const cov = window.hpPavCovData && o.tipo !== 'sellin' ? await hpPavCovData(o) : [];
       if (cov.length) { const im = cov[0]; let h = 70, w = h / (im.r || 1); if (w > 174) { w = 174; h = w * (im.r || 1); }
         body.push(Pp(R('', { s: 10 }), { after: 30 }), new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: 'jpg', data: await u8url(im.d), transformation: { width: Math.round(w * 3.78), height: Math.round(h * 3.78) } })] })); }
       await ins('cov');
