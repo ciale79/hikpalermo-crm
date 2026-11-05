@@ -1,4 +1,4 @@
-/* HIK PALERMO — riquadri del cruscotto: scorciatoia all'analisi capitolato e «pillola del giorno» (un articolo NEW dei listini) */
+/* HIK PALERMO — riquadri del cruscotto: scorciatoia all'analisi capitolato e «prodotto del giorno» (un articolo NEW dei listini) */
 (function () {
   'use strict';
   // ——— Capitolato: ultima analisi salvata + nuova analisi
@@ -14,7 +14,7 @@
       last && last.by ? el('span', { class: 's', style: 'font-size:.72rem' }, 'di ' + (last.by === S.me ? 'te' : nm(last.by))) : null);
   };
 
-  // ——— Pillola del giorno: un articolo contrassegnato NEW, scelto in base alla data (uguale per tutti nella giornata)
+  // ——— Prodotto del giorno: un articolo contrassegnato NEW, scelto in base alla data (uguale per tutti nella giornata)
   let shift = 0;
   const hash = s => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
   // su proav.hikpalermo.com: prodotti audio video del listino Pro T&D (display, LED, monitor interattivi, audio…)
@@ -50,11 +50,11 @@
   window.hpPillTile = function () {
     const d = new Date(); const P = pick();
     const date = el('div', { class: 'hp-pill-d' }, el('b', {}, d.getDate() + ' ' + d.toLocaleDateString('it-IT', { month: 'long' })), el('small', {}, d.toLocaleDateString('it-IT', { weekday: 'long' })));
-    if (!P) return el('div', { class: 'kpi hp-pill' }, el('span', { class: 'eyebrow' }, 'Pillola del giorno'), date, el('div', {}, el('span', { class: 's' }, S.cat && S.cat.length ? (isPav() ? 'Nessun prodotto audio video nel listino Pro T&D' : 'Nessun articolo NEW nei listini') : 'Caricamento listini…')));
+    if (!P) return el('div', { class: 'kpi hp-pill' }, el('span', { class: 'eyebrow' }, 'Prodotto del giorno'), date, el('div', {}, el('span', { class: 's' }, S.cat && S.cat.length ? (isPav() ? 'Nessun prodotto audio video nel listino Pro T&D' : 'Nessun articolo NEW nei listini') : 'Caricamento listini…')));
     const it = P.it;
     const again = el('button', { type: 'button', class: 'hp-capnew', title: isPav() ? 'Mostra un altro prodotto audio video' : 'Mostra un altro articolo NEW', 'aria-label': isPav() ? 'Un altro prodotto audio video' : 'Un altro articolo NEW', onclick: e => { e.stopPropagation(); shift += 1 + Math.floor(Math.random() * (P.n - 1)); const n = window.hpPillTile(); tile.replaceWith(n); } }, '↻');
     const tile = el('div', { class: 'kpi hp-pill', role: 'button', tabindex: '0', title: 'Apri la scheda di ' + it.c, onclick: () => artDetail(it), onkeydown: e => { if (e.key === 'Enter') artDetail(it); } },
-      el('div', { class: 'row between', style: 'gap:6px;flex-wrap:nowrap' }, el('span', { class: 'eyebrow' }, 'Pillola del giorno'), el('div', { class: 'row', style: 'gap:8px;flex-wrap:nowrap' }, brandMark(it), again)),
+      el('div', { class: 'row between', style: 'gap:6px;flex-wrap:nowrap' }, el('span', { class: 'eyebrow' }, 'Prodotto del giorno'), el('div', { class: 'row', style: 'gap:8px;flex-wrap:nowrap' }, brandMark(it), again)),
       date,
       el('div', { class: 'hp-pill-b' }, thumb(it.im, 48),
         el('div', { class: 'hp-pill-t' }, el('div', { class: 'row', style: 'gap:6px;flex-wrap:nowrap;min-width:0' }, isPav() ? el('span', { class: 'tag new hp-avtag', title: 'Categoria nel listino Pro T&D' }, String(it.sz || 'AV')) : el('span', { class: 'tag new' }, 'NEW'), el('b', { class: 'mono hp-pill-c', title: it.c }, it.c)), el('span', { class: 'hp-pill-x', title: it.b }, it.b), el('span', { class: 's num' }, 'Listino ' + eur(it.p) + (isPav() ? ' · Pro T&D' : ' · ' + (SRC[it.s] ? SRC[it.s].name : it.L === 'sol' ? 'Solution' : 'Pro'))))));
