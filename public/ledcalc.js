@@ -24,7 +24,8 @@
     } else {
       const txt = [it.d, it.b, ref && ref.d, ref && ref.d2].filter(Boolean).join(' \n ');
       const led = /led/i.test(String(it.sz || '') + ' ' + txt.slice(0, 300)) && !/controller|receiving card|power supply|sensor|bracket|hanger|hanging bar|frame|all-in-one|aio/i.test(String(it.b || '') + ' ' + String(ref && ref.d2 || ''));
-      if (led) for (const rx of RX) { const m = rx.exec(txt); const A = m && ar(m); if (A) { res = { kit: false, A }; break; } }
+      // un solo codice: è il cabinet (moduli già dentro), il prezzo del listino è al m² come per i kit
+      if (led) for (const rx of RX) { const m = rx.exec(txt); const A = m && ar(m); if (A) { res = { kit: true, single: true, A, nMod: null, cabC: it.c, modC: null }; break; } }
     }
     cache.set(k, res); return res;
   }
@@ -43,7 +44,7 @@
   };
   // prezzi: al m² e al pezzo (cabinet con i suoi moduli, per i kit)
   window.hpLedPrice = function (r, unitNet) { const i = window.hpLedInfo(r); if (!i) return null; return i.kit ? { ...i, perMq: unitNet, perPz: unitNet * i.A } : { ...i, perMq: unitNet / i.A, perPz: unitNet }; };
-  window.hpLedPzTxt = function (r) { const x = window.hpLedQ(r); if (!x) return ''; return x.kit ? nq(x.cab) + ' cabinet ' + (x.cabC || '') + (x.mods != null ? ' + ' + nq(x.mods) + ' moduli ' + (x.modC || '') : '') + ' (' + n4(x.A) + ' m² a cabinet' + (x.nMod ? ', ' + x.nMod + ' moduli a cabinet' : '') + ')' : nq(x.cab) + ' pz da ' + n4(x.A) + ' m²'; };
+  window.hpLedPzTxt = function (r) { const x = window.hpLedQ(r); if (!x) return ''; return x.kit ? nq(x.cab) + ' cabinet' + (x.single ? '' : ' ' + (x.cabC || '')) + (x.mods != null ? ' + ' + nq(x.mods) + ' moduli ' + (x.modC || '') : '') + ' (' + n4(x.A) + ' m² a cabinet' + (x.nMod ? ', ' + x.nMod + ' moduli a cabinet' : '') + ')' : nq(x.cab) + ' pz da ' + n4(x.A) + ' m²'; };
 
   // celle della riga nei documenti: mq=true foglio «a metro quadro», mq=false foglio «a pezzi» (null = riga normale)
   window.hpLedCells = function (r, unit, mq, eur) {
@@ -56,6 +57,9 @@
     const i = window.hpLedInfo(r); if (!i) return null;
     const info = el('small', { class: 'hint hp-mqinfo' });
     if (i.kit) { // il riferimento è il cabinet: i m² scritti si arrotondano a cabinet interi (m² = cabinet × superficie del cabinet)
+      // righe salvate prima, con il LED wall a codice unico contato a pezzi: i pezzi diventano cabinet (m² = pezzi × superficie)
+      if (i.single && r.ledV == null) { r.q = Math.round((+r.q || 0) * i.A * 10000) / 10000; }
+      r.ledV = 2;
       qIn.step = '0.01'; qIn.title = 'Metri quadri del LED wall: si arrotondano a cabinet interi (' + n4(i.A) + ' m² a cabinet); il prezzo del kit è al m²';
       // composizione di 2 articoli: cabinet e moduli, entrambi visibili e modificabili
       const cabIn = el('input', { type: 'number', min: 0, step: 1, class: 'ln-in hp-mqin', 'aria-label': 'Numero di cabinet ' + (i.cabC || ''), title: 'Cabinet ' + (i.cabC || '') + ': i m² si calcolano dalla superficie del cabinet (' + n4(i.A) + ' m²)' });
