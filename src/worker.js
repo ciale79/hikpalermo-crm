@@ -694,16 +694,19 @@ async function findProductImage(env, model, desc, force) {
   // anche quando l'immagine non si trova si tiene la risposta per 90 giorni: non si ripaga la stessa ricerca a ogni clic
   if (cached && !force && (cached.data.blob || now() - (cached.data.at || 0) < 90 * 864e5)) return cached.data;
   const smodel = env.SEARCH_MODEL || 'claude-sonnet-5-5';
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+  // prima solo sui siti Hikvision (hikvision.com, pro-av.hikvision.com, assets.hikvision.com), poi ovunque
+  const ask = domains => fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
       model: smodel, max_tokens: 800,
-      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }],
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2, ...(domains ? { allowed_domains: domains } : {}) }],
       messages: [{ role: 'user', content: `Trova la pagina web del prodotto Hikvision (o Hikmicro / Hiwatch / Ezviz) con codice modello "${model}"${desc && desc !== model ? ' (descrizione: ' + desc + ')' : ''}. Preferisci il sito ufficiale hikvision.com, poi siti di distributori o rivenditori che mostrano la foto del prodotto esatto. Rispondi SOLO con JSON: {"pages":["url pagina 1","url pagina 2","url pagina 3"],"images":["url diretto di un'immagine del prodotto, se lo conosci dai risultati"]}` }]
     })
   });
   const out = { model, at: now(), blob: null, src: null, page: null };
-  if (!r.ok) { out.err = 'api ' + r.status; return out; }
+  for (const domains of [['hikvision.com', 'pro-av.hikvision.com'], null]) {
+  const r = await ask(domains);
+  if (!r.ok) { out.err = 'api ' + r.status; continue; }
   const j = await r.json(); await logAi(env, 'Immagini dal web', smodel, j);
   const text = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
   let pages = [], images = [];
@@ -721,6 +724,8 @@ async function findProductImage(env, model, desc, force) {
       for (const src of pageImages(html, pr.url || pg).slice(0, 3)) { const id = await grabImage(env, src, model); if (id) { Object.assign(out, { blob: id, src, page: pg }); break; } }
       if (out.blob) break;
     } catch { }
+  }
+  if (out.blob) break;
   }
   await env.DB.prepare('INSERT INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?) ON CONFLICT(col,id) DO UPDATE SET data=excluded.data, version=excluded.version, updated=excluded.updated').bind('imgweb', key, JSON.stringify(out), now(), now()).run();
   return out;

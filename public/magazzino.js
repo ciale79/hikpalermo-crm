@@ -410,13 +410,16 @@
       listBox);
     const m = modal('Carica articoli · ' + MAGL, body, [el('span', { class: 'grow' }), btn('Chiudi', () => m.close()), btn('Salva in magazzino', async () => {
       if (!pend.length) { toast('Nessun articolo da salvare.', 'bad'); return; }
-      const now = Date.now(); let ok = 0; S.state.mgUb = ub.value.trim();
+      const now = Date.now(); let ok = 0; const noImg = []; S.state.mgUb = ub.value.trim();
       for (const p of pend.slice().reverse()) {
         const d = { code: p.code, desc: p.desc, im: p.im, L: p.L, ean: p.ean, sap: p.sap || '', descEt: p.descEt || '', lotto: p.lotto || '', dataProd: p.dataProd || '', ordine: p.ordine || '', campi: p.campi || [], fotoEt: p.fotoEt || null, seriale: p.seriale, snFull: p.snFull, qty: p.qty, foto: p.foto || [], stato: 'sede', ubicazione: ub.value.trim() || 'Magazzino 1009', note: '', demoId: null, at: now, by: S.me, upd: now };
-        if (await put('magazzino', newId('magazzino'), d)) ok++;
+        const nid = newId('magazzino'); if (await put('magazzino', nid, d)) { ok++; if (!(typeof d.im === 'string' ? d.im : d.im >= 0) && !(d.foto || []).length) noImg.push([nid, d]); }
       }
       toast(ok === 1 ? '1 articolo caricato' : ok + ' articoli caricati'); feed('magazzino', 'ha caricato ' + ok + (ok === 1 ? ' articolo' : ' articoli') + ' in magazzino', { k: 'magazzino' }, []);
       pend = []; drawList();
+      // senza foto nel listino: si cerca l'immagine sul sito Hikvision / ProAV (in sottofondo)
+      (async () => { const by = new Map(); for (const [id, d] of noImg) { const k = norm(d.code); if (!by.has(k)) by.set(k, { d, ids: [] }); by.get(k).ids.push(id); }
+        for (const { d, ids } of by.values()) { const b = await webImg(d.code, d.descEt || d.desc); if (b) for (const id of ids) await patch('magazzino', id, { imgWeb: b }); } })().catch(() => { });
     }, 'pri', 'check')], { wide: true });
     setTimeout(() => scan.focus(), 60);
   }
