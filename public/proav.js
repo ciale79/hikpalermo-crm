@@ -13,7 +13,7 @@
   document.title = 'HIK Palermo · ProAV';
   ICONS.av = 'M3 5h18v11H3zM8 20h8M12 16v4M10 8.5v4l3.5-2z';
   document.querySelectorAll('.brand .hp-brandimg, .brand b').forEach(b => b.replaceWith(el('img', { class: 'hp-pavlogo-img', src: '/proav-logo.png', alt: 'ProAV Hikvision' })));
-  const sub = document.querySelector('.brand .sub'); if (sub) sub.textContent = 'Area riservata ProAV';
+  const sub = document.querySelector('.brand .sub'); if (sub) sub.remove(); // niente sottotitolo sotto il logo ProAV
   if (!NAV.some(n => n[0] === 'pav')) NAV.splice(1, 0, ['pav', 'Listini ProAV', 'av']);
   { const i = NAV.findIndex(n => n[0] === 'naming'); if (i >= 0) NAV.splice(i, 1); } // la naming rule non serve in ProAV
   { const i = NAV.findIndex(n => n[0] === 'partner'); if (i >= 0) NAV.splice(i, 1); } // i partner sono solo di HIK PALERMO
