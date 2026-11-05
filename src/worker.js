@@ -630,6 +630,27 @@ async function productImage(req, env, u) {
   if (!env.ANTHROPIC_API_KEY) return err('not_configured', 'Chiave Anthropic non configurata sul server.', 503);
   return json(await findProductImage(env, model, desc, !!b.force));
 }
+// descrizioni estese in italiano per i listini ProAV (come per il Listino TD Nino): dati dalle schede ufficiali Hikvision / ProAV
+async function pavDesc(req, env) {
+  if (!env.ANTHROPIC_API_KEY) return err('not_configured', 'Chiave Anthropic non configurata sul server.', 503);
+  const b = await req.json().catch(() => ({}));
+  const items = (Array.isArray(b.items) ? b.items : []).slice(0, 6).map(x => ({ c: String(x.c || '').slice(0, 60), d2: String(x.d2 || '').slice(0, 300), cat: String(x.cat || '').slice(0, 60), tip: String(x.tip || '').slice(0, 80) })).filter(x => x.c);
+  if (!items.length) return json({ descs: {} });
+  const model = env.SEARCH_MODEL || 'claude-sonnet-5-5';
+  const ex = 'Esempio di stile: «Diffusore da incasso a soffitto analogico 60W, 2 vie: woofer 6,5" + tweeter 1". Sensibilità 91 dB (1W/1m), SPL max 108 dB (114 dB di picco), risposta in frequenza 65Hz-20kHz (-10dB). Ingresso 8 Ω/60W oppure tensione costante 100V/70V con prese 30/15/7,5W. Foro di incasso Ø224 mm, dim. Ø248 × 229 mm, 4,6 kg, connettore Phoenix 4 pin.»';
+  const prompt = 'Per ognuno di questi prodotti Hikvision (listino ProAV) scrivi una descrizione estesa IN ITALIANO per un listino commerciale, ricavando i dati tecnici dalla scheda ufficiale del prodotto su pro-av.hikvision.com o hikvision.com (cerca il codice). ' +
+    'Una o più frasi compatte con i dati principali (tipo di prodotto e serie, risoluzione/potenza/dimensioni, caratteristiche chiave, connessioni, misure e peso, installazione). Usa la virgola decimale e le unità italiane. Non inventare: se non trovi la scheda, descrivi solo ciò che risulta dai dati forniti. ' + ex +
+    '\nProdotti:\n' + items.map(x => '- ' + x.c + (x.d2 ? ' · ' + x.d2 : '') + (x.cat ? ' · ' + x.cat : '') + (x.tip ? ' · ' + x.tip : '')).join('\n') +
+    '\nRispondi SOLO con un JSON: {"CODICE": "descrizione", ...} con i codici esattamente come scritti sopra.';
+  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({ model, max_tokens: 3000, tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Math.min(8, items.length + 2), allowed_domains: ['hikvision.com', 'pro-av.hikvision.com'] }], messages: [{ role: 'user', content: prompt }] }) });
+  if (!r.ok) return err('upstream', 'Descrizioni non generate (' + r.status + ')', 502);
+  const j = await r.json(); await logAi(env, 'Descrizioni listino ProAV', model, j);
+  const t = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
+  let o = {}; try { o = JSON.parse(/\{[\s\S]*\}/.exec(t)[0]); } catch { }
+  const descs = {}; for (const x of items) { const v = o[x.c]; if (typeof v === 'string' && v.trim().length > 20) descs[x.c] = v.trim().slice(0, 1500); }
+  return json({ descs });
+}
 const imgKey = model => model.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 120) || 'x';
 // Pagina prodotto ufficiale su hikvision.com/en (manuali, firmware, documenti): cercata con Claude e messa in cache
 const hikModel = code => String(code || '').replace(/\([^()]*\)/g, '').replace(/\s+/g, '').trim().toUpperCase();
@@ -1042,6 +1063,7 @@ async function api(req, env, ctx, url, u) {
   }
   if (p === '/api/claude' && m === 'POST') return claudeProxy(req, env);
   if (p === '/api/prodimg' && m === 'POST') return productImage(req, env, u);
+  if (p === '/api/pavdesc' && m === 'POST') { if (!(await isPav(env, u))) return err('permission_denied', 'Area riservata ProAV', 403); return pavDesc(req, env); }
   if (p === '/api/fetch' && m === 'GET') return fetchExternal(url.searchParams.get('u') || '');
   // controllo dei link «scheda prodotto» dei listini: ok se la pagina esiste (404/410 o pagina «non trovata» = rotto); risultato in cache
   if (p === '/api/linkcheck' && m === 'GET') {

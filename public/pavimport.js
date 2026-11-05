@@ -218,7 +218,7 @@
     const sel = new Set(sheets.filter(s => s.hi >= 0 && !SKIP_SHEET.test(s.name)).map(s => s.name));
     const prevMeta = replace || null;
     let map = prevMeta && prevMeta.v === 2 && prevMeta.mapK ? JSON.parse(JSON.stringify(prevMeta.mapK)) : null;
-    const opt = { kitMerge: true, kitBelow: false, sheetCat: true, foto: /\.xls[xm]$/i.test(file.name) };
+    const opt = { kitMerge: true, kitBelow: false, sheetCat: true, foto: /\.xls[xm]$/i.test(file.name), desc: true };
     const now = new Date();
     const nome = inp('pavNome', replace ? replace.nome : file.name.replace(/\.(xlsx|xls|xlsm|xlsb|csv)$/i, '').replace(/[_]+/g, ' ').trim());
     const per = inp('pavPer', replace ? replace.periodo : now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0'), { type: 'month' });
@@ -249,7 +249,8 @@
       ck('kitMerge', 'Articoli composti da celle unite', 'Se in Excel il prezzo (o la categoria) è unito su più righe, quelle righe diventano un solo articolo con i suoi componenti e la quantità di ciascuno (colonna MOQ / quantità).'),
       ck('kitBelow', 'Righe senza prezzo sotto un articolo = componenti', 'Per listini senza celle unite: una riga con codice ma senza prezzi e categoria si aggiunge all\'articolo sopra.'),
       ck('sheetCat', 'Se manca la categoria usa il nome del foglio'),
-      ck('foto', 'Importa le foto incorporate nel foglio', 'Una foto per articolo, ridotta per il web. Solo file .xlsx/.xlsm.'));
+      ck('foto', 'Importa le foto incorporate nel foglio', 'Una foto per articolo, ridotta per il web. Solo file .xlsx/.xlsm.'),
+      ck('desc', 'Genera la descrizione estesa dove manca', 'Descrizione in italiano dai dati delle schede ufficiali Hikvision / ProAV, come per il Listino TD Nino. Se l\'articolo ha già una descrizione estesa (in questo file o in un altro listino ProAV) si tiene quella.'));
     const run = () => {
       const S2 = sheets.filter(s => sel.has(s.name));
       res = parse(S2, map || {}, opt);
@@ -294,6 +295,21 @@
         const q = jobs.slice(); const worker = async () => { while (q.length) { const [obj, p] = q.shift(); try { if (!cache.has(p)) cache.set(p, (async () => { const f = z.file(p); if (!f) return null; const b = await shrink(new Blob([await f.async('arraybuffer')])); if (!b) return null; const id = await uploadImg(b, (obj.c || 'foto') + '.jpg'); imgIds.push(id); return id; })()); const id = await cache.get(p); if (id) obj.img = id; } catch (e) { } done++; say('Foto ' + done + ' di ' + jobs.length + '…'); } };
         if (z && jobs.length) await Promise.all([worker(), worker(), worker(), worker()]);
       }
+      let genD = false, movedD = false;
+      if (opt.desc) {
+        // descrizione estesa: quella del file, altrimenti quella dello stesso codice in un altro listino ProAV, altrimenti generata
+        const known = new Map(); for (const [lid, d] of S.pavRows || new Map()) { if (replace && lid === replace.id) continue; for (const x of (d.items || [])) { for (const y of [x, ...(x.kit || [])]) if (y.c && y.d && !known.has(norm(y.c))) known.set(norm(y.c), y.d); } }
+        for (const x of (S.artDesc ? S.artDesc.values() : [])) if (x.L === 'pav' && x.d && x.cn) known.set(x.cn, x.d); // descrizioni modificate a mano (es. da Antonino) hanno la precedenza
+        const need = []; const tgt = []; for (const it of items) for (const y of it.kit ? it.kit : [it]) { const d0 = String(y.d || '').trim(); if (d0.length >= 80) continue; /* una descrizione breve (titolo del prodotto) non è una descrizione estesa: diventa la breve */ if (d0 && !y.d2) { y.d2 = d0; movedD = true; } y.d = ''; const k = known.get(norm(y.c)); if (k) { y.d = k; continue; } need.push({ c: y.c, d2: y.d2 || '', cat: it.cat || '', tip: it.tip || '' }); tgt.push(y); }
+        const uniq = [...new Map(need.map(x => [x.c, x])).values()];
+        if (uniq.length) {
+          let done = 0; const got = {}; const q = []; for (let i = 0; i < uniq.length; i += 5) q.push(uniq.slice(i, i + 5));
+          const work = async () => { while (q.length) { const b = q.shift(); try { const r = await fetch('/api/pavdesc', { method: 'POST', credentials: 'same-origin', headers: { ...H, 'content-type': 'application/json' }, body: JSON.stringify({ items: b }) }); if (r.ok) Object.assign(got, (await r.json()).descs || {}); } catch (e) { } done += b.length; say('Scrivo le descrizioni estese… ' + done + ' / ' + uniq.length); } };
+          say('Scrivo le descrizioni estese… 0 / ' + uniq.length); await Promise.all([work(), work(), work()]);
+          let n = 0; for (const y of tgt) if (got[y.c]) { y.d = got[y.c]; n++; } if (n) genD = true;
+          if (n < tgt.length) toast((tgt.length - n) + ' articoli senza descrizione estesa: non ho trovato la scheda.', 'bad');
+        }
+      }
       say('Salvo il listino…');
       const clean = items.map(it => { const o = { ...it }; delete o.r; if (o.kit) o.kit = o.kit.map(k => { const x = { ...k }; delete x.r; return x; }); return o; });
       const id = replace ? replace.id : newId('proavListini');
@@ -305,6 +321,7 @@
       } catch (e) { toast('Caricamento non riuscito: ' + e.message, 'bad'); okB.disabled = false; say(replace ? 'Sostituisci' : 'Importa'); return; }
       const HS = heads(); const labOf = k => (HS.find(h => h.k === k) || {}).l || k;
       const fields = {}; for (const f of FIELDS) { if (f.multi) { if ((map.n || []).length) fields.n = map.n.map(labOf); } else if (map[f.k]) fields[f.k] = labOf(map[f.k]); }
+      if (movedD && map.d && !fields.d2) fields.d2 = labOf(map.d); if (genD || movedD) fields.d = 'DESCRIZIONE ESTESA';
       // il file originale del listino resta scaricabile dalla pagina dei listini
       let orig = null; try { const ro = await fetch('/api/proav/blob?id=' + encodeURIComponent(blob + '_f'), { method: 'PUT', credentials: 'same-origin', headers: { ...H, 'content-type': file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }, body: file }); if (ro.ok) orig = blob + '_f'; } catch (e) { }
       const meta = { v: 2, orig, nome: n, periodo: per.value || '', righe: clean.length, kit: res.st.kit, fogli: res.st.fogli.map(f => f.n), fields, mapK: map, file: file.name, size: payload.length, blob, imgs: imgIds, by: S.me, at, map: { n: (map.n || []).length ? [0] : [] } };
