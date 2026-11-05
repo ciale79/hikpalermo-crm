@@ -324,7 +324,7 @@
   function loadForm() {
     let cur = null;        // modello corrente {code, desc, im, L, ean}
     let pend = [];         // articoli da salvare
-    const ub = inp('mgUb', S.state.mgUb || '', { placeholder: 'Es. Scaffale A2, Showroom, Furgone' });
+    const ub = inp('mgUb', S.state.mgUb || 'Magazzino 1009', { placeholder: 'Es. Magazzino 1009, Scaffale A2, Showroom' }); // di base il magazzino 1009
     const scan = el('input', { type: 'text', class: 'mg-scan', id: 'mgScan', placeholder: 'Scansiona qui con il lettore oppure scrivi e premi Invio', autocomplete: 'off', autocapitalize: 'characters', spellcheck: false });
     const curBox = el('div', { class: 'mg-cur' });
     const listBox = el('div', { class: 'stack', style: 'gap:6px' });
@@ -412,7 +412,7 @@
       if (!pend.length) { toast('Nessun articolo da salvare.', 'bad'); return; }
       const now = Date.now(); let ok = 0; S.state.mgUb = ub.value.trim();
       for (const p of pend.slice().reverse()) {
-        const d = { code: p.code, desc: p.desc, im: p.im, L: p.L, ean: p.ean, sap: p.sap || '', descEt: p.descEt || '', lotto: p.lotto || '', dataProd: p.dataProd || '', ordine: p.ordine || '', campi: p.campi || [], fotoEt: p.fotoEt || null, seriale: p.seriale, snFull: p.snFull, qty: p.qty, foto: p.foto || [], stato: 'sede', ubicazione: ub.value.trim(), note: '', demoId: null, at: now, by: S.me, upd: now };
+        const d = { code: p.code, desc: p.desc, im: p.im, L: p.L, ean: p.ean, sap: p.sap || '', descEt: p.descEt || '', lotto: p.lotto || '', dataProd: p.dataProd || '', ordine: p.ordine || '', campi: p.campi || [], fotoEt: p.fotoEt || null, seriale: p.seriale, snFull: p.snFull, qty: p.qty, foto: p.foto || [], stato: 'sede', ubicazione: ub.value.trim() || 'Magazzino 1009', note: '', demoId: null, at: now, by: S.me, upd: now };
         if (await put('magazzino', newId('magazzino'), d)) ok++;
       }
       toast(ok === 1 ? '1 articolo caricato' : ok + ' articoli caricati'); feed('magazzino', 'ha caricato ' + ok + (ok === 1 ? ' articolo' : ' articoli') + ' in magazzino', { k: 'magazzino' }, []);
