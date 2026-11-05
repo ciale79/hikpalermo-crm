@@ -204,6 +204,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const AP = opt.attPages || {}; const attP = new Set(); const covers = new Set([1]);
     const ins = pos => { for (const pg of AP[pos] || []) { const land = pg.w > pg.h; doc.addPage('a4', land ? 'l' : 'p'); attP.add(doc.internal.getNumberOfPages()); const PW = land ? 297 : 210, PHh = land ? 210 : 297, m = 6; const k = Math.min((PW - 2 * m) / pg.w, (PHh - 2 * m) / pg.h); const iw = pg.w * k, ih = pg.h * k; doc.addImage(pg.d, 'JPEG', (PW - iw) / 2, (PHh - ih) / 2, iw, ih, undefined, 'FAST'); } };
 
+    const SI = o.tipo === 'sellin'; // ordine Sell In: nel documento solo l'offerta commerciale (con il codice SAP)
     /* 1 · copertina */
     let y = MG;
     y = logoAt((W - 69.6) / 2, y, 69.6) + 2 * PT;
@@ -214,7 +215,6 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     if (rif) { y = PARA('Riferimento', y, { s: 10, c: GREY }); y = PARA(rif, y, { s: 12, c: DARK }); }
     y = PARA(num + ' del ' + dt, y, { s: 8, c: GREY });
     y = BLANK(y, 10); y = BLANK(y, 10);
-    const SI = o.tipo === 'sellin'; // ordine Sell In: copertina senza testo introduttivo e senza immagini
     const intro = SI ? '' : String(o.intro || '').trim();
     if (intro) for (const par of intro.split(/\n\s*\n|\n/).map(x => x.trim()).filter(Boolean)) y = PARA(par, y, { s: 10, mult: 1.375, a: 'j', after: 8 });
     y += 4;
@@ -283,19 +283,19 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     y = PARA('Resta escluso quanto non esplicitamente descritto.', y, { s: 8, b: true, mult: 1.15, after: 6 });
     const anySc = lines.some(r => !(r.net || r.noList) && (+(r.sc1 ?? r.sc) > 0)); const anyEx = lines.some(r => +r.sc2 > 0);
     const showSc = opt.sc && anySc, showEx = opt.sc && anyEx, showL = opt.lst && lines.some(r => !r.noList && +r.p > 0);
-    const head = ['Codice', 'Descrizione', mq ? 'Q.tà / m²' : 'Q.tà', ...(showL ? [mq ? 'Listino' : 'Listino Cad.'] : []), ...(showSc ? ['Sc %'] : []), ...(showEx ? ['Ex %'] : []), mq ? 'Prezzo unit.' : 'Prezzo Cad.', 'Prezzo Tot.'];
+    const head = ['Codice', ...(SI ? ['SAP'] : []), 'Descrizione', mq ? 'Q.tà / m²' : 'Q.tà', ...(showL ? [mq ? 'Listino' : 'Listino Cad.'] : []), ...(showSc ? ['Sc %'] : []), ...(showEx ? ['Ex %'] : []), mq ? 'Prezzo unit.' : 'Prezzo Cad.', 'Prezzo Tot.'];
     const nC = head.length; const sb = []; sez = null;
     for (const r of lines) {
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) sb.push([{ content: sez, colSpan: nC, styles: { fontStyle: 'bold', fillColor: SECF } }]); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
       const LC = window.hpLedCells ? hpLedCells(r, t.unit, mq, eur) : null;
       const dMain = String(r.b || (fc(r.c, r.L) || {}).b || '').slice(0, 160);
-      sb.push([hpCodeLines(r.c).join('\n'), dMain, LC && LC.q.includes('\n') ? { content: LC.q, _parts: LC.q.split('\n').map((t, i) => [t, i ? [175, 175, 175] : DARK, !i]) } : LC ? LC.q : String(r.q), ...(showL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)]);
+      sb.push([hpCodeLines(r.c).join('\n'), ...(SI ? [{ content: (window.hpSapList ? hpSapList(r) : [(fc(r.c, r.L) || {}).sap || r.sap || '']).filter(Boolean).join('\n'), styles: { fontStyle: 'normal' } }] : []), dMain, LC && LC.q.includes('\n') ? { content: LC.q, _parts: LC.q.split('\n').map((t, i) => [t, i ? [175, 175, 175] : DARK, !i]) } : LC ? LC.q : String(r.q), ...(showL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(showSc ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(Math.round(+s1 * 100) / 100) : '-')] : []), ...(showEx ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(s2) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)]);
     }
     const lab = (t, extra) => ({ content: t, colSpan: nC - 1, styles: { halign: 'right', fontStyle: 'normal', fontSize: 8, textColor: INK, ...(extra || {}) } });
     const foot = [[lab('Subtotale'), { content: eur(Tt.N), styles: { halign: 'right', textColor: RED, fontStyle: 'bold', fontSize: 8 } }], [lab('IVA (22%)'), { content: eur(iva), styles: { halign: 'right', fontStyle: 'bold', fontSize: 8 } }],
       [lab('Totale offerta', { fillColor: TOTF, fontStyle: 'bold', textColor: DARK, fontSize: 9 }), { content: eur(Tt.N + iva), styles: { halign: 'right', fontStyle: 'bold', fillColor: TOTF, textColor: DARK, fontSize: 9 } }]];
-    const cs = { 0: { cellWidth: 37, fontStyle: 'bold', overflow: 'visible' }, 2: { cellWidth: anyLed ? 17 : 9.9, halign: 'center' } }; let k = 3; if (showL) cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
+    const dq = SI ? 1 : 0; const cs = { 0: { cellWidth: 37, fontStyle: 'bold', overflow: 'visible' }, ...(SI ? { 1: { cellWidth: 19 } } : {}), [2 + dq]: { cellWidth: anyLed ? 17 : 9.9, halign: 'center' } }; let k = 3 + dq; if (showL) cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; if (showSc) cs[k++] = { cellWidth: 11.3, halign: 'center' }; if (showEx) cs[k++] = { cellWidth: 10.6, halign: 'center' }; cs[k++] = { cellWidth: mq ? 24 : 20.3, halign: 'right' }; cs[k] = { cellWidth: 22, halign: 'right', textColor: RED };
     // celle a più colori: pezzi del LED wall in grigio sotto la descrizione; cabinet in grassetto e moduli in grigio chiaro nella quantità
     const greyW = d => { if (d.section === 'body' && d.cell.raw && d.cell.raw._parts) { d.cell._lines = 1; d.cell.text = []; } };
     const greyD = d => { tHooks.didDrawCell(d); const c = d.cell; if (!c._lines || d.section !== 'body') return; const fs = c.styles.fontSize, k = doc.internal.scaleFactor, lh = fs / k * 1.15, w = c.width - c.padding('horizontal'), ha = c.styles.halign;
@@ -313,7 +313,9 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       const yl = y + 0.9 + 30 * PT + 8 * PT * LH * 1.15 - 1.2; doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.line(c2 + 8, yl, c2 + w2 - 8, yl); doc.line(c3 + 9, yl, c3 + w3 - 9, yl);
       PARA('Luogo e data', yl + 1, { s: 7, a: 'c', x: c2, w: w2, mult: 1.15 }); PARA('Il committente (timbro/firma)', yl + 1, { s: 7, a: 'c', x: c3, w: w3, mult: 1.15 }); }
     };
-    if (anyLed) orderForm(true); orderForm(false); // con il LED wall: prima il foglio a m², poi quello a pezzi (con timbro e firma)
+    const ofP0 = doc.internal.getNumberOfPages() + 1;
+    if (anyLed) orderForm(true); orderForm(false);
+    const ofP1 = doc.internal.getNumberOfPages(); // con il LED wall: prima il foglio a m², poi quello a pezzi (con timbro e firma)
     ins('ord');
 
     /* 5 · condizioni, con il riquadro delle note */
@@ -331,6 +333,8 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
       doc.setDrawColor(...LINEC); doc.setLineWidth(.3); doc.roundedRect(MG, y0, CW, bh, RAD, RAD); y = y0 + bh + 8; }
     ['Immagini e descrizioni dei prodotti presenti nell\'offerta sono indicativi e potrebbero contenere inesattezze.', 'Per maggiori dettagli, vi preghiamo di consultare le schede tecniche dei prodotti sui siti web ufficiali o di contattare il personale Hikvision e i partner di distribuzione autorizzati.'].forEach(l => { y = PARA(l, y, { s: 7.5, mult: 1.15, after: 2, c: GREY }); });
 
+    // ordine Sell In: si tolgono copertine, pagina con le anteprime, condizioni e allegati; resta solo l'offerta commerciale
+    if (SI) { for (let p = doc.internal.getNumberOfPages(); p >= 1; p--) if (p < ofP0 || p > ofP1) doc.deletePage(p); covers.clear(); attP.clear(); for (const k2 of Object.keys(AP)) delete AP[k2]; }
     // piè di pagina delle pagine dell'offerta (non sulle copertine)
     const nAll = doc.internal.getNumberOfPages(); const offP = []; for (let p = 1; p <= nAll; p++) if (!attP.has(p)) offP.push(p); const nOff = offP.length;
     for (let n = 1; n <= nOff; n++) {

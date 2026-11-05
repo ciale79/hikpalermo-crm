@@ -16,6 +16,7 @@
 
   const u8url = async d => new Uint8Array(await (await fetch(d)).arrayBuffer());
   window.hpOffDocx = async function (o, sc, lst, pav, attPages) {
+    const SI = pav && o.tipo === 'sellin'; // ordine Sell In: solo l'offerta commerciale, con il codice SAP
     try { if (!window.docx) await loadScript(DOCX); } catch (e) { toast('Non riesco a caricare il generatore Word.', 'bad'); return; }
     const X = window.docx; const { Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType, PageBreak, TableLayoutType } = X;
     const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P = o.pdf || {}; const M = P.meta || {}; const C = P.cliente || {};
@@ -29,7 +30,7 @@
     const Pp = (runs, op = {}) => new Paragraph({ keepNext: !!op.keep, children: Array.isArray(runs) ? runs : [runs], alignment: op.a === 'c' ? AlignmentType.CENTER : op.a === 'r' ? AlignmentType.RIGHT : AlignmentType.LEFT, spacing: { before: Math.round((op.before || 0) * 20), after: Math.round((op.after ?? 4) * 20), ...(op.img ? {} : { line: op.line || 276 }) } });
     // allegati (immagini e PDF già trasformati in pagine) nelle posizioni scelte, una pagina ciascuno
     const AP = attPages || {};
-    const ins = async pos => { for (const pg of AP[pos] || []) { const k = Math.min(174 / pg.w, 248 / pg.h); body.push(new Paragraph({ children: [new PageBreak()] }), new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new ImageRun({ type: 'jpg', data: await u8url(pg.d), transformation: { width: Math.round(pg.w * k * 3.78), height: Math.round(pg.h * k * 3.78) } })] })); } };
+    const ins = async pos => { if (SI) return; for (const pg of AP[pos] || []) { const k = Math.min(174 / pg.w, 248 / pg.h); body.push(new Paragraph({ children: [new PageBreak()] }), new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 0 }, children: [new ImageRun({ type: 'jpg', data: await u8url(pg.d), transformation: { width: Math.round(pg.w * k * 3.78), height: Math.round(pg.h * k * 3.78) } })] })); } };
     const img = (im, wMm, a) => im ? Pp(new ImageRun({ type: 'png', data: im.data, transformation: { width: Math.round(wMm * 3.78), height: Math.round(wMm * im.r * 3.78) } }), { a: a || 'c', after: 2, img: true }) : null;
     const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, thin = { style: BorderStyle.SINGLE, size: 4, color: LINE };
     const cell = (content, op = {}) => new TableCell({ children: (Array.isArray(content) ? content : [content]).map(c => c instanceof Paragraph ? c : Pp(R(c, { s: op.s || 7.5, b: op.b, c: op.c || (op.head ? 'FFFFFF' : INK) }), { a: op.a, after: 0, line: 240, keep: op.keep })), columnSpan: op.span, width: op.w ? { size: op.w, type: WidthType.DXA } : undefined,
@@ -75,6 +76,7 @@
     if (!pav) await ins('cov');
     body.push(new Paragraph({ children: [new PageBreak()] }));
 
+    if (SI) body.length = 0; // niente copertine né pagina con le anteprime
     /* 2 · offerta commerciale */
     const lines = o.righe || []; const anyLed = pav && !!window.hpLedInfo && lines.some(r => hpLedInfo(r));
     // con un LED wall: due fogli di offerta commerciale, a pezzi e con il LED wall a m²
@@ -93,8 +95,8 @@
     // tabella righe: le colonne di sconto vuote non compaiono; le righe «netto cliente» mostrano solo il netto
     const anySc = lines.some(r => !(r.net || r.noList) && +(r.sc1 ?? r.sc) > 0), anyEx = lines.some(r => !(r.net || r.noList) && +r.sc2 > 0);
     const sL = lst && lines.some(r => !r.noList && +r.p > 0), sS = sc && anySc, sE = sc && anyEx;
-    const cols = [['Codice', pav ? 2100 : 1750], ['Descrizione', 0], [mq ? 'Q.tà / m²' : 'Q.tà', anyLed ? 900 : 560, 'c'], ...(sL ? [[mq ? 'Listino' : 'Listino Cad.', mq ? 1400 : 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), [mq ? 'Prezzo unit.' : 'Prezzo Cad.', mq ? 1400 : 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
-    cols[1][1] = 9906 - cols.reduce((a, c) => a + c[1], 0);
+    const cols = [['Codice', pav ? 2100 : 1750], ...(SI ? [['SAP', 1250]] : []), ['Descrizione', 0], [mq ? 'Q.tà / m²' : 'Q.tà', anyLed ? 900 : 560, 'c'], ...(sL ? [[mq ? 'Listino' : 'Listino Cad.', mq ? 1400 : 1150, 'r']] : []), ...(sS ? [['Sc %', 640, 'c']] : []), ...(sE ? [['Ex %', 600, 'c']] : []), [mq ? 'Prezzo unit.' : 'Prezzo Cad.', mq ? 1400 : 1150, 'r'], ['Prezzo Tot.', 1250, 'r']];
+    { const di = cols.findIndex(c => c[0] === 'Descrizione'); cols[di][1] = 9906 - cols.reduce((a, c) => a + c[1], 0); }
     const longD = r => { if (r.dx && !pav) return r.dx; if (pav) return String(r.b || (fc(r.c, r.L) || {}).b || ''); const it = fc(r.c, r.L); return it && it.d && (!r.b || r.b === it.b) ? it.d : (r.b || (it && it.d) || ''); };
     const rows = [new TableRow({ tableHeader: true, children: cols.map(([h, w, a]) => cell(h, { head: true, fill: pav ? 'DEE0E4' : '808080', c: pav ? DARK : undefined, b: pav, w, a: a || 'c' })) })];
     let sez = null;
@@ -102,7 +104,7 @@
       if ((r.sez || '') !== sez) { sez = r.sez || ''; if (sez) rows.push(new TableRow({ children: [cell(sez, { b: true, fill: pav ? 'F6F7F8' : 'F0F0F0', span: cols.length })] })); }
       const t = lineTot(r); const net = r.net || r.noList; const s2 = +r.sc2 || 0, s1 = s2 ? (r.sc1 ?? r.sc) : r.sc;
       const LC = pav && window.hpLedCells ? hpLedCells(r, t.unit, mq, eur) : null;
-      const v = [r.c, longD(r), LC && LC.q.includes('\n') ? LC.q.split('\n').map((t, i) => Pp(R(t, { s: 7.5, b: !i, c: i ? 'AFAFAF' : DARK }), { a: 'c', after: 0, line: 240 })) : LC ? LC.q : String(r.q), ...(sL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)];
+      const v = [r.c, ...(SI ? [(window.hpSapList ? hpSapList(r) : [(fc(r.c, r.L) || {}).sap || r.sap || '']).filter(Boolean).join('\n')] : []), longD(r), LC && LC.q.includes('\n') ? LC.q.split('\n').map((t, i) => Pp(R(t, { s: 7.5, b: !i, c: i ? 'AFAFAF' : DARK }), { a: 'c', after: 0, line: 240 })) : LC ? LC.q : String(r.q), ...(sL ? [net ? '' : LC ? LC.l : eur(r.p)] : []), ...(sS ? [r.ncHide ? '' : net ? 'NETTO' : (+s1 ? fN.format(r2(s1)) : '-')] : []), ...(sE ? [r.ncHide ? '' : net ? '-' : s2 ? fN.format(r2(s2)) : '-'] : []), LC ? LC.u : eur(t.unit), eur(t.netto)];
       rows.push(new TableRow({ cantSplit: true, children: v.map((x, k) => cell(k === 0 && pav && window.hpCodeLines ? hpCodeLines(x) : typeof x === 'string' && x.includes('\n') ? x.split('\n') : x, { w: cols[k][1], a: cols[k][2], b: k === 0, c: k === v.length - 1 ? RED : undefined })) }));
     }
     const T = offTot(lines), iva = hpExact(T.N * 0.22);
@@ -131,6 +133,7 @@
     }
     await ins('ord');
 
+    const keepN = body.length;
     /* 3 · condizioni */
     body.push(new Paragraph({ children: [new PageBreak()] }));
     const cond = P.cond || {}; const cf = (typeof cfg === 'function' ? cfg() : {}) || {};
@@ -145,6 +148,7 @@
     body.push(Pp(R('NOTE AGGIUNTIVE', { s: 8, b: true, c: RED }), { before: 6, after: 4 }));
     body.push(new Table({ width: { size: 9906, type: WidthType.DXA }, rows: [new TableRow({ children: [cell((note ? note.split('\n') : ['', '', '']).map(l => Pp(R(l, { s: 8 }), { after: 2 })), { w: 9906 })] })] }));
 
+    if (SI) body.length = keepN; // niente condizioni
     await ins('cond');
 
     // Open Sans incorporato nel file: il documento si vede uguale anche dove il font non è installato
