@@ -47,10 +47,11 @@
         sel([['', 'Tutti gli stati'], ...SIST.map(x => [x, x])], f.st, v => { f.st = v; this.update(); }),
         sel([['', 'Tutti i distributori'], ...cliIds.map(id => [id, cliN(id)]).sort((a, b) => a[1].localeCompare(b[1], 'it'))], f.cli, v => { f.cli = v; this.update(); }));
       const head = el('div', { class: 'row between', style: 'flex-wrap:wrap;gap:8px' }, el('div', { class: 'stack', style: 'gap:2px' }, el('h2', { style: 'margin:0' }, 'Ordine Sell In'), el('span', { class: 'hint' }, 'Ordini di forecast per i distributori ProAV, con lo stesso formato dell\'offerta')), btn('Nuovo ordine', () => newOrder(), 'pri', 'plus'));
-      const tbl = rows.length ? el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Numero', 'Distributore', 'Titolo', 'Consegna prevista', 'Stato', 'Righe', 'Valore netto', 'Aggiornato'].map((h, i) => el('th', { class: i >= 5 && i <= 6 ? 'r' : '' }, h)))),
-        el('tbody', {}, rows.map(o => el('tr', { class: 'click', onclick: () => offerEditor(o) },
+      const K = docSel('siSel', rows, SIST, ['ordine', 'ordini', 'o', 'i'], () => this.update());
+      const tbl = rows.length ? el('div', { class: 'stack', style: 'gap:8px' }, K.bar, el('div', { class: 'tbl-wrap' }, el('table', {}, el('thead', {}, el('tr', {}, el('th', { class: 'ck' }, K.all), ...['Numero', 'Distributore', 'Titolo', 'Consegna prevista', 'Stato', 'Righe', 'Valore netto', 'Aggiornato'].map((h, i) => el('th', { class: i >= 5 && i <= 6 ? 'r' : '' }, h)), el('th', {}))),
+        el('tbody', {}, rows.map(o => el('tr', { class: 'click' + (S.siSel && S.siSel.has(o.id) ? ' sel' : ''), onclick: () => offerEditor(o) }, K.ck(o),
           el('td', { class: 'mono' }, o.numero || '—'), el('td', {}, el('b', {}, cliN(o.clienteId))), el('td', {}, o.titolo || ''), el('td', {}, mLab(o.mese)), el('td', {}, chip(o.stato)),
-          el('td', { class: 'r num' }, String((o.righe || []).length)), el('td', { class: 'r num' }, el('b', {}, eur0(+o.totN || 0))), el('td', { class: 'hint' }, fD(o.upd || o.at)))))))
+          el('td', { class: 'r num' }, String((o.righe || []).length)), el('td', { class: 'r num' }, el('b', {}, eur0(+o.totN || 0))), el('td', { class: 'hint' }, fD(o.upd || o.at)), K.del(o)))))))
         : emptyBox(all.length ? 'Nessun ordine con questi filtri' : 'Nessun ordine Sell In', all.length ? 'Cambia i filtri qui sopra.' : 'Crea il primo ordine di forecast per un distributore ProAV.', btn('Nuovo ordine', () => newOrder(), 'pri sm', 'plus'));
       r.replaceChildren(...[dbGate(), loading(), head, el('div', { class: 'kpis' }, totTile(), kpi('Forecast', sum('Forecast'), 'Forecast'), kpi('Confermato', sum('Confermato'), 'Confermato'), kpi('Ordinato', sum('Ordinato'), 'Ordinato')), el('section', { class: 'panel' }, tools, el('div', { style: 'margin-top:10px' }, tbl))].filter(Boolean));
     }
