@@ -16,7 +16,8 @@
   const sub = document.querySelector('.brand .sub'); if (sub) sub.textContent = 'Area riservata ProAV';
   if (!NAV.some(n => n[0] === 'pav')) NAV.splice(1, 0, ['pav', 'Listini ProAV', 'av']);
   { const i = NAV.findIndex(n => n[0] === 'naming'); if (i >= 0) NAV.splice(i, 1); } // la naming rule non serve in ProAV
-  if (S.view === 'naming') S.view = 'dash';
+  { const i = NAV.findIndex(n => n[0] === 'partner'); if (i >= 0) NAV.splice(i, 1); } // i partner sono solo di HIK PALERMO
+  if (S.view === 'naming' || S.view === 'partner') S.view = 'dash';
   document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]').forEach(l => l.remove());
   document.head.append(el('link', { rel: 'icon', type: 'image/png', href: '/proav-favicon.png' }), el('link', { rel: 'apple-touch-icon', href: '/proav-touch.png' }));
 
