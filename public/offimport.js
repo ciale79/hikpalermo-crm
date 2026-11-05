@@ -376,7 +376,12 @@
   const safeCh = c => { const k = c.charCodeAt(0); if ((k >= 32 && k <= 126) || (k >= 160 && k <= 255) || c === '\n' || CP.has(c)) return c; if (MAPC[c] != null) return MAPC[c]; const n = c.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); return [...n].every(x => { const q = x.charCodeAt(0); return (q >= 32 && q <= 126) || (q >= 160 && q <= 255); }) ? n : ''; };
   const pdfSafe = t => typeof t === 'string' ? [...t].map(safeCh).join('') : Array.isArray(t) ? t.map(pdfSafe) : t;
   window.hpPdfSafe = pdfSafe;
-  window.hpPdfSafeDoc = doc => { const t0 = doc.text.bind(doc), s0 = doc.splitTextToSize.bind(doc), w0 = doc.getTextWidth.bind(doc); doc.text = (t, ...a) => t0(pdfSafe(t), ...a); doc.splitTextToSize = (t, ...a) => s0(pdfSafe(t), ...a); doc.getTextWidth = t => w0(pdfSafe(t)); return doc; };
+  // immagini nei PDF: la stessa immagine si incorpora una sola volta (alias) e i PNG si comprimono (senza perdita di qualità)
+  const imgAlias = d => { const t = typeof d === 'string' ? d : ''; if (!t) return undefined; let h = 0; for (let i = 0; i < t.length; i += Math.max(1, Math.floor(t.length / 4000))) h = (h * 31 + t.charCodeAt(i)) | 0; return 'im' + t.length + '_' + (h >>> 0).toString(36); };
+  const wrapImg = doc => { if (doc._hpImg) return doc; doc._hpImg = true; const a0 = doc.addImage.bind(doc);
+    doc.addImage = function (data, fmt, x, y, w, h, alias, comp, rot) { if (typeof fmt === 'string' && arguments.length >= 6) { const png = /png/i.test(fmt) || (typeof data === 'string' && /^data:image\/png/i.test(data)); return a0(data, fmt, x, y, w, h, alias || imgAlias(data), comp || (png ? 'SLOW' : undefined), rot); } return a0.apply(doc, arguments); }; return doc; };
+  window.hpPdfImgDoc = wrapImg;
+  window.hpPdfSafeDoc = doc => { wrapImg(doc); const t0 = doc.text.bind(doc), s0 = doc.splitTextToSize.bind(doc), w0 = doc.getTextWidth.bind(doc); doc.text = (t, ...a) => t0(pdfSafe(t), ...a); doc.splitTextToSize = (t, ...a) => s0(pdfSafe(t), ...a); doc.getTextWidth = t => w0(pdfSafe(t)); return doc; };
 
   /* immagine del prodotto per i documenti: quella dell'articolo nel listino (o della riga), quadrata su fondo bianco */
   window.hpProdThumb = async function (r, px = 240) {

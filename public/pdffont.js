@@ -11,7 +11,7 @@
   window.hpPdfFont = async function (doc) {
     const F = await getFonts(); if (!F.normal) return doc; // senza il file si resta su Helvetica
     const have = {};
-    for (const st of ['normal', 'bold', 'italic', 'bolditalic']) { const data = F[st] || (st === 'bolditalic' ? F.bold : null) || F.normal; const fn = 'OpenSans-' + st + '.ttf'; doc.addFileToVFS(fn, data); doc.addFont(fn, 'OpenSans', st); have[st] = !!F[st] || (st === 'bolditalic' && !!F.bold); }
+    for (const st of ['normal', 'bold', 'italic', 'bolditalic']) { if (st !== 'normal' && !F[st] && !(st === 'bolditalic' && F.bold)) continue; /* stili senza un file proprio: si usa il normale (grassetto simulato), senza incorporare di nuovo lo stesso font */ const data = F[st] || (st === 'bolditalic' ? F.bold : null) || F.normal; const fn = 'OpenSans-' + st + '.ttf'; doc.addFileToVFS(fn, data); doc.addFont(fn, 'OpenSans', st); have[st] = !!F[st] || (st === 'bolditalic' && !!F.bold); }
     const sf0 = doc.setFont.bind(doc), tx0 = doc.text.bind(doc);
     let fake = false;
     doc.setFont = (name, style, weight) => {

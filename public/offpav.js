@@ -165,7 +165,7 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     if (!window.jspdf) await loadScript(JSPDF); if (!window.jspdf.jsPDF.API.autoTable) await loadScript(AT);
     const doc = window.hpPdfSafeDoc ? hpPdfSafeDoc(new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' })) : new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' }); if (window.hpPdfFont) await hpPdfFont(doc); const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
     const com = S.commesse.get(o.commessaId), cli = S.clienti.get(o.clienteId) || {}; const P0 = o.pdf || {}; const M = P0.meta || {}; const C = P0.cliente || {};
-    const hik = await logo('/brand-hikvision.png', 900) || await logo('/hik-logo.png', 900); const pav = await logo('/proav-mark.png', 1200, true) || await logo('/proav-logo.png', 1200, true); const nlg = await logo('/proav-hik-logo.png', 1200);
+    const hik = await logo('/brand-hikvision.png', 900) || await logo('/hik-logo.png', 900); const pav = await logo('/proav-mark.png', 1200, true) || await logo('/proav-logo.png', 1200, true); const nlg = await logo('/proav-hik-logo.png', 900);
     const num = o.numero || '—'; const dt = o.data ? o.data.split('-').reverse().join('/') : new Date().toLocaleDateString('it-IT');
     const cliName = cli.nome || C.nome || 'Cliente'; const rif = o.titolo || M.riferimento || (com ? com.nome : '');
     const me = (S.team && S.team.get(o.by || S.me)) || {}; const red = { n: M.redatto || nm(o.by || S.me), e: M.redattoEmail || me.email || (typeof mailOf === 'function' ? mailOf(o.by || S.me) : '') || '', t: M.redattoTel || me.tel || '' };
