@@ -2131,7 +2131,7 @@ function sideWidget(){const {y,q}=S.qsel;const set=(ny,nq)=>{S.qsel={y:ny,q:nq};
     const salesBox=el('div',{class:'sales'+(sOpen?'':' hp-coll'),title:(own?'Fatturato prodotti propri (esclusi EZVIZ, Outdoor e Rebate)':'Fatturato escluso Rebate')+' · fonte: '+(sa.file||'Sales Analysis')},el('div',{class:'sh hp-shtog',role:'button',tabindex:'0','aria-expanded':String(sOpen),title:'Mostra o nascondi il fatturato',onclick:e=>{e.stopPropagation();const b=e.currentTarget.closest('.sales');const o=b.classList.toggle('hp-coll');e.currentTarget.setAttribute('aria-expanded',String(!o));try{localStorage.setItem('hp_sideSales',o?'0':'1');}catch(x){}},onkeydown:e=>{if(e.key==='Enter')e.currentTarget.click();}},el('span',{class:'hp-shcar','aria-hidden':'true'},'▸ '),(byQ?'FATTURATO Q'+q+' '+sa.anno:'FATTURATO '+(sa.anno||'')+' YTD')+' · AL '+(sa.dataLabel||fD(sa.data)).toUpperCase()),
       el('div',{class:'srow'},el('span',{},'SICILIA'),el('b',{title:eur(vS)},eurShort(vS))),ach(vS,tS,'Sicilia'),
       null);box.append(salesBox);}
-  else box.append(el('div',{class:'sales empty'},'FATTURATO · in attesa del file Sales Analysis'));
+  else if(!(typeof HP_PAV!=='undefined'&&HP_PAV))box.append(el('div',{class:'sales empty'},'FATTURATO · in attesa del file Sales Analysis')); // su ProAV senza fatturato il riquadro non c'è
   return box;}
 function renderSides(){const s=$('#sideWid');if(s)s.replaceChildren(sideWidget());const m=$('#mWid');if(m)m.replaceChildren(sideWidget());}
 
