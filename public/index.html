@@ -1479,8 +1479,10 @@ function offerEditor(o){const isNew=!o.id;const D=JSON.parse(JSON.stringify(o));
   const OS_ALL=SRC.map((x,i)=>i).filter(i=>!SRC[i].int&&S.cat.some(x=>x.s===i));const okey=i=>SRC[i]&&SRC[i].key||String(i);
   // listini di default: su ProAV solo il Listino TD Nino (o i listini ProAV), altrimenti tutti; la scelta si ricorda per chiave
   const oDef=()=>{if(typeof HP_PAV!=='undefined'&&HP_PAV){const td=OS_ALL.filter(i=>SRC[i].L==='pav'&&/td\s*nino/i.test(SRC[i].name||''));if(td.length)return td;const pv=OS_ALL.filter(i=>SRC[i].L==='pav');if(pv.length)return pv;}return OS_ALL;};
-  let oSel=oDef();try{const v=JSON.parse(localStorage.getItem('hp_offSrc2')||'null');if(Array.isArray(v)&&v.length){const k=new Set(v);const m=OS_ALL.filter(i=>k.has(okey(i)));if(m.length)oSel=m;}}catch(e){}
-  const oSrc=new Set(oSel.length?oSel:OS_ALL);const oF={sz:'',st:'',nuovo:false};const saveO=()=>{try{localStorage.setItem('hp_offSrc2',JSON.stringify([...oSrc].map(okey)));}catch(e){}};
+  // nell'ordine Sell In di base i listini ProAV (scelta ricordata a parte da quella delle offerte)
+  const OKEY=SI?'hp_siSrc':'hp_offSrc2';const pavS=OS_ALL.filter(i=>SRC[i].L==='pav');
+  let oSel=SI&&pavS.length?pavS:oDef();try{const v=JSON.parse(localStorage.getItem(OKEY)||'null');if(Array.isArray(v)&&v.length){const k=new Set(v);const m=OS_ALL.filter(i=>k.has(okey(i)));if(m.length)oSel=m;}}catch(e){}
+  const oSrc=new Set(oSel.length?oSel:OS_ALL);const oF={sz:'',st:'',nuovo:false};const saveO=()=>{try{localStorage.setItem(OKEY,JSON.stringify([...oSrc].map(okey)));}catch(e){}};
   const oCnt=SRC.map((_,i)=>S.cat.filter(x=>x.s===i).length);
   const srcLabel=()=>oSrc.size===OS_ALL.length?'Tutti i listini':oSrc.size===1?srcLab(SRC[[...oSrc][0]]):oSrc.size+' listini selezionati';
   const srcBtn=el('button',{type:'button',class:'btn hp-msbtn',title:'Scegli i listini e i filtri della ricerca','aria-expanded':'false'},ic('list',16),el('span',{},srcLabel()),el('span',{class:'hp-caret','aria-hidden':'true'},'▾'));
