@@ -440,11 +440,11 @@
     const gal = el('div', { class: 'mg-gal' });
     const pick = photoPicker(id => { d.foto = [...(d.foto || []), id]; drawGal(); }), pickG = photoPicker(id => { d.foto = [...(d.foto || []), id]; drawGal(); }, true);
     const drawGal = () => {
-      const c = findCode(code.value.trim()) || null; const im = c ? c.im : -1;
+      const c = findCode(code.value.trim()) || null; const im = c ? c.im : (d.im ?? -1); const hasIm = typeof im === 'string' ? !!im : im >= 0; // listino ProAV: percorso dell'immagine
       gal.replaceChildren(
-        im >= 0 ? el('figure', {}, thumb(im, 120), el('figcaption', {}, 'Listino')) : null,
-        im < 0 && d.imgWeb ? el('figure', {}, el('a', { href: '/_blob/' + d.imgWeb, target: '_blank', rel: 'noopener' }, el('img', { src: '/_blob/' + d.imgWeb, alt: 'Immagine dal web', style: 'object-fit:contain;background:#fff' })), el('figcaption', {}, 'Dal web · ', el('button', { type: 'button', class: 'linkish', onclick: () => { d.imgWeb = null; drawGal(); } }, 'Rimuovi'))) : null,
-        im < 0 && !d.imgWeb ? el('button', { type: 'button', class: 'mg-add', onclick: async e => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Cerco sul web…'; const r = await webImg(/^SAP /.test(code.value) ? (d.descSap || d.desc) : code.value, d.descSap || d.desc, true); if (r) { d.imgWeb = r; } else toast('Nessuna immagine trovata per ' + (code.value || d.code) + '.', 'bad'); drawGal(); } }, ic('search', 22), 'Cerca immagine sul web') : null,
+        hasIm ? el('figure', {}, window.artThumbC ? artThumbC(code.value.trim() || d.code, im, 120) : thumb(im, 120), el('figcaption', {}, 'Listino')) : null,
+        !hasIm && d.imgWeb ? el('figure', {}, el('a', { href: '/_blob/' + d.imgWeb, target: '_blank', rel: 'noopener' }, el('img', { src: '/_blob/' + d.imgWeb, alt: 'Immagine dal web', style: 'object-fit:contain;background:#fff' })), el('figcaption', {}, 'Dal web · ', el('button', { type: 'button', class: 'linkish', onclick: () => { d.imgWeb = null; drawGal(); } }, 'Rimuovi'))) : null,
+        !hasIm && !d.imgWeb ? el('button', { type: 'button', class: 'mg-add', onclick: async e => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Cerco sul web…'; const r = await webImg(/^SAP /.test(code.value) ? (d.descSap || d.desc) : code.value, d.descSap || d.desc, true); if (r) { d.imgWeb = r; } else toast('Nessuna immagine trovata per ' + (code.value || d.code) + '.', 'bad'); drawGal(); } }, ic('search', 22), 'Cerca immagine sul web') : null,
         ...(d.foto || []).map((f, k) => el('figure', {}, el('a', { href: '/_blob/' + f, target: '_blank', rel: 'noopener' }, el('img', { src: '/_blob/' + f, alt: 'Foto ' + (k + 1), loading: 'lazy' })), el('figcaption', {}, el('button', { type: 'button', class: 'linkish', onclick: () => { d.foto.splice(k, 1); drawGal(); } }, 'Rimuovi')))),
         el('button', { type: 'button', class: 'mg-add', onclick: () => pick.click() }, ic('cam', 22), 'Scatta foto'), el('button', { type: 'button', class: 'mg-add', onclick: () => pickG.click() }, ic('up', 22), 'Dalla galleria'), pick, pickG);
     };
