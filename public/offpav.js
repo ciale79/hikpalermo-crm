@@ -389,14 +389,15 @@ Regole: italiano professionale, tono consulenziale, 90-140 parole in 2 paragrafi
     const stop = () => { try { unO && unO(); } catch (e) { } try { unC && unC(); } catch (e) { } };
     const X = window.hpExportOpts(o);
     const m = modal('Esporta offerta ' + (o.numero || ''), el('div', { class: 'stack' }, X.node,
-      el('h4', { style: 'margin:6px 0 0' }, 'Allegati e ordine dell\'offerta'),
-      el('p', { class: 'hint', style: 'margin:0' }, 'Spunta gli allegati da includere e spostali con ↑ ↓ prima o dopo le parti dell\'offerta: ogni allegato va dopo la parte che lo precede nell\'elenco.'),
-      U.node, el('div', { class: 'row', style: 'gap:8px' }, btn('Aggiungi PDF o immagine', () => add.click(), 'sm ghost', 'up'), add), prog),
+      o.tipo === 'sellin' ? el('p', { class: 'hint', style: 'margin:6px 0 0' }, 'Ordine Sell In: il documento contiene solo l\'offerta commerciale, con il codice SAP.') : null,
+      o.tipo === 'sellin' ? null : el('h4', { style: 'margin:6px 0 0' }, 'Allegati e ordine dell\'offerta'),
+      ...(o.tipo === 'sellin' ? [] : [el('p', { class: 'hint', style: 'margin:0' }, 'Spunta gli allegati da includere e spostali con ↑ ↓ prima o dopo le parti dell\'offerta: ogni allegato va dopo la parte che lo precede nell\'elenco.'),
+      U.node, el('div', { class: 'row', style: 'gap:8px' }, btn('Aggiungi PDF o immagine', () => add.click(), 'sm ghost', 'up'), add)]), prog),
       [el('span', { class: 'grow' }), btn('Annulla', () => { stop(); m.close(); }),
         btn('Excel', () => { const R = X.read(); stop(); m.close(); window.hpOffXlsx && hpOffXlsx(R.o, R.sc, R.lst); }, '', 'dl'),
-        btn('Word', async () => { const R = X.read(); const list = U.read(); U.save(); try { const attPages = list.length ? await hpAttRender(list, say) : {}; stop(); m.close(); if (window.hpOffDocx) await hpOffDocx(R.o, R.sc, R.lst, true, attPages); } catch (e) { console.error(e); toast('Word non creato: ' + (e.message || e), 'bad'); prog.hidden = true; } }, '', 'doc'),
+        btn('Word', async () => { const R = X.read(); const list = o.tipo === 'sellin' ? [] : U.read(); if (o.tipo !== 'sellin') U.save(); try { const attPages = list.length ? await hpAttRender(list, say) : {}; stop(); m.close(); if (window.hpOffDocx) await hpOffDocx(R.o, R.sc, R.lst, true, attPages); } catch (e) { console.error(e); toast('Word non creato: ' + (e.message || e), 'bad'); prog.hidden = true; } }, '', 'doc'),
         btn('PDF', async () => {
-          const R = X.read(); const list = U.read(); U.save();
+          const R = X.read(); const list = o.tipo === 'sellin' ? [] : U.read(); if (o.tipo !== 'sellin') U.save();
           try { const attPages = list.length ? await hpAttRender(list, say) : {}; await build(R.o, { sc: R.sc, lst: R.lst, attPages }, say); stop(); m.close(); } catch (e) { console.error(e); toast('PDF non creato: ' + (e.message || e), 'bad'); prog.hidden = true; }
         }, 'pri', 'doc')], { wide: true });
   };
