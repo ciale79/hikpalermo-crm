@@ -285,6 +285,7 @@
     const m = modal('Voci di «' + c.t + '»', el('div', { class: 'stack' }, c.h ? el('p', { class: 'hint', style: 'margin:0' }, c.h) : null, list, el('h4', { style: 'margin:6px 0 0' }, 'Aggiungi'), nt),
       [el('span', { class: 'grow' }), btn('Aggiungi voce', add, '', 'plus'), btn('Fatto', () => { optSubs.delete(draw); m.close(); onDone && onDone(); }, 'pri', 'check')]);
   };
+  if (!document.getElementById('hpOptCss')) document.head.append(el('style', { id: 'hpOptCss' }, '.hp-optf{border:1px solid var(--line);border-radius:10px;padding:10px 12px;gap:6px!important}.hp-optt{font-weight:600}.hp-optrow{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}.hp-optlab{display:flex;gap:4px;align-items:center;flex:none;width:150px;font-size:.72rem;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}.hp-optsel{background:var(--surface-2,#f1f3f5)!important;border-style:dashed!important;color:var(--ink-2)!important;cursor:pointer}.hp-optta{flex:1;background:#fff!important;border:1px solid var(--line-2,#c9cdd3)!important;border-left:3px solid var(--accent)!important;font-weight:500;color:var(--ink)!important}@media (max-width:640px){.hp-optrow{flex-wrap:wrap}.hp-optlab{width:100%}}'));
   window.hpExportOpts = function (o, extraShow) {
     const cond = (o.pdf && o.pdf.cond) || {}; const pick = rx => { for (const [k, v] of Object.entries(cond)) if (rx.test(k)) return String(v).trim(); return ''; };
     const ck = (on, t, h) => { const i = el('input', { type: 'checkbox', checked: on }); return { i, n: el('label', { class: 'row', style: 'gap:8px;align-items:flex-start' }, i, el('span', {}, el('b', {}, t), h ? el('div', { class: 'hint' }, h) : null)) }; };
@@ -295,13 +296,14 @@
     seedOpts();
     // un campo per sezione: menu a tendina delle voci salvate + testo modificabile per questo documento + «Gestisci voci»
     const field = (cat, init) => {
-      const c = OCAT[cat]; const sel = el('select', { 'aria-label': c.t, style: 'flex:1;min-width:0' });
-      const ta = el('textarea', { rows: cat === 'note' ? 3 : 1, style: 'min-height:0', value: init || '', 'aria-label': c.t + ' (testo nel documento)' });
+      const c = OCAT[cat]; const sel = el('select', { class: 'hp-optsel', 'aria-label': c.t + ': scegli una voce salvata', style: 'flex:1;min-width:0' });
+      const ta = el('textarea', { class: 'hp-optta', rows: cat === 'note' ? 3 : 1, style: 'min-height:0', value: init || '', placeholder: 'Scrivi qui il testo che comparirà nel documento', 'aria-label': c.t + ' (testo nel documento)' });
       const fill = () => { const it = optsOf(cat); const cur = sel.value; sel.replaceChildren(el('option', { value: '' }, cat === 'note' ? '+ Aggiungi una nota salvata…' : it.length ? 'Scegli una voce…' : (OPTS ? 'Nessuna voce salvata' : 'Carico le voci…')), ...it.map(x => el('option', { value: x.id, selected: x.id === cur || (!cur && cat !== 'note' && x.text === ta.value.trim()) }, String(x.text).length > 90 ? String(x.text).slice(0, 88) + '…' : x.text))); if (cat !== 'note' && !ta.value.trim() && it.length && OPTS) { const last = lsG('hp_ex_' + cat); const d = it.find(x => x.text === last) || it[0]; ta.value = d.text; sel.value = d.id; ta.dispatchEvent(new Event('input')); } };
       sel.addEventListener('change', () => { const x = optsOf(cat).find(y => y.id === sel.value); if (!x) return; if (cat === 'note') { ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + x.text; sel.value = ''; } else ta.value = x.text; ta.dispatchEvent(new Event('input')); });
       optSubs.add(fill); fill();
-      const node = el('div', { class: 'fld', style: 'grid-column:1/-1' }, el('span', {}, c.t),
-        el('div', { class: 'row', style: 'gap:6px;flex-wrap:nowrap' }, sel, btn('Gestisci voci', () => hpOptManage(cat, fill), 'sm ghost', 'edit')), ta);
+      const node = el('div', { class: 'fld hp-optf', style: 'grid-column:1/-1' }, el('span', { class: 'hp-optt' }, c.t),
+        el('div', { class: 'hp-optrow' }, el('span', { class: 'hp-optlab' }, ic('list', 14), cat === 'note' ? 'Note salvate' : 'Voci salvate'), sel, btn('Gestisci voci', () => hpOptManage(cat, fill), 'sm ghost', 'edit')),
+        el('div', { class: 'hp-optrow' }, el('span', { class: 'hp-optlab' }, ic('edit', 14), 'Testo nel documento'), ta));
       return { node, ta, done: () => optSubs.delete(fill) };
     };
     const fC = field('consegna', o.consegna || pick(/consegn/i));
