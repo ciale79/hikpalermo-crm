@@ -4,6 +4,7 @@
 import seed from '../seed/data.json';
 import mag1009 from '../seed/magazzino-1009.json';
 import pavTD from '../seed/proav-listino-td.json';
+import pavAudio from '../seed/proav-audio-2610.json';
 import distIT from '../seed/distributori.json';
 import extraImport from '../seed/import-bolle.json';
 import extraLinks from '../seed/import-links.json';
@@ -741,6 +742,23 @@ async function migratePavTD(env) {
   }
   await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', 'mig_pav_td', JSON.stringify({ at: t, skipped: !!dup }), t, t).run();
 }
+// Import una tantum del listino ProAV «Listino novità Audio ProAV Ottobre 2026» (11 articoli audio commerciali, foto in /pavimg, file originale scaricabile)
+async function migratePavAudio(env) {
+  if (await env.DB.prepare("SELECT 1 FROM docs WHERE col='config' AND id='mig_pav_audio2610'").first()) return;
+  const t = now(); const NOME = 'Listino novità Audio ProAV Ottobre 2026';
+  const dup = await env.DB.prepare("SELECT 1 FROM docs WHERE col='proavListini' AND lower(json_extract(data,'$.nome')) = lower(?)").bind(NOME).first();
+  if (!dup) {
+    const owner = await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(normEmail(env.OWNER_EMAIL)).first();
+    const id = 'pl' + rndHex(7), blob = id + '_' + t.toString(36);
+    const payload = JSON.stringify({ v: 2, items: pavAudio.items, at: t });
+    await env.FILES.put('proav/' + blob, payload, { httpMetadata: { contentType: 'application/json' }, customMetadata: { by: 'import' } });
+    let orig = null; try { const b = Uint8Array.from(atob(pavAudio.orig), c => c.charCodeAt(0)); await env.FILES.put('proav/' + blob + '_f', b, { httpMetadata: { contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }, customMetadata: { by: 'import' } }); orig = blob + '_f'; } catch (e) { console.log('audio orig', e); }
+    const meta = { v: 2, orig, nome: NOME, periodo: '2026-10', righe: pavAudio.items.length, kit: 0, fogli: pavAudio.fogli, fields: pavAudio.fields, mapK: pavAudio.mapK, file: pavAudio.file, size: payload.length, blob, imgs: [], by: (owner || {}).id || null, at: t, map: { n: [0] } };
+    await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('proavListini', id, JSON.stringify(meta), t, t).run();
+    const ids = await pavUids(env); await Promise.all(ids.map(uid => broadcast(env, { col: 'proavListini', id, v: t, data: meta, by: 'server' }, uid)));
+  }
+  await env.DB.prepare('INSERT OR IGNORE INTO docs(col,id,data,version,updated) VALUES(?,?,?,?,?)').bind('config', 'mig_pav_audio2610', JSON.stringify({ at: t, skipped: !!dup }), t, t).run();
+}
 // Import una tantum dei distributori autorizzati Hikvision Italia (hikvision.com/it/Partners/distributori-autorizzati):
 // un cliente «Distributore» per azienda, con le categorie di canale, l'area e tutte le sedi; i clienti già presenti si completano senza sovrascrivere
 const distKey = n => String(n || '').toUpperCase().replace(/\b(S\.?R\.?L\.?|S\.?P\.?A\.?|SAS|SNC|S\.?C\.?A\.?R\.?L|SCARL|UNIPERSONALE|A SOCIO UNICO|SOC\.? ?COOP\.?)\b/g, '').replace(/\./g, '').replace(/ /g, '').replace(/&/g, 'E').replace(/[^A-Z0-9]/g, '');
@@ -875,7 +893,7 @@ async function api(req, env, ctx, url, u) {
   if (m !== 'GET' && req.headers.get('x-hp') !== '1') return err('csrf', 'Richiesta non valida', 403);
 
   if (p === '/api/me') {
-    ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)));
+    ctx.waitUntil(migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migratePavAudio(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)));
     const r = await ruoli(env);
     const team = await getDoc(env, 'team', u.id);
     return json({ id: u.id, email: u.email, name: team?.data?.nomeVis || team?.data?.nome || u.name, foto: team?.data?.foto || null, admin: await isAdmin(env, u), owner: u.email === normEmail(env.OWNER_EMAIL) || r.owner === u.id, needPassword: !u.has_pwd, proav: await isPav(env, u), pavAdmin: await isPavAdmin(env, u), perm: await permOf(env, u, isPavHost(url) ? 'pav' : 'hik') });
@@ -1118,7 +1136,7 @@ export default {
     // (promemoria di domani e pulizia) girano nel primo passaggio delle 06:00 UTC; i promemoria non si duplicano (tabella reminders)
     const st = new Date((ev && ev.scheduledTime) || Date.now());
     const daily = !ev || !ev.cron || ev.cron === '0 6 * * *' || (st.getUTCHours() === 6 && st.getUTCMinutes() < 10);
-    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)); try { await geoDist(env, 40); } catch (e) { console.log('geoDist', e); } await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); if (!daily) return; }
+    if (ev && ev.cron === '*/10 * * * *') { await migrateMag(env).then(() => migrateExtra(env)).then(() => migratePavTD(env)).then(() => migratePavAudio(env)).then(() => migrateDist(env)).catch(e => console.log('mig', e && e.stack || e)); try { await geoDist(env, 40); } catch (e) { console.log('geoDist', e); } await fillMagImages(env).catch(e => console.log('img', e && e.stack || e)); if (!daily) return; }
     const t = now();
     await env.DB.batch([env.DB.prepare('DELETE FROM otp WHERE expires<?').bind(t - 864e5), env.DB.prepare('DELETE FROM sessions WHERE expires<?').bind(t)]);
     const tomorrow = romeDay(t + 864e5);
