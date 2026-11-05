@@ -161,7 +161,7 @@
     S.cat = S.cat.filter(x => x.L !== 'pav'); SRC.length = SRC0;
     let i0 = S.cat.length ? Math.max(...S.cat.map(x => x.i)) + 1 : 0;
     for (const m of ready) {
-      const s = SRC.length; SRC.push({ L: 'pav', tag: 'PROAV', name: m.nome, per: fmtP(m.periodo), key: 'pav:' + m.id });
+      const s = SRC.length; SRC.push({ L: 'pav', tag: m.tag || 'PROAV', name: m.nome, per: fmtP(m.periodo), key: 'pav:' + m.id });
       for (const r of itemsOf(m)) {
         const nets = {}; for (const [h, v] of r.n || []) { if (/1 ?pz/i.test(h)) continue; if (/distribut/i.test(h) && nets.dist == null) nets.dist = v; else if (/dealer/i.test(h) && nets.dealer == null) nets.dealer = v; else if (/install|\bsi\b|system/i.test(h) && nets.si == null) nets.si = v; }
         const c = r.c, kd = r.kit ? kitDesc(r) : null, b = kd ? kd.b : (r.d2 || r.tip || String(r.d || '').slice(0, 110));
