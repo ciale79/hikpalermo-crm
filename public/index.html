@@ -1178,6 +1178,12 @@ function parseCoords(s){if(!s)return null;try{s=decodeURIComponent(s);}catch(e){
 const VIEWS={};
 
 /* ---------- Cruscotto ---------- */
+/* riquadri di riepilogo (.kpi) in tutto il CRM: titolo colorato con icona, scelti dal testo del titolo */
+if(!ICONS.cart)ICONS.cart='M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2M9 20.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2M17 20.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2';
+const KDECO=[[/open order|ordini aperti/i,'#E8A100','cart'],[/sell\s*in|ordin/i,'#2F9E44','cart'],[/italia|sicilia|calabria|kam|regione|area|anno|trimestre|q[1-4]/i,'#0B7285','chart'],[/forecast/i,'#1971C2','spark'],[/conferm/i,'#E8A100','check'],[/offert|preventiv/i,'#1971C2','doc'],[/fatturat|valore|pipeline|netto|vendut|target|obiettiv/i,'#0B7285','chart'],[/commess/i,'#7048E8','brief'],[/appuntament|calendar|promemoria|rientr|scadut|giorni/i,'#E8590C','cal'],[/filiale|magazzin|demo|poc|stock|articol|modell/i,'#0C8599','box'],[/client|partner|distribut/i,'#D6336C','users'],[/capitolat/i,'#7048E8','spark'],[/prodotto/i,'#E8A100','box'],[/buon|pasto|ferie|chiusur/i,'#F08C00','cal']];
+function hpKpiDeco(root){(root||document).querySelectorAll('.kpi').forEach(k=>{if(k.dataset.kd)return;const e=k.querySelector('.eyebrow');if(!e)return;k.dataset.kd='1';if(e.querySelector('.hp-kico'))return;const t=e.textContent||'';const m=KDECO.find(x=>x[0].test(t))||[null,'#495057','list'];
+  const c=getComputedStyle(e).color;e.style.display='flex';e.style.alignItems='center';if(!e.style.color)e.style.color=m[1];e.prepend(el('span',{class:'hp-kico',style:{'--c':e.style.color||m[1]},'aria-hidden':'true'},ic(ICONS[m[2]]?m[2]:'list',15)));});}
+(()=>{let t=null;const run=()=>{t=null;try{hpKpiDeco(document.getElementById('view')||document);}catch(e){}};const mo=new MutationObserver(()=>{if(!t)t=setTimeout(run,60);});const go0=()=>{const v=document.getElementById('view');if(v){mo.observe(v,{childList:true,subtree:true});run();}else setTimeout(go0,300);};go0();})();
 /* cruscotto ProAV: riquadri colorati con le statistiche di offerte e ordini Sell In */
 function pavBar(parts){const t=parts.reduce((a,p)=>a+p[1],0)||1;return el('div',{class:'hp-kbar'},parts.filter(p=>p[1]>0).map(([l,v,c])=>el('i',{style:{width:(v/t*100)+'%',background:c},title:l+' '+eur0(v)})));}
 function pavLeg(parts){return el('div',{class:'hp-kleg'},parts.map(([l,v,c,n])=>el('span',{},el('i',{style:{background:c}}),l+' ',el('b',{},eur0(v)),n!=null?el('small',{},' · '+n):null)));}

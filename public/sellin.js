@@ -28,7 +28,17 @@
       const rows = inY.filter(o => (!f.st || o.stato === f.st) && (!f.cli || o.clienteId === f.cli) && (!ql || [o.numero, o.titolo, cliN(o.clienteId)].join(' ').toLowerCase().includes(ql)))
         .sort((a, b) => String(b.mese || '').localeCompare(String(a.mese || '')) || (b.upd || b.at || 0) - (a.upd || a.at || 0));
       const sum = st => inY.filter(o => o.stato === st).reduce((t, o) => t + (+o.totN || 0), 0);
-      const kpi = (l, v, st) => el('div', { class: 'kpi hp-click' + (f.st === st ? ' on' : ''), role: 'button', tabindex: '0', title: 'Filtra: ' + l, onclick: () => { f.st = f.st === st ? '' : st; this.update(); } }, el('span', { class: 'eyebrow' }, l), el('span', { class: 'v' }, eur0(v)), el('span', { class: 's' }, (n => n + (n === 1 ? ' ordine · ' : ' ordini · '))(inY.filter(o => o.stato === st).length) + '' + (f.y || 'tutti gli anni')));
+      const TOT = ['Forecast', 'Confermato', 'Ordinato'].reduce((t, st) => t + sum(st), 0);
+      const SC = { Forecast: ['#1971C2', 'spark'], Confermato: ['#E8A100', 'check'], Ordinato: ['#2F9E44', 'cart'] };
+      const kpi = (l, v, st) => { const n = inY.filter(o => o.stato === st).length; const pc = TOT ? Math.round(v / TOT * 100) : 0; const [c, icn] = SC[st];
+        return el('div', { class: 'kpi hp-click hp-kc' + (f.st === st ? ' on' : ''), role: 'button', tabindex: '0', title: 'Filtra: ' + l, onclick: () => { f.st = f.st === st ? '' : st; this.update(); } },
+          el('span', { class: 'eyebrow', style: { color: c, display: 'flex', alignItems: 'center' } }, el('span', { class: 'hp-kico', style: { '--c': c }, 'aria-hidden': 'true' }, ic(icn, 15)), l), el('span', { class: 'v' }, eur0(v)),
+          el('span', { class: 's' }, n + (n === 1 ? ' ordine' : ' ordini') + ' · ' + pc + '% del totale · ' + (f.y || 'tutti gli anni')),
+          el('div', { class: 'hp-kbar' }, el('i', { style: { width: pc + '%', background: c } }))); };
+      const totTile = () => { const parts = [['Ordinato', sum('Ordinato'), '#2F9E44', inY.filter(o => o.stato === 'Ordinato').length], ['Confermato', sum('Confermato'), '#E8A100', inY.filter(o => o.stato === 'Confermato').length], ['Forecast', sum('Forecast'), '#1971C2', inY.filter(o => o.stato === 'Forecast').length]];
+        const ok = parts[0][1] + parts[1][1]; const nD = new Set(inY.filter(o => o.stato !== 'Annullato').map(o => o.clienteId)).size;
+        return el('div', { class: 'kpi hp-kc' }, el('span', { class: 'eyebrow', style: { color: '#7048E8', display: 'flex', alignItems: 'center' } }, el('span', { class: 'hp-kico', style: { '--c': '#7048E8' }, 'aria-hidden': 'true' }, ic('chart', 15)), 'Totale Sell In'), el('span', { class: 'v' }, eur0(TOT)),
+          el('span', { class: 's' }, 'confermato e ordinato ', el('b', {}, eur0(ok)), ' (' + (TOT ? Math.round(ok / TOT * 100) : 0) + '%) · ' + nD + (nD === 1 ? ' distributore' : ' distributori')), window.pavBar ? pavBar(parts) : null, window.pavLeg ? pavLeg(parts) : null); };
       const cliIds = [...new Set(all.map(o => o.clienteId).filter(Boolean))];
       const qIn = el('input', { type: 'search', placeholder: 'Cerca numero, distributore, titolo…', value: f.q, style: 'max-width:260px', oninput: e => { f.q = e.target.value; clearTimeout(qIn._t); qIn._t = setTimeout(() => { this.update(); const n = r.querySelector('input[type=search]'); if (n) { n.focus(); n.setSelectionRange(f.q.length, f.q.length); } }, 200); } });
       const sel = (opts, v, on) => el('select', { style: 'width:auto', onchange: e => on(e.target.value) }, opts.map(([k, l]) => el('option', { value: k, selected: String(k) === String(v) }, l)));
@@ -42,7 +52,7 @@
           el('td', { class: 'mono' }, o.numero || '—'), el('td', {}, el('b', {}, cliN(o.clienteId))), el('td', {}, o.titolo || ''), el('td', {}, mLab(o.mese)), el('td', {}, chip(o.stato)),
           el('td', { class: 'r num' }, String((o.righe || []).length)), el('td', { class: 'r num' }, el('b', {}, eur0(+o.totN || 0))), el('td', { class: 'hint' }, fD(o.upd || o.at)))))))
         : emptyBox(all.length ? 'Nessun ordine con questi filtri' : 'Nessun ordine Sell In', all.length ? 'Cambia i filtri qui sopra.' : 'Crea il primo ordine di forecast per un distributore ProAV.', btn('Nuovo ordine', () => newOrder(), 'pri sm', 'plus'));
-      r.replaceChildren(...[dbGate(), loading(), head, el('div', { class: 'kpis' }, kpi('Forecast', sum('Forecast'), 'Forecast'), kpi('Confermato', sum('Confermato'), 'Confermato'), kpi('Ordinato', sum('Ordinato'), 'Ordinato')), el('section', { class: 'panel' }, tools, el('div', { style: 'margin-top:10px' }, tbl))].filter(Boolean));
+      r.replaceChildren(...[dbGate(), loading(), head, el('div', { class: 'kpis' }, totTile(), kpi('Forecast', sum('Forecast'), 'Forecast'), kpi('Confermato', sum('Confermato'), 'Confermato'), kpi('Ordinato', sum('Ordinato'), 'Ordinato')), el('section', { class: 'panel' }, tools, el('div', { style: 'margin-top:10px' }, tbl))].filter(Boolean));
     }
   };
 
