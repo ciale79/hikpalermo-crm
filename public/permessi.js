@@ -6,6 +6,8 @@
   'use strict';
   const SITE = (typeof HP_PAV !== 'undefined' && HP_PAV) ? 'pav' : 'hik';
   S.perm = S.perm || { hide: [], ro: [] };
+  // ordine di base del menu ProAV (ognuno può poi cambiarlo per sé dalle impostazioni)
+  if (SITE === 'pav') { const ORD = ['dash', 'offerte', 'commesse', 'art', 'clienti', 'cal', 'magazzino', 'cap', 'bp', 'pav', 'fatt', 'set']; const ix = k => { const i = ORD.indexOf(k); return i < 0 ? ORD.length - 1.5 : i; }; const L = NAV.slice().sort((a, b) => ix(a[0]) - ix(b[0])); NAV.length = 0; NAV.push(...L); }
   const own = () => !!S.isOwner;
   HIK_CF.me().then(m => { S.perm = m.perm || { hide: [], ro: [] }; S.pavAdmin = !!m.pavAdmin; changed(); }).catch(() => { });
   // aggiornamento in tempo reale quando un amministratore cambia i permessi
