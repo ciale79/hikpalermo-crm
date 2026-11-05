@@ -1035,8 +1035,8 @@ async function api(req, env, ctx, url, u) {
     const id = url.searchParams.get('id') || '';
     if (!/^[A-Za-z0-9_-]{6,60}$/.test(id)) return err('invalid_argument', 'Id non valido');
     const key = 'proav/' + id;
-    if (m === 'GET') { const o = await env.FILES.get(key); if (!o) return err('not_found', 'Listino non trovato', 404); return new Response(o.body, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }); }
-    if (m === 'PUT') { const buf = await req.arrayBuffer(); if (buf.byteLength > 40 * 1048576) return err('too_large', 'Listino troppo grande', 413); await env.FILES.put(key, buf, { httpMetadata: { contentType: 'application/json' }, customMetadata: { by: u.id } }); return json({ ok: true, size: buf.byteLength }); }
+    if (m === 'GET') { const o = await env.FILES.get(key); if (!o) return err('not_found', 'Listino non trovato', 404); return new Response(o.body, { headers: { 'content-type': (o.httpMetadata && o.httpMetadata.contentType) || 'application/json; charset=utf-8', 'cache-control': 'no-store' } }); }
+    if (m === 'PUT') { const buf = await req.arrayBuffer(); if (buf.byteLength > 40 * 1048576) return err('too_large', 'Listino troppo grande', 413); const ct = /^[\w.+-]+\/[\w.+-]+/.exec(req.headers.get('content-type') || ''); await env.FILES.put(key, buf, { httpMetadata: { contentType: ct ? ct[0] : 'application/json' }, customMetadata: { by: u.id } }); return json({ ok: true, size: buf.byteLength }); }
     if (m === 'DELETE') { await env.FILES.delete(key); return json({ ok: true }); }
     return err('invalid_argument', 'Metodo non valido');
   }

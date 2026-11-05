@@ -46,6 +46,19 @@
     if (!r.ok) throw new Error('Listino «' + meta.nome + '» non leggibile (' + r.status + ')');
     const d = await r.json(); S.pavRows.set(meta.id, d); return d;
   }
+  // scarica un listino ProAV: il file originale se è stato salvato, altrimenti un Excel ricostruito dai dati caricati
+  window.hpPavDownload = async function (m) {
+    const nm0 = String(m.nome || 'listino').replace(/[\\/:*?"<>|]+/g, '-');
+    try {
+      if (m.orig) { const r = await fetch('/api/proav/blob?id=' + encodeURIComponent(m.orig), { credentials: 'same-origin', headers: H }); if (r.ok) { const b = await r.blob(); const ext = (/\.[a-z0-9]{2,5}$/i.exec(m.file || '') || ['.xlsx'])[0]; hpDlReady(b, m.file || nm0 + ext); return; } }
+      toast('Preparo il listino in Excel…'); await loadRows(m);
+      const rows = itemsOf(m); const netH = [...new Set(rows.flatMap(r => (r.n || []).map(x => x[0])))];
+      const H0 = ['Codice', 'SAP', 'EAN', 'Descrizione', 'Descrizione breve', 'Categoria', 'Tipologia', 'Prezzo di listino', ...netH, 'MOQ', 'Novità', 'Note', 'Link', 'Composizione kit'];
+      const aoa = [H0, ...rows.map(r => { const nets = new Map(r.n || []); return [r.c, r.sap || (r.kit ? r.kit.map(k => k.sap).filter(Boolean).join(' / ') : ''), r.ean || '', r.kit ? kitDesc(r).d : r.d || '', r.kit ? kitDesc(r).b : r.d2 || '', r.cat || '', r.tip || '', r.p != null ? r.p : '', ...netH.map(h => nets.has(h) ? nets.get(h) : ''), r.moq || '', r.var || '', r.note || '', r.url || '', r.kit ? r.kit.map(k => k.q + '× ' + k.c).join(' + ') : '']; })];
+      const X = await xlsxLib(); const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = H0.map(h => ({ wch: /^Descrizione$/.test(h) ? 70 : /breve|Composizione/.test(h) ? 40 : /Codice|Categoria|Tipologia|Link/.test(h) ? 24 : 14 }));
+      const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Listino'); await saveXlsx(wb, nm0);
+    } catch (e) { console.error(e); toast('Listino non scaricato: ' + (e.message || e), 'bad'); }
+  };
   let loadingAll = null;
   function loadAll() {
     if (!S.pavList) return Promise.resolve();
@@ -223,8 +236,9 @@
       const ready = L.every(m => S.pavRows.has(m.id));
       const cards = el('div', { class: 'hp-pavcards' }, L.map(m => el('div', { class: 'hp-pavcard' + (S.pavL === m.id ? ' on' : ''), role: 'button', tabindex: '0', onclick: () => { S.pavL = S.pavL === m.id ? '' : m.id; this.update(); }, onkeydown: e => { if (e.key === 'Enter') { S.pavL = S.pavL === m.id ? '' : m.id; this.update(); } } },
         el('div', { class: 'row between', style: 'gap:6px;flex-wrap:nowrap' }, el('b', { title: m.nome }, m.nome), el('span', { class: 'row', style: 'gap:2px;flex-wrap:nowrap' },
+          el('button', { type: 'button', class: 'icon-btn', title: m.orig ? 'Scarica il file del listino (' + (m.file || 'Excel') + ')' : 'Scarica il listino in Excel', 'aria-label': 'Scarica ' + m.nome, onclick: e => { e.stopPropagation(); window.hpPavDownload(m); } }, ic('dl', 15)),
           el('button', { type: 'button', class: 'icon-btn', title: 'Sostituisci con un file aggiornato', 'aria-label': 'Aggiorna ' + m.nome, onclick: e => { e.stopPropagation(); window.hpPavUpload(m); } }, ic('up', 15)),
-          el('button', { type: 'button', class: 'icon-btn', title: 'Elimina listino', 'aria-label': 'Elimina ' + m.nome, onclick: async e => { e.stopPropagation(); if (!await ask('Eliminare il listino «' + m.nome + '»?', 'Elimina')) return; if (await remove('proavListini', m.id)) { (m.imgs || []).forEach(b => fetch('/api/blob/' + b, { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { })); fetch('/api/proav/blob?id=' + encodeURIComponent(m.blob || m.id), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { }); S.pavRows.delete(m.id); if (S.pavL === m.id) S.pavL = ''; toast('Listino eliminato'); } } }, ic('trash', 15)))),
+          el('button', { type: 'button', class: 'icon-btn', title: 'Elimina listino', 'aria-label': 'Elimina ' + m.nome, onclick: async e => { e.stopPropagation(); if (!await ask('Eliminare il listino «' + m.nome + '»?', 'Elimina')) return; if (await remove('proavListini', m.id)) { (m.imgs || []).forEach(b => fetch('/api/blob/' + b, { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { })); fetch('/api/proav/blob?id=' + encodeURIComponent(m.blob || m.id), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { }); if (m.orig) fetch('/api/proav/blob?id=' + encodeURIComponent(m.orig), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { }); S.pavRows.delete(m.id); if (S.pavL === m.id) S.pavL = ''; toast('Listino eliminato'); } } }, ic('trash', 15)))),
         el('span', { class: 'hint' }, (m.periodo ? fmtP(m.periodo) + ' · ' : '') + (m.righe || 0).toLocaleString('it-IT') + ' articoli' + (m.kit ? ' · ' + m.kit + ' kit' : '') + ((m.map || {}).n && m.map.n.length ? ' · netti' : '')),
         el('span', { class: 'hint', style: 'font-size:.72rem' }, 'Caricato ' + fD(m.at) + (m.by ? ' da ' + (m.by === S.me ? 'te' : nm(m.by)) : '')))));
       const qIn = el('input', { type: 'search', value: S.pavQ, placeholder: 'Cerca codice o descrizione nei listini ProAV…', 'aria-label': 'Cerca nei listini ProAV', style: 'flex:1;min-width:220px' });

@@ -305,9 +305,11 @@
       } catch (e) { toast('Caricamento non riuscito: ' + e.message, 'bad'); okB.disabled = false; say(replace ? 'Sostituisci' : 'Importa'); return; }
       const HS = heads(); const labOf = k => (HS.find(h => h.k === k) || {}).l || k;
       const fields = {}; for (const f of FIELDS) { if (f.multi) { if ((map.n || []).length) fields.n = map.n.map(labOf); } else if (map[f.k]) fields[f.k] = labOf(map[f.k]); }
-      const meta = { v: 2, nome: n, periodo: per.value || '', righe: clean.length, kit: res.st.kit, fogli: res.st.fogli.map(f => f.n), fields, mapK: map, file: file.name, size: payload.length, blob, imgs: imgIds, by: S.me, at, map: { n: (map.n || []).length ? [0] : [] } };
+      // il file originale del listino resta scaricabile dalla pagina dei listini
+      let orig = null; try { const ro = await fetch('/api/proav/blob?id=' + encodeURIComponent(blob + '_f'), { method: 'PUT', credentials: 'same-origin', headers: { ...H, 'content-type': file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }, body: file }); if (ro.ok) orig = blob + '_f'; } catch (e) { }
+      const meta = { v: 2, orig, nome: n, periodo: per.value || '', righe: clean.length, kit: res.st.kit, fogli: res.st.fogli.map(f => f.n), fields, mapK: map, file: file.name, size: payload.length, blob, imgs: imgIds, by: S.me, at, map: { n: (map.n || []).length ? [0] : [] } };
       if (await put('proavListini', id, meta)) {
-        if (replace && replace.blob && replace.blob !== blob) fetch('/api/proav/blob?id=' + encodeURIComponent(replace.blob), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { });
+        if (replace && replace.blob && replace.blob !== blob) fetch('/api/proav/blob?id=' + encodeURIComponent(replace.blob), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { }); if (replace && replace.orig && replace.orig !== orig) fetch('/api/proav/blob?id=' + encodeURIComponent(replace.orig), { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { });
         if (replace && Array.isArray(replace.imgs)) for (const b of replace.imgs) fetch('/api/blob/' + b, { method: 'DELETE', credentials: 'same-origin', headers: H }).catch(() => { });
         S.pavRows.set(id, { v: 2, items: clean, at }); m.close();
         toast('Listino «' + n + '» importato: ' + fmtN(clean.length) + ' articoli' + (res.st.kit ? ', di cui ' + res.st.kit + ' kit' : '') + (imgIds.length ? ' · ' + imgIds.length + ' foto' : ''));
