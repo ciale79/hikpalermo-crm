@@ -65,6 +65,7 @@
 (function () {
   'use strict';
   window.hpQuickBar = function () {
+    const PAVQ = typeof HP_PAV !== 'undefined' && HP_PAV; // su ProAV niente Articoli e Partner
     const n = (x, s, p) => x + ' ' + (x === 1 ? s : p);
     const has = v => typeof VIEWS !== 'undefined' && VIEWS[v];
     const mag = S.mag ? S.mag.size : 0, demo = S.demo ? [...S.demo.values()].filter(d => d.stato !== 'chiusa').length : 0;
@@ -78,7 +79,7 @@
       B('brief', 'Commesse', n(S.commesse.size, 'commessa', 'commesse'), () => go('commesse')),
       has('magazzino') ? B('whs', 'Magazzino', demo ? demo + ' in demo' : n(mag, 'articolo', 'articoli'), () => go('magazzino')) : null,
       B('cal', 'Calendario', today ? today + ' oggi' : up + ' in 7 giorni', () => go('cal')),
-      B('box', 'Articoli', (S.cat ? S.cat.length.toLocaleString('it-IT') : '…') + ' a listino', () => go('art')),
-      has('partner') ? B('medal', 'Partner', part ? part + ' partner' : 'Programmi', () => go('partner')) : null);
+      PAVQ ? null : B('box', 'Articoli', (S.cat ? S.cat.length.toLocaleString('it-IT') : '…') + ' a listino', () => go('art')),
+      has('partner') && !PAVQ ? B('medal', 'Partner', part ? part + ' partner' : 'Programmi', () => go('partner')) : null);
   };
 })();
